@@ -1,0 +1,17 @@
+{
+  "name": "work-order-suite-monorepo",
+  "version": "1.0.0",
+  "description": "Monorepo for Work Order Suite applications",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+
+  "author": "Dejanovic Bojan",
+  "license": "ISC",
+  "workspaces": [
+    "packages/sf-common",
+    "packages/work-order-central",
+    "packages/work-order-local"
+  ]
+}
