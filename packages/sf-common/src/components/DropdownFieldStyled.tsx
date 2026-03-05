@@ -18,7 +18,7 @@ export function DropdownFieldStyled(props: Props) {
 
     const { t } = useTranslation()
 
-    let selectOptions: JSX.Element[] = []
+    let selectOptions: any[] = []
 
     selectOptions.push(<option></option>)
 
