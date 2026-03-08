@@ -7,6 +7,7 @@ import type { QRData } from '../../models/ApiRequests';
 import { paddedContainer } from '../../styling/Custom';
 import { Server } from '../../api/Server';
 import { useTranslation } from 'react-i18next';
+import {useNavigate} from "react-router";
 
 
 export function LoginForm() {
@@ -16,6 +17,8 @@ export function LoginForm() {
     const { t } = useTranslation()
 
     const dispatch = useDispatch();
+
+    const navigation = useNavigate();
 
     const handleGetUserByQRResponse = (response) => {
 
@@ -28,8 +31,9 @@ export function LoginForm() {
             }
 
         } else {
-            sessionStorage.setItem("userData", JSON.stringify(response.data.data));
-            window.location.href = "/"
+            sessionStorage.setItem("userData", JSON.stringify(response.data));
+            console.log("User data stored in sessionStorage: ", response);
+            navigation("/")
         }
     }
 

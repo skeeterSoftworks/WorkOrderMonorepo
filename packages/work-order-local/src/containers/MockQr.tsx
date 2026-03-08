@@ -70,7 +70,7 @@ export function MockQr() {
                     <Form onSubmit={getCustomQr}
                         render={({ handleSubmit, values }) => {
 
-                            let formValid: boolean = values && values.customQr;
+                            const formValid: boolean = values && values.customQr;
 
                             return (
                                 <form onSubmit={handleSubmit}>

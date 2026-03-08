@@ -6,6 +6,7 @@ import {ErrorModal, WebsocketListener} from "sf-common";
 import {BrowserRouter, Route, Routes} from "react-router-dom";
 import {HOC} from "./containers/HOC.tsx";
 import {Home} from "./components/home/Home.tsx";
+import {MockQr} from "./containers/MockQr.tsx";
 
 
 const root = ReactDOM.createRoot(
@@ -22,6 +23,7 @@ root.render(
                 <HOC>
                     <Routes>
                         <Route path="/" element={<Home/>}/>
+                        <Route path="/mock-qr" element={<MockQr/>}/>
                     </Routes>
                 </HOC>
             </BrowserRouter>
