@@ -20,8 +20,8 @@ export function MockQr() {
     const { t } = useTranslation()
 
 
-    const [qrCode, setQrCode] = useState<string>(undefined)
-    const [customQrCode, setCustomQrCode] = useState<string>(undefined)
+    const [qrCode, setQrCode] = useState<string | undefined>(undefined)
+    const [customQrCode, setCustomQrCode] = useState<string | undefined>(undefined)
 
     useEffect(() => {
 
@@ -57,7 +57,7 @@ export function MockQr() {
             mockScannedQr: formValues?.mockScannedQR?.toUpperCase()
         }
 
-        Server.sendMockQr(mockQrRequest, (error) => {
+        Server.sendMockQr(mockQrRequest, () => {
             toast.error(t("msg_errorSendingMockQr"))
         })
     }
@@ -68,7 +68,7 @@ export function MockQr() {
             <Container style={centerHorizontal}>
                 <Grid style={centerHorizontal}>
                     <Form onSubmit={getCustomQr}
-                        render={({ handleSubmit, form, submitting, pristine, values }) => {
+                        render={({ handleSubmit, values }) => {
 
                             let formValid: boolean = values && values.customQr;
 
@@ -121,7 +121,7 @@ export function MockQr() {
                                     changeValue(state, fieldName, () => fieldVal);
                                 }
                             }}
-                            render={({ handleSubmit, form, submitting, pristine, values }) => {
+                            render={({ handleSubmit, values }) => {
 
                                 return (
                                     <form onSubmit={handleSubmit}>

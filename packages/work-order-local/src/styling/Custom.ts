@@ -69,15 +69,6 @@ export const mockScanContent: any = {
     textAlign: "center"
 }
 
-const Background = {
-    position: "absolute",
-    width: "100%",
-    height: "100%",
-    backgroundImage: `../public/streit-nova.png`,
-    backgroundPosition: "center",
-    backgroundSize: "cover",
-    backgroundRepeat: "no-repeat",
-};
 
 export const radioButtonContainer = {
     marginLeft: "20%"

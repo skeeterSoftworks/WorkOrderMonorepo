@@ -1,6 +1,5 @@
 import {StrictMode} from 'react'
 import ReactDOM from 'react-dom/client'
-import './index.css'
 import {Provider} from "react-redux";
 import {store} from "./store.ts";
 import {ErrorModal, WebsocketListener} from "sf-common";

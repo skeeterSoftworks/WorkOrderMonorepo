@@ -11,7 +11,7 @@ export class Server {
             .then(response => onSuccess(response))
             .catch(
                 (error) => {
-                    onError(error)
+                    onError &&  onError(error)
                     console.log(error)
                 });
 
@@ -46,7 +46,10 @@ export class Server {
 
         axios.get(`${getServerUrl()}/configuration/get_station_config`)
             .then(response => onSuccess(response))
-            .catch(error => console.log(error));
+            .catch(error => {
+                console.log(error)
+                onError && onError(error)
+            });
 
     }
 
@@ -56,7 +59,7 @@ export class Server {
                 onSuccess(response)
             })
             .catch(error => {
-                onError(error)
+                onError && onError(error)
             });
     }
 
@@ -82,12 +85,12 @@ export class Server {
     static sendMockQr(mockQrCode: any, onError: Function) {
 
         axios.post(`${getServerUrl()}/qrcode/simulate`, mockQrCode)
-            .then(response => {
+            .then(() => {
 
             })
             .catch(error => {
                 console.error(error)
-                onError(error)
+                onError && onError(error)
             });
     }
 
