@@ -24,22 +24,27 @@ export function Home() {
                 <Grid container>
 
                     {userData && userData.role === "ADMIN" &&
-                        <Grid item xs={4} md={4} sx={{ textAlign: "center" }}>
+                        <Grid item xs={3} md={3} sx={{ textAlign: "center" }}>
                             <Button href="/purchase-orders" variant="contained" sx={homeButtonMarginStyle}>
                                 {t("purchaseOrders")}
                             </Button>
                         </Grid>}
                     {userData && userData.role === "ADMIN" &&
-                        <Grid item xs={4} md={4} sx={{ textAlign: "center" }}>
+                        <Grid item xs={3} md={3} sx={{ textAlign: "center" }}>
                             <Button href="/work-orders" variant="contained" sx={homeButtonMarginStyle}>
                                 {t("workOrders")}
                             </Button>
                         </Grid>}
-
                     {userData && userData.role === "ADMIN" &&
-                        <Grid item xs={4} md={4} sx={{ textAlign: "center" }}>
-                            <Button href="/mock-qr" variant="contained" sx={homeButtonMarginStyle}>
-                                MOCK Qr Panel
+                        <Grid item xs={3} md={3} sx={{ textAlign: "center" }}>
+                            <Button href="/stock" variant="contained" sx={homeButtonMarginStyle}>
+                                {t("stock")}
+                            </Button>
+                        </Grid>}
+                    {userData && userData.role === "ADMIN" &&
+                        <Grid item xs={3} md={3} sx={{ textAlign: "center" }}>
+                            <Button href="/admin" variant="contained" sx={homeButtonMarginStyle}>
+                                {t("admin")}
                             </Button>
                         </Grid>}
 
