@@ -20,11 +20,12 @@ export function LoginForm() {
 
     const navigation = useNavigate();
 
-    const handleGetUserByQRResponse = (response) => {
+    const handleGetUserByQRResponse = (response: any) => {
 
-        if (response.data.responseStatus === "ERROR") {
+        debugger
+        if (response.status !== 200) {
 
-            if (response.data.data === "NOT_FOUND") {
+            if (response.data === "NOT_FOUND") {
                 dispatch(openErrorModal(t("msg_userWithScannedQrNotExist")));
             } else {
                 dispatch(openErrorModal(t("msg_errorSearchingUser")));
@@ -32,7 +33,7 @@ export function LoginForm() {
 
         } else {
             sessionStorage.setItem("userData", JSON.stringify(response.data));
-            console.log("User data stored in sessionStorage: ", response);
+            console.log("User data stored in sessionStorage: ", response.data);
             navigation("/")
         }
     }
@@ -41,8 +42,8 @@ export function LoginForm() {
 
         if (scannedQrData?.qrText) {
 
-            Server.fetchOperatorData(scannedQrData?.qrText, (response) => { handleGetUserByQRResponse(response) },
-                (error) => {
+            Server.fetchOperatorData(scannedQrData?.qrText, (response:any) => { handleGetUserByQRResponse(response) },
+                (error: any) => {
                     dispatch(openErrorModal(t("msg_errorFetchingOperatorData") + " " + error))
                 })
         }
@@ -52,13 +53,13 @@ export function LoginForm() {
 
 
 
-    const submitLogin = (formValues) => {
+    const submitLogin = (formValues: any) => {
 
         if (!formValues || !formValues.userID) {
             dispatch(openErrorModal(t("typeUserIdOrScanPersonalQr")))
         } else {
-            Server.fetchOperatorData(formValues.userID, (response) => { handleGetUserByQRResponse(response) },
-                (error) => {
+            Server.fetchOperatorData(formValues.userID, (response: any) => { handleGetUserByQRResponse(response) },
+                (error: any) => {
                     dispatch(openErrorModal(t("msg_errorFetchingOperatorData") + " " + error))
                 })
         }

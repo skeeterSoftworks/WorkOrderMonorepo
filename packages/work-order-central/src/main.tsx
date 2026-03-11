@@ -13,11 +13,14 @@ const root = ReactDOM.createRoot(
     document.getElementById('root') as HTMLElement
 );
 
+// Resolve server URL from Vite's import.meta.env. Provide a fallback to process.env for other build tools.
+const SERVER_URL = (import.meta as any).env?.VITE_SERVER_URL || ((globalThis as any).process?.env?.REACT_APP_SERVER_URL) || '';
+
 root.render(
     <StrictMode>
         <Provider store={store}>
             <WebsocketListener onMessage={() => {
-            }}/>
+            }} socketUrl={SERVER_URL}/>
             <ErrorModal/>
             <BrowserRouter>
                 <HOC>
@@ -30,5 +33,3 @@ root.render(
 
         </Provider>
     </StrictMode>)
-
-

@@ -8,7 +8,7 @@ import "../i18n/I18n"
 import {useTranslation} from 'react-i18next';
 
 
-export function HOC(props) {
+export function HOC(props: any) {
 
     const { t } = useTranslation()
 

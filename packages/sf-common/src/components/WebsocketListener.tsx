@@ -9,7 +9,8 @@ let stompClient: any;
 type Props = {
     onMessage: Function,
     onConnect?: Function,
-    onWebsocketClose?: Function
+    onWebsocketClose?: Function,
+    socketUrl: string
 }
 
 export function WebsocketListener(props: Props) {
@@ -19,7 +20,7 @@ export function WebsocketListener(props: Props) {
     useEffect(() => {
 
         stompClient = new Client({
-            brokerURL: SOCKET_URL,
+            brokerURL: props.socketUrl,
             reconnectDelay: 2000,
             onConnect: () => {
 

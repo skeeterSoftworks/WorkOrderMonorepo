@@ -6,6 +6,6 @@ export function getClientMode(): EClientMode {
 }
 
 export function getServerUrl(): string {
-    return process.env.REACT_APP_SERVER_URL || "http://localhost:10000"
+    return process.env.REACT_APP_SERVER_URL || "http://localhost:10001"
 }
 
