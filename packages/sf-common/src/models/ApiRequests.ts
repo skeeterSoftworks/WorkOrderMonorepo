@@ -110,6 +110,7 @@ export interface ProductOrderTO {
 
 export interface PurchaseOrderTO {
     id?: number,
+    customerId?: number,
     customer?: CustomerTO,
     productOrderList?: ProductOrderTO[],
     orderStatus?: string,
@@ -118,7 +119,12 @@ export interface PurchaseOrderTO {
     reference?: string,
     deliveryTerms?: string,
     shippingAddress?: string,
-    comment?: string
+    comment?: string,
+    createdAt?: string,
+    confirmedAt?: string,
+    inProductionAt?: string,
+    completedAt?: string,
+    deliveredAt?: string
 }
 
 export interface WorkOrderTO {

@@ -89,6 +89,15 @@ export class Server {
             });
     }
 
+    static getPurchaseOrderById(id: number, onSuccess: Function, onError: Function) {
+        axios.get(`${getServerUrl()}/purchaseorder/${id}`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
     static addPurchaseOrder(purchaseOrder: PurchaseOrderTO, onSuccess: Function, onError: Function) {
         axios.post(`${getServerUrl()}/purchaseorder/add`, purchaseOrder)
             .then(response => onSuccess(response))

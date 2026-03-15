@@ -20,6 +20,7 @@ import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import DownloadIcon from '@mui/icons-material/Download';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PurchaseOrderTO, ProductOrderTO, CustomerTO, ProductTO } from 'sf-common/src/models/ApiRequests';
@@ -53,6 +54,10 @@ export function PurchaseOrdersManagementPanel() {
     const [formModalOpen, setFormModalOpen] = useState(false);
     const [importError, setImportError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+    const [detailsOrder, setDetailsOrder] = useState<LocalPurchaseOrder | null>(null);
+    const [detailsLoading, setDetailsLoading] = useState(false);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
 
     useEffect(() => {
         loadOrders();
@@ -166,6 +171,7 @@ export function PurchaseOrdersManagementPanel() {
                 quantity: Number(row.quantity) || 0,
                 pricePerUnit: Number(row.pricePerUnit) || 0,
             }));
+        const customerId = selectedCustomerId != null && selectedCustomerId !== '' ? Number(selectedCustomerId) : undefined;
         const payload: PurchaseOrderTO = {
             id: selectedOrderId,
             reference,
@@ -174,7 +180,8 @@ export function PurchaseOrdersManagementPanel() {
             deliveryTerms: deliveryTerms || undefined,
             shippingAddress: shippingAddress || undefined,
             comment,
-            customer: selectedCustomerId ? { id: selectedCustomerId } : undefined,
+            customerId,
+            customer: customerId != null ? { id: customerId } : undefined,
             productOrderList,
         };
 
@@ -200,14 +207,19 @@ export function PurchaseOrdersManagementPanel() {
             setOrderToDelete(null);
             return;
         }
-
+        setDeleteError(null);
         Server.deletePurchaseOrder(
             Number(orderToDelete.id),
             () => {
                 loadOrders();
                 setOrderToDelete(null);
             },
-            () => {
+            (err: any) => {
+                const body = err?.response?.data;
+                const msg = body === 'PURCHASE_ORDER_HAS_WORK_ORDER'
+                    ? t('purchaseOrderHasWorkOrderCannotDelete')
+                    : (typeof body === 'string' ? body : t('msg_errorDeletingPurchaseOrder'));
+                setDeleteError(msg);
                 setOrderToDelete(null);
             }
         );
@@ -230,6 +242,36 @@ export function PurchaseOrdersManagementPanel() {
         }
 
         return '';
+    };
+
+    const formatDateTime = (isoString: string | undefined): string => {
+        if (!isoString || !isoString.trim()) return '';
+        const d = new Date(isoString);
+        return Number.isNaN(d.getTime()) ? isoString : d.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
+    };
+
+    const handleViewDetails = (order: LocalPurchaseOrder) => {
+        if (order.id == null) return;
+        setDetailsOrder(null);
+        setDetailsModalOpen(true);
+        setDetailsLoading(true);
+        Server.getPurchaseOrderById(
+            Number(order.id),
+            (response: any) => {
+                const data = response?.data != null ? response.data : response;
+                setDetailsOrder(data);
+                setDetailsLoading(false);
+            },
+            () => {
+                setDetailsLoading(false);
+                setDetailsModalOpen(false);
+            },
+        );
+    };
+
+    const closeDetailsModal = () => {
+        setDetailsModalOpen(false);
+        setDetailsOrder(null);
     };
 
     const closeFormModal = () => {
@@ -364,6 +406,14 @@ export function PurchaseOrdersManagementPanel() {
                                     <TableCell>{order.shippingAddress}</TableCell>
                                     <TableCell>{order.comment}</TableCell>
                                     <TableCell align="right">
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => handleViewDetails(order)}
+                                            sx={{ mr: 1 }}
+                                            title={t('viewPurchaseOrderDetails')}
+                                        >
+                                            <VisibilityIcon fontSize="small" />
+                                        </IconButton>
                                         <IconButton
                                             size="small"
                                             onClick={() => handleEditClick(order)}
@@ -518,8 +568,117 @@ export function PurchaseOrdersManagementPanel() {
                 open={!!orderToDelete}
                 modalMessage={t('confirmDeletePurchaseOrder')}
                 onConfirm={handleConfirmDelete}
-                onModalClose={() => setOrderToDelete(null)}
+                onModalClose={() => { setOrderToDelete(null); setDeleteError(null); }}
             />
+            {deleteError && (
+                <Typography color="error" variant="body2" sx={{ mt: 1 }}>
+                    {deleteError}
+                </Typography>
+            )}
+
+            <Dialog
+                open={detailsModalOpen}
+                onClose={closeDetailsModal}
+                maxWidth="lg"
+                fullWidth
+                scroll="paper"
+                PaperProps={{ sx: { minHeight: '75vh', maxHeight: '90vh', minWidth: 720 } }}
+            >
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    {t('purchaseOrderDetails')}
+                    <IconButton size="small" onClick={closeDetailsModal} aria-label={t('close')}>
+                        <CloseIcon />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent dividers sx={{ minHeight: '60vh' }}>
+                    {detailsLoading && (
+                        <Typography color="text.secondary" sx={{ py: 2 }}>
+                            {t('fetchingData')}
+                        </Typography>
+                    )}
+                    {!detailsLoading && detailsOrder && (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'row', gap: 3, flexWrap: 'wrap' }}>
+                                <Box sx={{ flex: 1, minWidth: 160 }}>
+                                    <Typography variant="body2"><strong>{t('reference')}:</strong> {detailsOrder.reference ?? '—'}</Typography>
+                                    <Typography variant="body2" sx={{ mt: 0.5 }}><strong>{t('customer')}:</strong> {detailsOrder.customer?.companyName ?? '—'}</Typography>
+                                    <Typography variant="body2" sx={{ mt: 0.5 }}><strong>{t('currency')}:</strong> {detailsOrder.currency ?? '—'}</Typography>
+                                </Box>
+                                <Box sx={{ flex: 1, minWidth: 160 }}>
+                                    <Typography variant="body2"><strong>{t('deliveryDate')}:</strong> {formatDeliveryDate(detailsOrder.deliveryDate)}</Typography>
+                                    <Typography variant="body2" sx={{ mt: 0.5 }}><strong>{t('deliveryTerms')}:</strong> {detailsOrder.deliveryTerms || '—'}</Typography>
+                                </Box>
+                                <Box sx={{ flex: 1, minWidth: 160 }}>
+                                    <Typography variant="body2"><strong>{t('shippingAddress')}:</strong> {detailsOrder.shippingAddress || '—'}</Typography>
+                                    <Typography variant="body2" sx={{ mt: 0.5 }}><strong>{t('comment')}:</strong> {detailsOrder.comment || '—'}</Typography>
+                                </Box>
+                            </Box>
+                            <Typography variant="subtitle2" sx={{ mt: 1 }}>{t('productOrders')}</Typography>
+                            <Table size="small">
+                                <TableHead>
+                                    <TableRow>
+                                        <TableCell>{t('product')}</TableCell>
+                                        <TableCell align="right">{t('quantity')}</TableCell>
+                                        <TableCell align="right">{t('pricePerUnit')}</TableCell>
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {(detailsOrder.productOrderList || []).map((po, idx) => (
+                                        <TableRow key={po.id ?? idx}>
+                                            <TableCell>{po.product?.name ?? '—'}</TableCell>
+                                            <TableCell align="right">{po.quantity ?? 0}</TableCell>
+                                            <TableCell align="right">{po.pricePerUnit ?? 0}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+
+                            <Typography variant="subtitle2" sx={{ mt: 3 }}>{t('stateHistory')}</Typography>
+                            <Box sx={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 1, alignItems: 'stretch' }}>
+                                {[
+                                    { key: 'CREATED', label: t('stateCreated'), time: detailsOrder.createdAt },
+                                    { key: 'CONFIRMED', label: t('stateConfirmed'), time: detailsOrder.confirmedAt },
+                                    { key: 'IN_PRODUCTION', label: t('stateInProduction'), time: detailsOrder.inProductionAt, emptyLabel: t('notYet') },
+                                    { key: 'COMPLETED', label: t('stateCompleted'), time: detailsOrder.completedAt },
+                                    { key: 'DELIVERED', label: t('stateDelivered'), time: detailsOrder.deliveredAt },
+                                ].map((item, index) => {
+                                    const isCurrent = (detailsOrder.orderStatus ?? 'CREATED') === item.key;
+                                    return (
+                                        <Box
+                                            key={item.key}
+                                            sx={{
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                justifyContent: 'center',
+                                                minWidth: 120,
+                                                flex: 1,
+                                                py: 1.5,
+                                                px: 1.5,
+                                                borderRadius: 1,
+                                                border: '1px solid',
+                                                borderColor: isCurrent ? 'primary.main' : 'divider',
+                                                ...(isCurrent && { bgcolor: 'action.selected' }),
+                                            }}
+                                        >
+                                            <Typography variant="body2" fontWeight={isCurrent ? 600 : 500}>
+                                                {item.label}
+                                                {isCurrent && (
+                                                    <Typography component="span" variant="caption" color="primary" sx={{ ml: 0.5, fontWeight: 600 }}>
+                                                        ({t('currentState')})
+                                                    </Typography>
+                                                )}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                                {item.time ? formatDateTime(item.time) : (item.emptyLabel ?? '—')}
+                                            </Typography>
+                                        </Box>
+                                    );
+                                })}
+                            </Box>
+                        </Box>
+                    )}
+                </DialogContent>
+            </Dialog>
         </Box>
     );
 }

@@ -344,5 +344,17 @@
   "importPurchaseOrderFromExcel": "Uvezi iz Excel-a",
   "importExcelError": "Nije moguće učitati Excel fajl. Koristite šablon: red 2 za podatke narudžbenice, redovi 5+ za proizvode.",
   "deliveryTerms": "Uslovi isporuke",
-  "shippingAddress": "Adresa isporuke"
+  "shippingAddress": "Adresa isporuke",
+  "purchaseOrderDetails": "Detalji narudžbenice",
+  "viewPurchaseOrderDetails": "Pregled detalja",
+  "stateHistory": "Istorija stanja",
+  "stateCreated": "Kreirano",
+  "stateConfirmed": "Potvrđeno",
+  "stateInProduction": "U produkciji",
+  "stateCompleted": "Završeno",
+  "stateDelivered": "Isporučeno",
+  "currentState": "trenutno",
+  "notYet": "Još nije",
+  "purchaseOrderHasWorkOrderCannotDelete": "Nije moguće obrisati: radni nalog je povezan sa ovom narudžbenicom. Prvo obrišite radni nalog.",
+  "msg_errorDeletingPurchaseOrder": "Greška pri brisanju narudžbenice."
 }

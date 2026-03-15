@@ -345,5 +345,17 @@
   "importPurchaseOrderFromExcel": "Import from Excel",
   "importExcelError": "Failed to parse the Excel file. Use the template and fill row 2 for order data and rows 5+ for products.",
   "deliveryTerms": "Delivery terms",
-  "shippingAddress": "Shipping address"
+  "shippingAddress": "Shipping address",
+  "purchaseOrderDetails": "Purchase order details",
+  "viewPurchaseOrderDetails": "View details",
+  "stateHistory": "State history",
+  "stateCreated": "Created",
+  "stateConfirmed": "Confirmed",
+  "stateInProduction": "In production",
+  "stateCompleted": "Completed",
+  "stateDelivered": "Delivered",
+  "currentState": "current",
+  "notYet": "Not yet",
+  "purchaseOrderHasWorkOrderCannotDelete": "Cannot delete: a work order is linked to this purchase order. Delete the work order first.",
+  "msg_errorDeletingPurchaseOrder": "Error deleting purchase order."
 }
