@@ -1,4 +1,4 @@
-import type {ApplicationUserTO, StationConfigDTO, PurchaseOrderTO, ProductTO, CustomerTO} from "../models/ApiRequests";
+import type {ApplicationUserTO, StationConfigDTO, PurchaseOrderTO, ProductTO, CustomerTO, MachineTO} from "../models/ApiRequests";
 import axios from "axios";
 import { getServerUrl } from "../util/EnvUtils";
 
@@ -181,6 +181,42 @@ export class Server {
 
     static deleteCustomer(id: number, onSuccess: Function, onError: Function) {
         axios.delete(`${getServerUrl()}/customers/${id}`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static getAllMachines(onSuccess: Function, onError: Function) {
+        axios.get(`${getServerUrl()}/machines/all`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static addMachine(machine: MachineTO, onSuccess: Function, onError: Function) {
+        axios.post(`${getServerUrl()}/machines/add`, machine)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static editMachine(machine: MachineTO, onSuccess: Function, onError: Function) {
+        axios.post(`${getServerUrl()}/machines/update`, machine)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static deleteMachine(id: number, onSuccess: Function, onError: Function) {
+        axios.delete(`${getServerUrl()}/machines/${id}`)
             .then(response => onSuccess(response))
             .catch(error => {
                 console.log(error);

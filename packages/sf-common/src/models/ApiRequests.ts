@@ -81,6 +81,26 @@ export interface CustomerTO {
     description?: string
 }
 
+export interface ToolTO {
+    id?: number,
+    toolName?: string,
+    toolDescription?: string
+}
+
+export interface MachineTO {
+    id?: number,
+    machineName?: string,
+    cycleTime?: number,
+    barLocation?: string,
+    piecesPerBar?: number,
+    barsPerSeries?: number,
+    barsCount?: number,
+    weightPerBar?: number,
+    sumBarWeight?: number,
+    seriesID?: string,
+    tools?: ToolTO[]
+}
+
 export interface ProductOrderTO {
     id?: number,
     product?: ProductTO,
