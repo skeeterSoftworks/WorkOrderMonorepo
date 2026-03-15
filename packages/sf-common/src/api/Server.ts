@@ -1,4 +1,4 @@
-import type { ApplicationUserTO, StationConfigDTO } from "../models/ApiRequests";
+import type {ApplicationUserTO, StationConfigDTO, PurchaseOrderTO, ProductTO} from "../models/ApiRequests";
 import axios from "axios";
 import { getServerUrl } from "../util/EnvUtils";
 
@@ -73,6 +73,78 @@ export class Server {
 
     static deleteUser(id: number, onSuccess: Function, onError: Function) {
         axios.delete(`${getServerUrl()}/users/${id}`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static getAllPurchaseOrders(onSuccess: Function, onError: Function) {
+        axios.get(`${getServerUrl()}/purchaseorder/all`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static addPurchaseOrder(purchaseOrder: PurchaseOrderTO, onSuccess: Function, onError: Function) {
+        axios.post(`${getServerUrl()}/purchaseorder/add`, purchaseOrder)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static editPurchaseOrder(purchaseOrder: PurchaseOrderTO, onSuccess: Function, onError: Function) {
+        axios.post(`${getServerUrl()}/purchaseorder/update`, purchaseOrder)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static deletePurchaseOrder(id: number, onSuccess: Function, onError: Function) {
+        axios.delete(`${getServerUrl()}/purchaseorder/${id}`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static getAllProducts(onSuccess: Function, onError: Function) {
+        axios.get(`${getServerUrl()}/products/all`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static addProduct(product: ProductTO, onSuccess: Function, onError: Function) {
+        axios.post(`${getServerUrl()}/products/add`, product)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static editProduct(product: ProductTO, onSuccess: Function, onError: Function) {
+        axios.post(`${getServerUrl()}/products/update`, product)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static deleteProduct(id: number, onSuccess: Function, onError: Function) {
+        axios.delete(`${getServerUrl()}/products/${id}`)
             .then(response => onSuccess(response))
             .catch(error => {
                 console.log(error);

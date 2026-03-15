@@ -18,20 +18,16 @@ import { useTranslation } from 'react-i18next';
 import type { ApplicationUserTO } from 'sf-common/src/models/ApiRequests';
 import { Server, ConfirmationModal } from 'sf-common';
 
-interface LocalApplicationUser extends ApplicationUserTO {
-    id?: string | number;
-}
-
 export function UsersManagementPanel() {
     const { t } = useTranslation();
 
-    const [users, setUsers] = useState<LocalApplicationUser[]>([]);
+    const [users, setUsers] = useState<ApplicationUserTO[]>([]);
     const [selectedUserId, setSelectedUserId] = useState<string | number | undefined>(undefined);
     const [name, setName] = useState('');
     const [surname, setSurname] = useState('');
     const [qrCode, setQrCode] = useState('');
     const [role, setRole] = useState<'ADMIN' | 'OPERATOR'>('OPERATOR');
-    const [userToDelete, setUserToDelete] = useState<LocalApplicationUser | null>(null);
+    const [userToDelete, setUserToDelete] = useState<ApplicationUserTO | null>(null);
 
     const formatCreatedDate = (value: any): string => {
         if (!value) {
@@ -61,7 +57,7 @@ export function UsersManagementPanel() {
     const loadUsers = () => {
         Server.getAllUsers(
             (response: any) => {
-                let data: LocalApplicationUser[] = [];
+                let data: ApplicationUserTO[] = [];
 
                 if (Array.isArray(response?.data)) {
                     data = response.data;
@@ -84,7 +80,7 @@ export function UsersManagementPanel() {
         setRole('OPERATOR');
     };
 
-    const handleEditClick = (user: LocalApplicationUser) => {
+    const handleEditClick = (user: ApplicationUserTO) => {
         setSelectedUserId(user.id);
         setName(user.name || '');
         setSurname(user.surname || '');
@@ -113,7 +109,7 @@ export function UsersManagementPanel() {
         }
     };
 
-    const handleDeleteClick = (user: LocalApplicationUser) => {
+    const handleDeleteClick = (user: ApplicationUserTO) => {
         setUserToDelete(user);
     };
 

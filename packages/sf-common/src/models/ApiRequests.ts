@@ -16,23 +16,11 @@ export interface SessionTO {
 }
 
 export interface ProductTO {
-    productName?: string,
+    id?: number,
+    name?: string,
     description?: string,
-    productState?: string,
-    referenceID?: string,
-    qrCode?: string,
-    reject?: boolean,
-    rejectReason?: string,
-    rejectCause?: string,
-    rejectComment?: string,
-    cell?: string,
-    operation?: string,
-    session?: SessionTO,
-    measuringFeaturesList?: MeasuringFeatureTO[],
-    controlProductGood?: string | boolean,
-    processingDate?: any,
-    setupData?: SetupTO,
-    comment?: string
+    machineType?: string,
+    toolType?: string,
 }
 
 export interface SetupTO {
@@ -84,6 +72,31 @@ export interface ApplicationUserTO {
     role?: "ADMIN" | "OPERATOR",
     createdDate?: number[],
     id?: string
+}
+
+export interface CustomerTO {
+    id?: number,
+    companyName?: string
+}
+
+export interface ProductOrderTO {
+    id?: number,
+    product?: ProductTO,
+    quantity?: number,
+    pricePerUnit?: number
+}
+
+export interface PurchaseOrderTO {
+    id?: number,
+    customer?: CustomerTO,
+    productOrderList?: ProductOrderTO[],
+    orderStatus?: string,
+    currency?: string,
+    deliveryDate?: string | number[] | null,
+    reference?: string,
+    deliveryTerms?: string,
+    shippingAddress?: string,
+    comment?: string
 }
 
 export interface ProductProfileTO {
