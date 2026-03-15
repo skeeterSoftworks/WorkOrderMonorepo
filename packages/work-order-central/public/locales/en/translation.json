@@ -340,5 +340,10 @@
   "none": "None",
   "cancel": "Cancel",
   "workOrdersManagement": "Work orders",
-  "workOrdersManagementStub": "Create and manage work orders linked to purchase orders."
+  "workOrdersManagementStub": "Create and manage work orders linked to purchase orders.",
+  "downloadPurchaseOrderTemplate": "Download Excel template",
+  "importPurchaseOrderFromExcel": "Import from Excel",
+  "importExcelError": "Failed to parse the Excel file. Use the template and fill row 2 for order data and rows 5+ for products.",
+  "deliveryTerms": "Delivery terms",
+  "shippingAddress": "Shipping address"
 }

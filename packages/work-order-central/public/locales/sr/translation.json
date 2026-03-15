@@ -339,5 +339,10 @@
   "none": "Nijedan",
   "cancel": "Odustani",
   "workOrdersManagement": "Radni nalozi",
-  "workOrdersManagementStub": "Kreirajte i upravljajte radnim nalozima povezanim sa narudžbenicama."
+  "workOrdersManagementStub": "Kreirajte i upravljajte radnim nalozima povezanim sa narudžbenicama.",
+  "downloadPurchaseOrderTemplate": "Preuzmi Excel šablon",
+  "importPurchaseOrderFromExcel": "Uvezi iz Excel-a",
+  "importExcelError": "Nije moguće učitati Excel fajl. Koristite šablon: red 2 za podatke narudžbenice, redovi 5+ za proizvode.",
+  "deliveryTerms": "Uslovi isporuke",
+  "shippingAddress": "Adresa isporuke"
 }

@@ -18,10 +18,17 @@ import LinkIcon from '@mui/icons-material/Link';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
-import { useEffect, useState } from 'react';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
+import DownloadIcon from '@mui/icons-material/Download';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PurchaseOrderTO, ProductOrderTO, CustomerTO, ProductTO } from 'sf-common/src/models/ApiRequests';
 import { Server, ConfirmationModal } from 'sf-common';
+import {
+    downloadPurchaseOrderTemplate,
+    parsePurchaseOrderFile,
+    type ParsedPurchaseOrder,
+} from '../../util/purchaseOrderExcel';
 
 type LocalPurchaseOrder = PurchaseOrderTO;
 
@@ -38,10 +45,14 @@ export function PurchaseOrdersManagementPanel() {
     const [reference, setReference] = useState('');
     const [currency, setCurrency] = useState('');
     const [deliveryDate, setDeliveryDate] = useState<string>('');
+    const [deliveryTerms, setDeliveryTerms] = useState('');
+    const [shippingAddress, setShippingAddress] = useState('');
     const [comment, setComment] = useState('');
     const [productOrderRows, setProductOrderRows] = useState<ProductOrderRow[]>([]);
     const [orderToDelete, setOrderToDelete] = useState<LocalPurchaseOrder | null>(null);
     const [formModalOpen, setFormModalOpen] = useState(false);
+    const [importError, setImportError] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         loadOrders();
@@ -91,6 +102,8 @@ export function PurchaseOrdersManagementPanel() {
         setReference('');
         setCurrency('');
         setDeliveryDate('');
+        setDeliveryTerms('');
+        setShippingAddress('');
         setComment('');
         setProductOrderRows([]);
     };
@@ -130,6 +143,8 @@ export function PurchaseOrdersManagementPanel() {
         } else {
             setDeliveryDate('');
         }
+        setDeliveryTerms(order.deliveryTerms || '');
+        setShippingAddress(order.shippingAddress || '');
         setComment(order.comment || '');
         setProductOrderRows(
             (order.productOrderList || []).map((po) => ({
@@ -156,6 +171,8 @@ export function PurchaseOrdersManagementPanel() {
             reference,
             currency,
             deliveryDate: deliveryDate || undefined,
+            deliveryTerms: deliveryTerms || undefined,
+            shippingAddress: shippingAddress || undefined,
             comment,
             customer: selectedCustomerId ? { id: selectedCustomerId } : undefined,
             productOrderList,
@@ -218,18 +235,106 @@ export function PurchaseOrdersManagementPanel() {
     const closeFormModal = () => {
         setFormModalOpen(false);
         resetForm();
+        setImportError(null);
+    };
+
+    const handleDownloadTemplate = () => {
+        downloadPurchaseOrderTemplate();
+    };
+
+    const resolveCustomerId = (companyName: string): number | undefined => {
+        const normalized = companyName.trim().toLowerCase();
+        if (!normalized) return undefined;
+        const found = customers.find(
+            (c) => c.companyName && c.companyName.trim().toLowerCase() === normalized,
+        );
+        return found?.id;
+    };
+
+    const resolveProductId = (nameOrId: string): number | undefined => {
+        const trimmed = nameOrId.trim();
+        if (!trimmed) return undefined;
+        const asNum = Number(trimmed);
+        if (!Number.isNaN(asNum) && Number.isInteger(asNum)) {
+            const byId = products.find((p) => p.id === asNum);
+            if (byId) return byId.id;
+        }
+        const normalized = trimmed.toLowerCase();
+        const byName = products.find(
+            (p) => p.name && p.name.trim().toLowerCase() === normalized,
+        );
+        return byName?.id;
+    };
+
+    const applyParsedOrder = (parsed: ParsedPurchaseOrder) => {
+        setSelectedOrderId(undefined);
+        setSelectedCustomerId(resolveCustomerId(parsed.customerCompanyName));
+        setReference(parsed.reference);
+        setCurrency(parsed.currency);
+        setDeliveryDate(parsed.deliveryDate ? parsed.deliveryDate.substring(0, 10) : '');
+        setDeliveryTerms(parsed.deliveryTerms);
+        setShippingAddress(parsed.shippingAddress);
+        setComment(parsed.comment);
+        setProductOrderRows(
+            parsed.productRows
+                .filter((row) => row.productNameOrId)
+                .map((row) => ({
+                    productId: resolveProductId(row.productNameOrId),
+                    quantity: String(row.quantity),
+                    pricePerUnit: String(row.pricePerUnit),
+                })),
+        );
+        setFormModalOpen(true);
+    };
+
+    const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        setImportError(null);
+        parsePurchaseOrderFile(file)
+            .then(applyParsedOrder)
+            .catch((err) => {
+                setImportError(err instanceof Error ? err.message : t('importExcelError'));
+            })
+            .finally(() => {
+                if (fileInputRef.current) fileInputRef.current.value = '';
+            });
     };
 
     return (
         <Box sx={{ mt: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
                 <Typography variant="h6">
                     {t('purchaseOrdersList')}
                 </Typography>
-                <Button variant="contained" color="primary" onClick={openFormModal}>
-                    {t('createNewPurchaseOrder')}
-                </Button>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    <Button variant="outlined" startIcon={<DownloadIcon />} onClick={handleDownloadTemplate}>
+                        {t('downloadPurchaseOrderTemplate')}
+                    </Button>
+                    <Button
+                        variant="outlined"
+                        startIcon={<UploadFileIcon />}
+                        onClick={() => fileInputRef.current?.click()}
+                    >
+                        {t('importPurchaseOrderFromExcel')}
+                    </Button>
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".xlsx,.xls"
+                        style={{ display: 'none' }}
+                        onChange={handleFileSelect}
+                    />
+                    <Button variant="contained" color="primary" onClick={openFormModal}>
+                        {t('createNewPurchaseOrder')}
+                    </Button>
+                </Box>
             </Box>
+            {importError && (
+                <Typography color="error" variant="body2" sx={{ mb: 1 }}>
+                    {importError}
+                </Typography>
+            )}
 
             <Paper sx={{ p: 2 }}>
                 <TableContainer>
@@ -241,6 +346,8 @@ export function PurchaseOrdersManagementPanel() {
                                 <TableCell>{t('currency')}</TableCell>
                                 <TableCell>{t('status')}</TableCell>
                                 <TableCell>{t('deliveryDate')}</TableCell>
+                                <TableCell>{t('deliveryTerms')}</TableCell>
+                                <TableCell>{t('shippingAddress')}</TableCell>
                                 <TableCell>{t('comment')}</TableCell>
                                 <TableCell align="right">{t('actions')}</TableCell>
                             </TableRow>
@@ -253,6 +360,8 @@ export function PurchaseOrdersManagementPanel() {
                                     <TableCell>{order.currency}</TableCell>
                                     <TableCell>{order.orderStatus}</TableCell>
                                     <TableCell>{formatDeliveryDate(order.deliveryDate)}</TableCell>
+                                    <TableCell>{order.deliveryTerms}</TableCell>
+                                    <TableCell>{order.shippingAddress}</TableCell>
                                     <TableCell>{order.comment}</TableCell>
                                     <TableCell align="right">
                                         <IconButton
@@ -323,6 +432,22 @@ export function PurchaseOrdersManagementPanel() {
                             size="small"
                             fullWidth
                             InputLabelProps={{ shrink: true }}
+                        />
+                        <TextField
+                            label={t('deliveryTerms')}
+                            value={deliveryTerms}
+                            onChange={(e) => setDeliveryTerms(e.target.value)}
+                            size="small"
+                            fullWidth
+                        />
+                        <TextField
+                            label={t('shippingAddress')}
+                            value={shippingAddress}
+                            onChange={(e) => setShippingAddress(e.target.value)}
+                            size="small"
+                            fullWidth
+                            multiline
+                            minRows={2}
                         />
                         <TextField
                             label={t('comment')}
