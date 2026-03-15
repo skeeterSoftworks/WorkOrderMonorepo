@@ -19,8 +19,8 @@ export interface ProductTO {
     id?: number,
     name?: string,
     description?: string,
-    machineType?: string,
-    toolType?: string,
+    machineId?: number,
+    toolId?: number,
 }
 
 export interface SetupTO {

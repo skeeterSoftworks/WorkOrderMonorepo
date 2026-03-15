@@ -10,11 +10,12 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
+import MenuItem from '@mui/material/MenuItem';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LinkIcon from '@mui/icons-material/Link';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { ProductTO } from 'sf-common/src/models/ApiRequests';
+import type { ProductTO, MachineTO, ToolTO } from 'sf-common/src/models/ApiRequests';
 import { Server, ConfirmationModal } from 'sf-common';
 
 type LocalProduct = ProductTO;
@@ -23,32 +24,43 @@ export function ProductsManagementPanel() {
     const { t } = useTranslation();
 
     const [products, setProducts] = useState<LocalProduct[]>([]);
+    const [machines, setMachines] = useState<MachineTO[]>([]);
     const [selectedProductId, setSelectedProductId] = useState<number | undefined>(undefined);
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
-    const [machineType, setMachineType] = useState('');
-    const [toolType, setToolType] = useState('');
+    const [selectedMachineId, setSelectedMachineId] = useState<number | undefined>(undefined);
+    const [selectedToolId, setSelectedToolId] = useState<number | undefined>(undefined);
     const [productToDelete, setProductToDelete] = useState<LocalProduct | null>(null);
+
+    const selectedMachine = machines.find((m) => m.id === selectedMachineId);
+    const availableTools: ToolTO[] = selectedMachine?.tools ?? [];
 
     useEffect(() => {
         loadProducts();
+        loadMachines();
     }, []);
+
+    const loadMachines = () => {
+        Server.getAllMachines(
+            (response: any) => {
+                let data: MachineTO[] = [];
+                if (Array.isArray(response?.data)) data = response.data;
+                else if (Array.isArray(response?.data?.data)) data = response.data.data;
+                setMachines(data);
+            },
+            () => {},
+        );
+    };
 
     const loadProducts = () => {
         Server.getAllProducts(
             (response: any) => {
                 let data: LocalProduct[] = [];
-
-                if (Array.isArray(response?.data)) {
-                    data = response.data;
-                } else if (Array.isArray(response?.data?.data)) {
-                    data = response.data.data;
-                }
-
+                if (Array.isArray(response?.data)) data = response.data;
+                else if (Array.isArray(response?.data?.data)) data = response.data.data;
                 setProducts(data);
             },
-            () => {
-            }
+            () => {},
         );
     };
 
@@ -56,16 +68,21 @@ export function ProductsManagementPanel() {
         setSelectedProductId(undefined);
         setName('');
         setDescription('');
-        setMachineType('');
-        setToolType('');
+        setSelectedMachineId(undefined);
+        setSelectedToolId(undefined);
+    };
+
+    const handleMachineChange = (machineId: number | undefined) => {
+        setSelectedMachineId(machineId);
+        setSelectedToolId(undefined);
     };
 
     const handleEditClick = (product: LocalProduct) => {
         setSelectedProductId(product.id as number | undefined);
         setName(product.name || '');
         setDescription(product.description || '');
-        setMachineType(product.machineType || '');
-        setToolType(product.toolType || '');
+        setSelectedMachineId(product.machineId);
+        setSelectedToolId(product.toolId);
     };
 
     const handleSubmit = () => {
@@ -73,20 +90,29 @@ export function ProductsManagementPanel() {
             id: selectedProductId,
             name,
             description,
-            machineType: machineType || undefined,
-            toolType: toolType || undefined,
+            machineId: selectedMachineId,
+            toolId: selectedToolId,
         };
-
         const onSuccess = () => {
             loadProducts();
             resetForm();
         };
-
         if (selectedProductId) {
             Server.editProduct(payload, onSuccess, () => {});
         } else {
             Server.addProduct(payload, onSuccess, () => {});
         }
+    };
+
+    const getMachineName = (machineId: number | undefined) =>
+        machineId == null ? '' : machines.find((m) => m.id === machineId)?.machineName ?? '';
+    const getToolName = (toolId: number | undefined) => {
+        if (toolId == null) return '';
+        for (const m of machines) {
+            const tool = (m.tools ?? []).find((t) => t.id === toolId);
+            if (tool) return tool.toolName ?? '';
+        }
+        return '';
     };
 
     const handleDeleteClick = (product: LocalProduct) => {
@@ -136,19 +162,36 @@ export function ProductsManagementPanel() {
                         minRows={2}
                     />
                     <TextField
-                        label={t('machineType')}
-                        value={machineType}
-                        onChange={(e) => setMachineType(e.target.value)}
+                        select
+                        label={t('machine')}
+                        value={selectedMachineId ?? ''}
+                        onChange={(e) => handleMachineChange(e.target.value ? Number(e.target.value) : undefined)}
                         size="small"
                         fullWidth
-                    />
+                    >
+                        <MenuItem value="">{t('none')}</MenuItem>
+                        {machines.map((m) => (
+                            <MenuItem key={m.id} value={m.id}>
+                                {m.machineName}
+                            </MenuItem>
+                        ))}
+                    </TextField>
                     <TextField
-                        label={t('toolType')}
-                        value={toolType}
-                        onChange={(e) => setToolType(e.target.value)}
+                        select
+                        label={t('tool')}
+                        value={selectedToolId ?? ''}
+                        onChange={(e) => setSelectedToolId(e.target.value ? Number(e.target.value) : undefined)}
                         size="small"
                         fullWidth
-                    />
+                        disabled={!selectedMachineId}
+                    >
+                        <MenuItem value="">{t('none')}</MenuItem>
+                        {availableTools.map((tool) => (
+                            <MenuItem key={tool.id} value={tool.id}>
+                                {tool.toolName}
+                            </MenuItem>
+                        ))}
+                    </TextField>
 
                     <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
                         <Button variant="contained" color="primary" onClick={handleSubmit}>
@@ -172,8 +215,8 @@ export function ProductsManagementPanel() {
                             <TableRow>
                                 <TableCell>{t('name')}</TableCell>
                                 <TableCell>{t('description')}</TableCell>
-                                <TableCell>{t('machineType')}</TableCell>
-                                <TableCell>{t('toolType')}</TableCell>
+                                <TableCell>{t('machine')}</TableCell>
+                                <TableCell>{t('tool')}</TableCell>
                                 <TableCell align="right">{t('actions')}</TableCell>
                             </TableRow>
                         </TableHead>
@@ -182,8 +225,8 @@ export function ProductsManagementPanel() {
                                 <TableRow key={product.id || product.name}>
                                     <TableCell>{product.name}</TableCell>
                                     <TableCell>{product.description}</TableCell>
-                                    <TableCell>{product.machineType}</TableCell>
-                                    <TableCell>{product.toolType}</TableCell>
+                                    <TableCell>{getMachineName(product.machineId)}</TableCell>
+                                    <TableCell>{getToolName(product.toolId)}</TableCell>
                                     <TableCell align="right">
                                         <IconButton
                                             size="small"
