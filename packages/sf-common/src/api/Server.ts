@@ -1,4 +1,4 @@
-import type {ApplicationUserTO, StationConfigDTO, PurchaseOrderTO, ProductTO} from "../models/ApiRequests";
+import type {ApplicationUserTO, StationConfigDTO, PurchaseOrderTO, ProductTO, CustomerTO} from "../models/ApiRequests";
 import axios from "axios";
 import { getServerUrl } from "../util/EnvUtils";
 
@@ -145,6 +145,42 @@ export class Server {
 
     static deleteProduct(id: number, onSuccess: Function, onError: Function) {
         axios.delete(`${getServerUrl()}/products/${id}`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static getAllCustomers(onSuccess: Function, onError: Function) {
+        axios.get(`${getServerUrl()}/customers/all`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static addCustomer(customer: CustomerTO, onSuccess: Function, onError: Function) {
+        axios.post(`${getServerUrl()}/customers/add`, customer)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static editCustomer(customer: CustomerTO, onSuccess: Function, onError: Function) {
+        axios.post(`${getServerUrl()}/customers/update`, customer)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static deleteCustomer(id: number, onSuccess: Function, onError: Function) {
+        axios.delete(`${getServerUrl()}/customers/${id}`)
             .then(response => onSuccess(response))
             .catch(error => {
                 console.log(error);

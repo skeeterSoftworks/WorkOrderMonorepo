@@ -76,7 +76,9 @@ export interface ApplicationUserTO {
 
 export interface CustomerTO {
     id?: number,
-    companyName?: string
+    companyName?: string,
+    addressData?: string,
+    description?: string
 }
 
 export interface ProductOrderTO {
