@@ -9,8 +9,6 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LoggedUser } from 'work-order-local/src/models/Common.ts';
 import { UsersManagementPanel } from './UsersManagementPanel';
-import { WorkOrdersManagementPanel } from './WorkOrdersManagementPanel';
-import { PurchaseOrdersManagementPanel } from './PurchaseOrdersManagementPanel';
 import { ProductsManagementPanel } from './ProductsManagementPanel';
 import { CustomersManagementPanel } from './CustomersManagementPanel';
 import { MachinesManagementPanel } from './MachinesManagementPanel';
@@ -18,11 +16,9 @@ import { MachinesManagementPanel } from './MachinesManagementPanel';
 // @ts-ignore
 enum AdminTabs {
     USERS = 0,
-    WORK_ORDERS = 1,
-    PURCHASE_ORDERS = 2,
-    PRODUCTS = 3,
-    CUSTOMERS = 4,
-    MACHINES = 5,
+    PRODUCTS = 1,
+    CUSTOMERS = 2,
+    MACHINES = 3,
 }
 
 export function AdminHome() {
@@ -49,8 +45,6 @@ export function AdminHome() {
                     onChange={(_, newValue) => setActiveTab(newValue)}
                 >
                     <Tab label={t('users')} value={AdminTabs.USERS} />
-                    <Tab label={t('workOrders')} value={AdminTabs.WORK_ORDERS} />
-                    <Tab label={t('purchaseOrders')} value={AdminTabs.PURCHASE_ORDERS} />
                     <Tab label={t('products')} value={AdminTabs.PRODUCTS} />
                     <Tab label={t('customers')} value={AdminTabs.CUSTOMERS} />
                     <Tab label={t('machines')} value={AdminTabs.MACHINES} />
@@ -58,8 +52,6 @@ export function AdminHome() {
             </Box>
 
             {activeTab === AdminTabs.USERS && <UsersManagementPanel />}
-            {activeTab === AdminTabs.WORK_ORDERS && <WorkOrdersManagementPanel />}
-            {activeTab === AdminTabs.PURCHASE_ORDERS && <PurchaseOrdersManagementPanel />}
             {activeTab === AdminTabs.PRODUCTS && <ProductsManagementPanel />}
             {activeTab === AdminTabs.CUSTOMERS && <CustomersManagementPanel />}
             {activeTab === AdminTabs.MACHINES && <MachinesManagementPanel />}

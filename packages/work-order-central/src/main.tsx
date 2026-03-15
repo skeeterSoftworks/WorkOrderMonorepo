@@ -7,8 +7,8 @@ import {BrowserRouter, Route, Routes} from "react-router-dom";
 import {HOC} from "./containers/HOC.tsx";
 import {Home} from "./components/home/Home.tsx";
 import {MockQr} from "./containers/MockQr.tsx";
-import {PurchaseOrdersHome} from "./components/purchaseOrders/PurchaseOrdersHome.tsx";
-import {WorkOrdersHome} from "./components/workOrders/WorkOrdersHome.tsx";
+import {PurchaseOrdersManagementPage} from "./components/purchaseOrders/PurchaseOrdersManagementPage.tsx";
+import {WorkOrdersManagementPage} from "./components/workOrders/WorkOrdersManagementPage.tsx";
 import {StockHome} from "./components/stock/StockHome.tsx";
 import {AdminHome} from "./components/admin/AdminHome.tsx";
 
@@ -30,8 +30,8 @@ root.render(
                 <HOC>
                     <Routes>
                         <Route path="/" element={<Home/>}/>
-                        <Route path="/purchase-orders" element={<PurchaseOrdersHome/>}/>
-                        <Route path="/work-orders" element={<WorkOrdersHome/>}/>
+                        <Route path="/purchase-orders" element={<PurchaseOrdersManagementPage/>}/>
+                        <Route path="/work-orders" element={<WorkOrdersManagementPage/>}/>
                         <Route path="/stock" element={<StockHome/>}/>
                         <Route path="/admin" element={<AdminHome/>}/>
                         <Route path="/mock-qr" element={<MockQr/>}/>
