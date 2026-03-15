@@ -1,4 +1,4 @@
-import type {ApplicationUserTO, StationConfigDTO, PurchaseOrderTO, ProductTO, CustomerTO, MachineTO} from "../models/ApiRequests";
+import type {ApplicationUserTO, StationConfigDTO, PurchaseOrderTO, ProductTO, CustomerTO, MachineTO, WorkOrderTO} from "../models/ApiRequests";
 import axios from "axios";
 import { getServerUrl } from "../util/EnvUtils";
 
@@ -109,6 +109,42 @@ export class Server {
 
     static deletePurchaseOrder(id: number, onSuccess: Function, onError: Function) {
         axios.delete(`${getServerUrl()}/purchaseorder/${id}`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static getAllWorkOrders(onSuccess: Function, onError: Function) {
+        axios.get(`${getServerUrl()}/workorders/all`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static addWorkOrder(workOrder: WorkOrderTO, onSuccess: Function, onError: Function) {
+        axios.post(`${getServerUrl()}/workorders/add`, workOrder)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static editWorkOrder(workOrder: WorkOrderTO, onSuccess: Function, onError: Function) {
+        axios.post(`${getServerUrl()}/workorders/update`, workOrder)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static deleteWorkOrder(id: number, onSuccess: Function, onError: Function) {
+        axios.delete(`${getServerUrl()}/workorders/${id}`)
             .then(response => onSuccess(response))
             .catch(error => {
                 console.log(error);

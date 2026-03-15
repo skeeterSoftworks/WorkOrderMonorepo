@@ -326,5 +326,19 @@
   "notLoggedIn": "You are not logged in",
   "loginButton": "Login",
   "Pregled sesija": "Sessions overview",
-  "Central panel: pregled svih stanica": "Central panel: all stations overview"
+  "Central panel: pregled svih stanica": "Central panel: all stations overview",
+  "workOrdersList": "Work orders",
+  "createNewWorkOrder": "Create new work order",
+  "editWorkOrder": "Edit work order",
+  "confirmDeleteWorkOrder": "Are you sure you want to delete this work order?",
+  "purchaseOrder": "Purchase order",
+  "dueDate": "Due date",
+  "startDate": "Start date",
+  "endDate": "End date",
+  "addWorkOrder": "Add work order",
+  "close": "Close",
+  "none": "None",
+  "cancel": "Cancel",
+  "workOrdersManagement": "Work orders",
+  "workOrdersManagementStub": "Create and manage work orders linked to purchase orders."
 }

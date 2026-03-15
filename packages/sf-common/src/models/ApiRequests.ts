@@ -121,6 +121,15 @@ export interface PurchaseOrderTO {
     comment?: string
 }
 
+export interface WorkOrderTO {
+    id?: number,
+    purchaseOrderId?: number,
+    dueDate?: string,
+    startDate?: string,
+    endDate?: string,
+    comment?: string
+}
+
 export interface ProductProfileTO {
     productReferenceID?: string,
     productName?: string,

@@ -325,5 +325,19 @@
   "enterOrScanQR": "Unesite ID ili skenirajte QR:",
   "notLoggedIn": "Niste ulogovani",
   "loginButton": "Uloguj se",
-  "centralPanelAllStationsOverview": "Central panel: pregled svih stanica"
+  "centralPanelAllStationsOverview": "Central panel: pregled svih stanica",
+  "workOrdersList": "Radni nalozi",
+  "createNewWorkOrder": "Kreiraj novi radni nalog",
+  "editWorkOrder": "Izmena radnog naloga",
+  "confirmDeleteWorkOrder": "Da li ste sigurni da želite da obrišete ovaj radni nalog?",
+  "purchaseOrder": "Narudžbenica",
+  "dueDate": "Rok",
+  "startDate": "Datum početka",
+  "endDate": "Datum završetka",
+  "addWorkOrder": "Dodaj radni nalog",
+  "close": "Zatvori",
+  "none": "Nijedan",
+  "cancel": "Odustani",
+  "workOrdersManagement": "Radni nalozi",
+  "workOrdersManagementStub": "Kreirajte i upravljajte radnim nalozima povezanim sa narudžbenicama."
 }
