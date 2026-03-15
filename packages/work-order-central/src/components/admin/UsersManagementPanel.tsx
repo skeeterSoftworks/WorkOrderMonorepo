@@ -2,6 +2,7 @@ import Paper from '@mui/material/Paper';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
+import MenuItem from '@mui/material/MenuItem';
 import IconButton from '@mui/material/IconButton';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -30,8 +31,28 @@ export function UsersManagementPanel() {
     const [surname, setSurname] = useState('');
     const [qrCode, setQrCode] = useState('');
     const [role, setRole] = useState<'ADMIN' | 'OPERATOR'>('OPERATOR');
-    const [accountStatus, setAccountStatus] = useState<string>('');
     const [userToDelete, setUserToDelete] = useState<LocalApplicationUser | null>(null);
+
+    const formatCreatedDate = (value: any): string => {
+        if (!value) {
+            return '';
+        }
+
+        // If backend sends LocalDateTime as array [year, month, day, hour, minute, second,...]
+        if (Array.isArray(value)) {
+            const [year, month = 1, day = 1, hour = 0, minute = 0, second = 0] = value;
+            const d = new Date(year, month - 1, day, hour, minute, second);
+            return Number.isNaN(d.getTime()) ? '' : d.toLocaleString();
+        }
+
+        // If backend sends ISO string
+        if (typeof value === 'string') {
+            const d = new Date(value);
+            return Number.isNaN(d.getTime()) ? value : d.toLocaleString();
+        }
+
+        return '';
+    };
 
     useEffect(() => {
         loadUsers();
@@ -61,7 +82,6 @@ export function UsersManagementPanel() {
         setSurname('');
         setQrCode('');
         setRole('OPERATOR');
-        setAccountStatus('');
     };
 
     const handleEditClick = (user: LocalApplicationUser) => {
@@ -70,7 +90,6 @@ export function UsersManagementPanel() {
         setSurname(user.surname || '');
         setQrCode(user.qrCode || '');
         setRole(user.role || 'OPERATOR');
-        setAccountStatus(user.accountStatus || '');
     };
 
     const handleSubmit = () => {
@@ -80,7 +99,6 @@ export function UsersManagementPanel() {
             surname,
             qrCode,
             role,
-            accountStatus,
         };
 
         const onSuccess = () => {
@@ -147,19 +165,16 @@ export function UsersManagementPanel() {
                         fullWidth
                     />
                     <TextField
+                        select
                         label={t('role')}
                         value={role}
                         onChange={(e) => setRole(e.target.value as 'ADMIN' | 'OPERATOR')}
                         size="small"
                         fullWidth
-                    />
-                    <TextField
-                        label={t('accountStatus')}
-                        value={accountStatus}
-                        onChange={(e) => setAccountStatus(e.target.value)}
-                        size="small"
-                        fullWidth
-                    />
+                    >
+                        <MenuItem value="OPERATOR">{t('operator')}</MenuItem>
+                        <MenuItem value="ADMIN">{t('admin')}</MenuItem>
+                    </TextField>
 
                     <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
                         <Button variant="contained" color="primary" onClick={handleSubmit}>
@@ -185,7 +200,7 @@ export function UsersManagementPanel() {
                                 <TableCell>{t('surname')}</TableCell>
                                 <TableCell>{t('qrCode')}</TableCell>
                                 <TableCell>{t('role')}</TableCell>
-                                <TableCell>{t('accountStatus')}</TableCell>
+                                <TableCell>{t('createdDate')}</TableCell>
                                 <TableCell align="right">{t('actions')}</TableCell>
                             </TableRow>
                         </TableHead>
@@ -196,7 +211,9 @@ export function UsersManagementPanel() {
                                     <TableCell>{user.surname}</TableCell>
                                     <TableCell>{user.qrCode}</TableCell>
                                     <TableCell>{user.role}</TableCell>
-                                    <TableCell>{user.accountStatus}</TableCell>
+                                    <TableCell>
+                                        {formatCreatedDate(user.createdDate as any)}
+                                    </TableCell>
                                     <TableCell align="right">
                                         <IconButton
                                             size="small"
