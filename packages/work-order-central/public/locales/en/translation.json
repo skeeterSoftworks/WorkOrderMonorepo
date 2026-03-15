@@ -355,6 +355,7 @@
   "stateCompleted": "Completed",
   "stateDelivered": "Delivered",
   "currentState": "current",
+  "createWorkOrderFromThis": "Create work order",
   "notYet": "Not yet",
   "purchaseOrderHasWorkOrderCannotDelete": "Cannot delete: a work order is linked to this purchase order. Delete the work order first.",
   "msg_errorDeletingPurchaseOrder": "Error deleting purchase order."

@@ -354,6 +354,7 @@
   "stateCompleted": "Završeno",
   "stateDelivered": "Isporučeno",
   "currentState": "trenutno",
+  "createWorkOrderFromThis": "Kreiraj radni nalog",
   "notYet": "Još nije",
   "purchaseOrderHasWorkOrderCannotDelete": "Nije moguće obrisati: radni nalog je povezan sa ovom narudžbenicom. Prvo obrišite radni nalog.",
   "msg_errorDeletingPurchaseOrder": "Greška pri brisanju narudžbenice."

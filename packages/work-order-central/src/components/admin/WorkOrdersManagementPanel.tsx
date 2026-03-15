@@ -19,12 +19,14 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { WorkOrderTO, PurchaseOrderTO } from 'sf-common/src/models/ApiRequests';
 import { Server, ConfirmationModal } from 'sf-common';
 
 export function WorkOrdersManagementPanel() {
     const { t } = useTranslation();
+    const [searchParams, setSearchParams] = useSearchParams();
 
     const [workOrders, setWorkOrders] = useState<WorkOrderTO[]>([]);
     const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrderTO[]>([]);
@@ -41,6 +43,21 @@ export function WorkOrdersManagementPanel() {
         loadWorkOrders();
         loadPurchaseOrders();
     }, []);
+
+    useEffect(() => {
+        const presetId = searchParams.get('createFromPurchaseOrder');
+        if (presetId != null && presetId !== '' && !Number.isNaN(Number(presetId))) {
+            const id = Number(presetId);
+            setSelectedId(undefined);
+            setPurchaseOrderId(id);
+            setDueDate('');
+            setStartDate('');
+            setEndDate('');
+            setComment('');
+            setFormModalOpen(true);
+            setSearchParams({});
+        }
+    }, [searchParams, setSearchParams]);
 
     const loadPurchaseOrders = () => {
         Server.getAllPurchaseOrders(

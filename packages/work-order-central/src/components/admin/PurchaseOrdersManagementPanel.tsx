@@ -22,6 +22,7 @@ import UploadFileIcon from '@mui/icons-material/UploadFile';
 import DownloadIcon from '@mui/icons-material/Download';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { PurchaseOrderTO, ProductOrderTO, CustomerTO, ProductTO } from 'sf-common/src/models/ApiRequests';
 import { Server, ConfirmationModal } from 'sf-common';
@@ -37,6 +38,7 @@ type ProductOrderRow = { id?: number; productId?: number; quantity: string; pric
 
 export function PurchaseOrdersManagementPanel() {
     const { t } = useTranslation();
+    const navigate = useNavigate();
 
     const [orders, setOrders] = useState<LocalPurchaseOrder[]>([]);
     const [customers, setCustomers] = useState<CustomerTO[]>([]);
@@ -586,9 +588,24 @@ export function PurchaseOrdersManagementPanel() {
             >
                 <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     {t('purchaseOrderDetails')}
-                    <IconButton size="small" onClick={closeDetailsModal} aria-label={t('close')}>
-                        <CloseIcon />
-                    </IconButton>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {detailsOrder?.id != null && (
+                            <Button
+                                variant="contained"
+                                size="small"
+                                startIcon={<AddIcon />}
+                                onClick={() => {
+                                    navigate(`/work-orders?createFromPurchaseOrder=${detailsOrder.id}`);
+                                    closeDetailsModal();
+                                }}
+                            >
+                                {t('createWorkOrderFromThis')}
+                            </Button>
+                        )}
+                        <IconButton size="small" onClick={closeDetailsModal} aria-label={t('close')}>
+                            <CloseIcon />
+                        </IconButton>
+                    </Box>
                 </DialogTitle>
                 <DialogContent dividers sx={{ minHeight: '60vh' }}>
                     {detailsLoading && (
