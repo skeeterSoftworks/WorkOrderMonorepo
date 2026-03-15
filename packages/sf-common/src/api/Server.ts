@@ -71,6 +71,15 @@ export class Server {
             });
     }
 
+    static deleteUser(id: number, onSuccess: Function, onError: Function) {
+        axios.delete(`${getServerUrl()}/users/${id}`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
     static getCustomQrCode(customQr: string, onSuccess: Function) {
         axios.get(`${getServerUrl()}/qrcode/generate?qrData=${customQr}`)
             .then(response => {
