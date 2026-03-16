@@ -46,12 +46,12 @@ export function MockQr() {
 
     function getCustomQr(customQrData: any) {
 
-        Server.getCustomQrCode(customQrData, (customQrCode) => {
+        Server.getCustomQrCode(customQrData, (customQrCode: string) => {
             setCustomQrCode(customQrCode)
         })
     }
 
-    function sendMockScannedQrData(formValues) {
+    function sendMockScannedQrData(formValues: any) {
 
         const mockQrRequest = {
             mockScannedQr: formValues?.mockScannedQR?.toUpperCase()

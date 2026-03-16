@@ -22,7 +22,7 @@ export function UsersManagementPanel() {
     const { t } = useTranslation();
 
     const [users, setUsers] = useState<ApplicationUserTO[]>([]);
-    const [selectedUserId, setSelectedUserId] = useState<string | number | undefined>(undefined);
+    const [selectedUserId, setSelectedUserId] = useState<string  | undefined>(undefined);
     const [name, setName] = useState('');
     const [surname, setSurname] = useState('');
     const [qrCode, setQrCode] = useState('');

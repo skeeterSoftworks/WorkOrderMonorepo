@@ -136,6 +136,8 @@ export function ProductsManagementPanel() {
         resetForm();
     };
 
+    // @ts-ignore
+    // @ts-ignore
     return (
         <Box sx={{ mt: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -215,7 +217,7 @@ export function ProductsManagementPanel() {
                             onChange={(e) => handleMachineIdsChange([].concat(e.target.value as number[]))}
                             size="small"
                             fullWidth
-                            renderValue={(selected) =>
+                            renderValue={(selected: any) =>
                                 (selected as number[]).length === 0
                                     ? t('none')
                                     : (selected as number[])

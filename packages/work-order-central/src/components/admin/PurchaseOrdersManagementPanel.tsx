@@ -173,7 +173,7 @@ export function PurchaseOrdersManagementPanel() {
                 quantity: Number(row.quantity) || 0,
                 pricePerUnit: Number(row.pricePerUnit) || 0,
             }));
-        const customerId = selectedCustomerId != null && selectedCustomerId !== '' ? Number(selectedCustomerId) : undefined;
+        const customerId = selectedCustomerId && Number(selectedCustomerId) ;
         const payload: PurchaseOrderTO = {
             id: selectedOrderId,
             reference,
@@ -520,7 +520,8 @@ export function PurchaseOrdersManagementPanel() {
                                     select
                                     label={t('product')}
                                     value={row.productId ?? ''}
-                                    onChange={(e) => updateProductOrderRow(index, 'productId', e.target.value ? Number(e.target.value) : undefined)}
+                                    onChange={(e) =>
+                                        updateProductOrderRow(index, 'productId', e.target.value && Number(e.target.value) )}
                                     size="small"
                                     sx={{ minWidth: 160, flex: 1 }}
                                 >
@@ -660,7 +661,7 @@ export function PurchaseOrdersManagementPanel() {
                                     { key: 'IN_PRODUCTION', label: t('stateInProduction'), time: detailsOrder.inProductionAt, emptyLabel: t('notYet') },
                                     { key: 'COMPLETED', label: t('stateCompleted'), time: detailsOrder.completedAt },
                                     { key: 'DELIVERED', label: t('stateDelivered'), time: detailsOrder.deliveredAt },
-                                ].map((item, index) => {
+                                ].map((item) => {
                                     const isCurrent = (detailsOrder.orderStatus ?? 'CREATED') === item.key;
                                     return (
                                         <Box
