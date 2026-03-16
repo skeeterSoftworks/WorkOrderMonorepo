@@ -11,11 +11,16 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import MenuItem from '@mui/material/MenuItem';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LinkIcon from '@mui/icons-material/Link';
+import AddIcon from '@mui/icons-material/Add';
+import CloseIcon from '@mui/icons-material/Close';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { ProductTO, MachineTO, ToolTO } from 'sf-common/src/models/ApiRequests';
+import type { ProductTO, MachineTO } from 'sf-common/src/models/ApiRequests';
 import { Server, ConfirmationModal } from 'sf-common';
 
 type LocalProduct = ProductTO;
@@ -28,12 +33,9 @@ export function ProductsManagementPanel() {
     const [selectedProductId, setSelectedProductId] = useState<number | undefined>(undefined);
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
-    const [selectedMachineId, setSelectedMachineId] = useState<number | undefined>(undefined);
-    const [selectedToolId, setSelectedToolId] = useState<number | undefined>(undefined);
+    const [selectedMachineIds, setSelectedMachineIds] = useState<number[]>([]);
     const [productToDelete, setProductToDelete] = useState<LocalProduct | null>(null);
-
-    const selectedMachine = machines.find((m) => m.id === selectedMachineId);
-    const availableTools: ToolTO[] = selectedMachine?.tools ?? [];
+    const [formModalOpen, setFormModalOpen] = useState(false);
 
     useEffect(() => {
         loadProducts();
@@ -68,21 +70,24 @@ export function ProductsManagementPanel() {
         setSelectedProductId(undefined);
         setName('');
         setDescription('');
-        setSelectedMachineId(undefined);
-        setSelectedToolId(undefined);
+        setSelectedMachineIds([]);
     };
 
-    const handleMachineChange = (machineId: number | undefined) => {
-        setSelectedMachineId(machineId);
-        setSelectedToolId(undefined);
+    const openFormModal = () => {
+        resetForm();
+        setFormModalOpen(true);
+    };
+
+    const handleMachineIdsChange = (ids: number[]) => {
+        setSelectedMachineIds(ids);
     };
 
     const handleEditClick = (product: LocalProduct) => {
         setSelectedProductId(product.id as number | undefined);
         setName(product.name || '');
         setDescription(product.description || '');
-        setSelectedMachineId(product.machineId);
-        setSelectedToolId(product.toolId);
+        setSelectedMachineIds(product.machineIds ?? []);
+        setFormModalOpen(true);
     };
 
     const handleSubmit = () => {
@@ -90,12 +95,12 @@ export function ProductsManagementPanel() {
             id: selectedProductId,
             name,
             description,
-            machineId: selectedMachineId,
-            toolId: selectedToolId,
+            machineIds: selectedMachineIds.length > 0 ? selectedMachineIds : undefined,
         };
         const onSuccess = () => {
             loadProducts();
             resetForm();
+            setFormModalOpen(false);
         };
         if (selectedProductId) {
             Server.editProduct(payload, onSuccess, () => {});
@@ -104,16 +109,8 @@ export function ProductsManagementPanel() {
         }
     };
 
-    const getMachineName = (machineId: number | undefined) =>
-        machineId == null ? '' : machines.find((m) => m.id === machineId)?.machineName ?? '';
-    const getToolName = (toolId: number | undefined) => {
-        if (toolId == null) return '';
-        for (const m of machines) {
-            const tool = (m.tools ?? []).find((t) => t.id === toolId);
-            if (tool) return tool.toolName ?? '';
-        }
-        return '';
-    };
+    const getMachineNames = (machineIds: number[] | undefined) =>
+        (machineIds ?? []).map((id) => machines.find((m) => m.id === id)?.machineName ?? id).filter(Boolean).join(', ') || '—';
 
     const handleDeleteClick = (product: LocalProduct) => {
         setProductToDelete(product);
@@ -124,91 +121,31 @@ export function ProductsManagementPanel() {
             setProductToDelete(null);
             return;
         }
-
         Server.deleteProduct(
             Number(productToDelete.id),
             () => {
                 loadProducts();
                 setProductToDelete(null);
             },
-            () => {
-                setProductToDelete(null);
-            }
+            () => setProductToDelete(null),
         );
     };
 
+    const closeFormModal = () => {
+        setFormModalOpen(false);
+        resetForm();
+    };
+
     return (
-        <Box sx={{ display: 'flex', gap: 3, mt: 3, flexWrap: 'wrap' }}>
-            <Paper sx={{ flex: 1, minWidth: 320, p: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                    {t('productsManagement')}
-                </Typography>
+        <Box sx={{ mt: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">{t('productsManagement')}</Typography>
+                <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={openFormModal}>
+                    {t('addProduct')}
+                </Button>
+            </Box>
 
-                <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <TextField
-                        label={t('name')}
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        size="small"
-                        fullWidth
-                    />
-                    <TextField
-                        label={t('description')}
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        size="small"
-                        fullWidth
-                        multiline
-                        minRows={2}
-                    />
-                    <TextField
-                        select
-                        label={t('machine')}
-                        value={selectedMachineId ?? ''}
-                        onChange={(e) => handleMachineChange(e.target.value ? Number(e.target.value) : undefined)}
-                        size="small"
-                        fullWidth
-                    >
-                        <MenuItem value="">{t('none')}</MenuItem>
-                        {machines.map((m) => (
-                            <MenuItem key={m.id} value={m.id}>
-                                {m.machineName}
-                            </MenuItem>
-                        ))}
-                    </TextField>
-                    <TextField
-                        select
-                        label={t('tool')}
-                        value={selectedToolId ?? ''}
-                        onChange={(e) => setSelectedToolId(e.target.value ? Number(e.target.value) : undefined)}
-                        size="small"
-                        fullWidth
-                        disabled={!selectedMachineId}
-                    >
-                        <MenuItem value="">{t('none')}</MenuItem>
-                        {availableTools.map((tool) => (
-                            <MenuItem key={tool.id} value={tool.id}>
-                                {tool.toolName}
-                            </MenuItem>
-                        ))}
-                    </TextField>
-
-                    <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                        <Button variant="contained" color="primary" onClick={handleSubmit}>
-                            {selectedProductId ? t('editProduct') : t('addProduct')}
-                        </Button>
-                        <Button variant="outlined" onClick={resetForm}>
-                            {t('reset')}
-                        </Button>
-                    </Box>
-                </Box>
-            </Paper>
-
-            <Paper sx={{ flex: 2, minWidth: 400, p: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                    {t('productsList')}
-                </Typography>
-
+            <Paper sx={{ p: 2 }}>
                 <TableContainer>
                     <Table size="small">
                         <TableHead>
@@ -216,7 +153,6 @@ export function ProductsManagementPanel() {
                                 <TableCell>{t('name')}</TableCell>
                                 <TableCell>{t('description')}</TableCell>
                                 <TableCell>{t('machine')}</TableCell>
-                                <TableCell>{t('tool')}</TableCell>
                                 <TableCell align="right">{t('actions')}</TableCell>
                             </TableRow>
                         </TableHead>
@@ -225,20 +161,17 @@ export function ProductsManagementPanel() {
                                 <TableRow key={product.id || product.name}>
                                     <TableCell>{product.name}</TableCell>
                                     <TableCell>{product.description}</TableCell>
-                                    <TableCell>{getMachineName(product.machineId)}</TableCell>
-                                    <TableCell>{getToolName(product.toolId)}</TableCell>
+                                    <TableCell>{getMachineNames(product.machineIds)}</TableCell>
                                     <TableCell align="right">
                                         <IconButton
                                             size="small"
                                             onClick={() => handleEditClick(product)}
                                             sx={{ mr: 1 }}
+                                            title={t('editProduct')}
                                         >
                                             <LinkIcon fontSize="small" />
                                         </IconButton>
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => handleDeleteClick(product)}
-                                        >
+                                        <IconButton size="small" onClick={() => handleDeleteClick(product)}>
                                             <DeleteIcon fontSize="small" />
                                         </IconButton>
                                     </TableCell>
@@ -249,6 +182,65 @@ export function ProductsManagementPanel() {
                 </TableContainer>
             </Paper>
 
+            <Dialog open={formModalOpen} onClose={closeFormModal} maxWidth="sm" fullWidth scroll="paper">
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    {selectedProductId ? t('editProduct') : t('addProduct')}
+                    <IconButton size="small" onClick={closeFormModal} aria-label={t('close')}>
+                        <CloseIcon />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent dividers>
+                    <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+                        <TextField
+                            label={t('name')}
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            size="small"
+                            fullWidth
+                        />
+                        <TextField
+                            label={t('description')}
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            size="small"
+                            fullWidth
+                            multiline
+                            minRows={2}
+                        />
+                        <TextField
+                            select
+                            SelectProps={{ multiple: true }}
+                            label={t('machine')}
+                            value={selectedMachineIds}
+                            onChange={(e) => handleMachineIdsChange([].concat(e.target.value as number[]))}
+                            size="small"
+                            fullWidth
+                            renderValue={(selected) =>
+                                (selected as number[]).length === 0
+                                    ? t('none')
+                                    : (selected as number[])
+                                          .map((id) => machines.find((m) => m.id === id)?.machineName ?? id)
+                                          .join(', ')
+                            }
+                        >
+                            {machines.map((m) => (
+                                <MenuItem key={m.id} value={m.id}>
+                                    {m.machineName}
+                                </MenuItem>
+                            ))}
+                        </TextField>
+                        <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                            <Button variant="contained" color="primary" onClick={handleSubmit}>
+                                {selectedProductId ? t('editProduct') : t('addProduct')}
+                            </Button>
+                            <Button variant="outlined" onClick={closeFormModal}>
+                                {t('cancel')}
+                            </Button>
+                        </Box>
+                    </Box>
+                </DialogContent>
+            </Dialog>
+
             <ConfirmationModal
                 open={!!productToDelete}
                 modalMessage={t('confirmDeleteProduct')}
@@ -258,4 +250,3 @@ export function ProductsManagementPanel() {
         </Box>
     );
 }
-

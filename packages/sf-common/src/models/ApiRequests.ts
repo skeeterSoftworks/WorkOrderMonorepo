@@ -19,7 +19,7 @@ export interface ProductTO {
     id?: number,
     name?: string,
     description?: string,
-    machineId?: number,
+    machineIds?: number[],
     toolId?: number,
 }
 
