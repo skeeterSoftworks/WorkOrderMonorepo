@@ -357,5 +357,21 @@
   "createWorkOrderFromThis": "Kreiraj radni nalog",
   "notYet": "Još nije",
   "purchaseOrderHasWorkOrderCannotDelete": "Nije moguće obrisati: radni nalog je povezan sa ovom narudžbenicom. Prvo obrišite radni nalog.",
-  "msg_errorDeletingPurchaseOrder": "Greška pri brisanju narudžbenice."
+  "msg_errorDeletingPurchaseOrder": "Greška pri brisanju narudžbenice.",
+  "scheduleMachineForWorkOrder": "Zakaži mašinu za radni nalog",
+  "scheduleOnMachine": "Zakaži na mašini",
+  "startDateTime": "Početak (datum i vreme)",
+  "endDateTime": "Kraj (datum i vreme)",
+  "bookingType": "Tip rezervacije",
+  "bookingTypeProduction": "Produkcija",
+  "bookingTypeMaintenance": "Održavanje",
+  "bookingTypeSetup": "Setup",
+  "bookingTypeOther": "Ostalo",
+  "schedule": "Zakaži",
+  "errorSchedulingMachine": "Greška pri zakazivanju mašine.",
+  "allFieldsRequired": "Sva obavezna polja moraju biti popunjena.",
+  "production": "Produkcija",
+  "calendar": "Kalendar",
+  "free": "Slobodno",
+  "occupied": "Zauzeto"
 }

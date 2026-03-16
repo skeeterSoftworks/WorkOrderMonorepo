@@ -11,6 +11,7 @@ import {PurchaseOrdersManagementPage} from "./components/purchaseOrders/Purchase
 import {WorkOrdersManagementPage} from "./components/workOrders/WorkOrdersManagementPage.tsx";
 import {StockHome} from "./components/stock/StockHome.tsx";
 import {AdminHome} from "./components/admin/AdminHome.tsx";
+import {ProductionPage} from "./components/production/ProductionPage.tsx";
 
 
 const root = ReactDOM.createRoot(
@@ -32,6 +33,7 @@ root.render(
                         <Route path="/" element={<Home/>}/>
                         <Route path="/purchase-orders" element={<PurchaseOrdersManagementPage/>}/>
                         <Route path="/work-orders" element={<WorkOrdersManagementPage/>}/>
+                        <Route path="/production" element={<ProductionPage/>}/>
                         <Route path="/stock" element={<StockHome/>}/>
                         <Route path="/admin" element={<AdminHome/>}/>
                         <Route path="/mock-qr" element={<MockQr/>}/>

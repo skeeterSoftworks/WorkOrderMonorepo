@@ -20,7 +20,17 @@ export interface ProductTO {
     name?: string,
     description?: string,
     machineIds?: number[],
-    toolId?: number,
+}
+
+export interface MachineBookingTO {
+    id?: number,
+    machineId?: number,
+    workOrderId?: number,
+    startDateTime?: string,
+    endDateTime?: string,
+    type?: "PRODUCTION" | "MAINTENANCE" | "SETUP" | "OTHER",
+    status?: "PLANNED" | "CONFIRMED" | "COMPLETED" | "CANCELLED",
+    comment?: string,
 }
 
 export interface SetupTO {

@@ -1,4 +1,13 @@
-import type {ApplicationUserTO, StationConfigDTO, PurchaseOrderTO, ProductTO, CustomerTO, MachineTO, WorkOrderTO} from "../models/ApiRequests";
+import type {
+    ApplicationUserTO,
+    StationConfigDTO,
+    PurchaseOrderTO,
+    ProductTO,
+    CustomerTO,
+    MachineTO,
+    WorkOrderTO,
+    MachineBookingTO,
+} from "../models/ApiRequests";
 import axios from "axios";
 import { getServerUrl } from "../util/EnvUtils";
 
@@ -154,6 +163,42 @@ export class Server {
 
     static deleteWorkOrder(id: number, onSuccess: Function, onError: Function) {
         axios.delete(`${getServerUrl()}/workorders/${id}`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static getMachineBookingsForMachine(machineId: number, fromIso: string, toIso: string, onSuccess: Function, onError: Function) {
+        axios.get(`${getServerUrl()}/machine-bookings/machine/${machineId}?from=${encodeURIComponent(fromIso)}&to=${encodeURIComponent(toIso)}`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static addMachineBooking(booking: MachineBookingTO, onSuccess: Function, onError: Function) {
+        axios.post(`${getServerUrl()}/machine-bookings/add`, booking)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static updateMachineBooking(booking: MachineBookingTO, onSuccess: Function, onError: Function) {
+        axios.post(`${getServerUrl()}/machine-bookings/update`, booking)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static cancelMachineBooking(id: number, onSuccess: Function, onError: Function) {
+        axios.post(`${getServerUrl()}/machine-bookings/${id}/cancel`)
             .then(response => onSuccess(response))
             .catch(error => {
                 console.log(error);

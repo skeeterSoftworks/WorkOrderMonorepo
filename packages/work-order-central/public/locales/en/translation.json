@@ -358,5 +358,21 @@
   "createWorkOrderFromThis": "Create work order",
   "notYet": "Not yet",
   "purchaseOrderHasWorkOrderCannotDelete": "Cannot delete: a work order is linked to this purchase order. Delete the work order first.",
-  "msg_errorDeletingPurchaseOrder": "Error deleting purchase order."
+  "msg_errorDeletingPurchaseOrder": "Error deleting purchase order.",
+  "scheduleMachineForWorkOrder": "Schedule machine for work order",
+  "scheduleOnMachine": "Schedule on machine",
+  "startDateTime": "Start date & time",
+  "endDateTime": "End date & time",
+  "bookingType": "Booking type",
+  "bookingTypeProduction": "Production",
+  "bookingTypeMaintenance": "Maintenance",
+  "bookingTypeSetup": "Setup",
+  "bookingTypeOther": "Other",
+  "schedule": "Schedule",
+  "errorSchedulingMachine": "Error scheduling machine.",
+  "allFieldsRequired": "All required fields must be filled.",
+  "production": "Production",
+  "calendar": "Calendar",
+  "free": "Free",
+  "occupied": "Occupied"
 }

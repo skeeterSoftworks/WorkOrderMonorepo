@@ -37,6 +37,12 @@ export function Home() {
                         </Grid>}
                     {userData && userData.role === "ADMIN" &&
                         <Grid item xs={3} md={3} sx={{ textAlign: "center" }}>
+                            <Button href="/production" variant="contained" sx={homeButtonMarginStyle}>
+                                {t("production")}
+                            </Button>
+                        </Grid>}
+                    {userData && userData.role === "ADMIN" &&
+                        <Grid item xs={3} md={3} sx={{ textAlign: "center" }}>
                             <Button href="/stock" variant="contained" sx={homeButtonMarginStyle}>
                                 {t("stock")}
                             </Button>

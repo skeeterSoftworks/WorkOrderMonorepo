@@ -21,7 +21,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { WorkOrderTO, PurchaseOrderTO } from 'sf-common/src/models/ApiRequests';
+import type { WorkOrderTO, PurchaseOrderTO, MachineTO, MachineBookingTO } from 'sf-common/src/models/ApiRequests';
 import { Server, ConfirmationModal } from 'sf-common';
 
 export function WorkOrdersManagementPanel() {
@@ -38,10 +38,27 @@ export function WorkOrdersManagementPanel() {
     const [comment, setComment] = useState('');
     const [orderToDelete, setOrderToDelete] = useState<WorkOrderTO | null>(null);
     const [formModalOpen, setFormModalOpen] = useState(false);
+    const [machines, setMachines] = useState<MachineTO[]>([]);
+    const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+    const [scheduleWorkOrder, setScheduleWorkOrder] = useState<WorkOrderTO | null>(null);
+    const [scheduleMachineId, setScheduleMachineId] = useState<number | undefined>(undefined);
+    const [scheduleStart, setScheduleStart] = useState('');
+    const [scheduleEnd, setScheduleEnd] = useState('');
+    const [scheduleType, setScheduleType] = useState<'PRODUCTION' | 'MAINTENANCE' | 'SETUP' | 'OTHER'>('PRODUCTION');
+    const [scheduleError, setScheduleError] = useState<string | null>(null);
 
     useEffect(() => {
         loadWorkOrders();
         loadPurchaseOrders();
+        Server.getAllMachines(
+            (response: any) => {
+                let data: MachineTO[] = [];
+                if (Array.isArray(response?.data)) data = response.data;
+                else if (Array.isArray(response?.data?.data)) data = response.data.data;
+                setMachines(data);
+            },
+            () => {},
+        );
     }, []);
 
     useEffect(() => {
@@ -134,6 +151,47 @@ export function WorkOrdersManagementPanel() {
         setOrderToDelete(wo);
     };
 
+    const openScheduleModal = (wo: WorkOrderTO) => {
+        setScheduleWorkOrder(wo);
+        setScheduleMachineId(undefined);
+        setScheduleStart('');
+        setScheduleEnd('');
+        setScheduleType('PRODUCTION');
+        setScheduleError(null);
+        setScheduleModalOpen(true);
+    };
+
+    const closeScheduleModal = () => {
+        setScheduleModalOpen(false);
+        setScheduleWorkOrder(null);
+        setScheduleError(null);
+    };
+
+    const handleScheduleSubmit = () => {
+        if (!scheduleWorkOrder?.id || !scheduleMachineId || !scheduleStart || !scheduleEnd) {
+            setScheduleError(t('allFieldsRequired'));
+            return;
+        }
+        const booking: MachineBookingTO = {
+            machineId: scheduleMachineId,
+            workOrderId: scheduleWorkOrder.id,
+            startDateTime: scheduleStart,
+            endDateTime: scheduleEnd,
+            type: scheduleType,
+            comment: undefined,
+        };
+        Server.addMachineBooking(
+            booking,
+            () => {
+                closeScheduleModal();
+            },
+            (err: any) => {
+                const body = err?.response?.data;
+                setScheduleError(typeof body === 'string' ? body : t('errorSchedulingMachine'));
+            }
+        );
+    };
+
     const handleConfirmDelete = () => {
         if (orderToDelete?.id == null) {
             setOrderToDelete(null);
@@ -206,6 +264,14 @@ export function WorkOrdersManagementPanel() {
                                             title={t('editWorkOrder')}
                                         >
                                             <LinkIcon fontSize="small" />
+                                        </IconButton>
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => openScheduleModal(wo)}
+                                            sx={{ mr: 1 }}
+                                            title={t('scheduleOnMachine')}
+                                        >
+                                            <AddIcon fontSize="small" />
                                         </IconButton>
                                         <IconButton size="small" onClick={() => handleDeleteClick(wo)}>
                                             <DeleteIcon fontSize="small" />
@@ -297,6 +363,81 @@ export function WorkOrdersManagementPanel() {
                 onConfirm={handleConfirmDelete}
                 onModalClose={() => setOrderToDelete(null)}
             />
+
+            <Dialog open={scheduleModalOpen} onClose={closeScheduleModal} maxWidth="sm" fullWidth scroll="paper">
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    {t('scheduleMachineForWorkOrder')}
+                    <IconButton size="small" onClick={closeScheduleModal} aria-label={t('close')}>
+                        <CloseIcon />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent dividers>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+                        <Typography variant="body2">
+                            {t('workOrder')}: {scheduleWorkOrder?.id ?? '—'}
+                        </Typography>
+                        <TextField
+                            select
+                            label={t('machine')}
+                            value={scheduleMachineId ?? ''}
+                            onChange={(e) => setScheduleMachineId(e.target.value ? Number(e.target.value) : undefined)}
+                            size="small"
+                            fullWidth
+                        >
+                            <MenuItem value="">{t('none')}</MenuItem>
+                            {machines.map((m) => (
+                                <MenuItem key={m.id} value={m.id}>
+                                    {m.machineName}
+                                </MenuItem>
+                            ))}
+                        </TextField>
+                        <TextField
+                            label={t('startDateTime')}
+                            type="datetime-local"
+                            value={scheduleStart}
+                            onChange={(e) => setScheduleStart(e.target.value)}
+                            size="small"
+                            fullWidth
+                            InputLabelProps={{ shrink: true }}
+                        />
+                        <TextField
+                            label={t('endDateTime')}
+                            type="datetime-local"
+                            value={scheduleEnd}
+                            onChange={(e) => setScheduleEnd(e.target.value)}
+                            size="small"
+                            fullWidth
+                            InputLabelProps={{ shrink: true }}
+                        />
+                        <TextField
+                            select
+                            label={t('bookingType')}
+                            value={scheduleType}
+                            onChange={(e) => setScheduleType(e.target.value as any)}
+                            size="small"
+                            fullWidth
+                        >
+                            <MenuItem value="PRODUCTION">{t('bookingTypeProduction')}</MenuItem>
+                            <MenuItem value="MAINTENANCE">{t('bookingTypeMaintenance')}</MenuItem>
+                            <MenuItem value="SETUP">{t('bookingTypeSetup')}</MenuItem>
+                            <MenuItem value="OTHER">{t('bookingTypeOther')}</MenuItem>
+                        </TextField>
+                        {scheduleError && (
+                            <Typography color="error" variant="body2">
+                                {scheduleError}
+                            </Typography>
+                        )}
+                        <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                            <Button variant="contained" color="primary" onClick={handleScheduleSubmit}>
+                                {t('schedule')}
+                            </Button>
+                            <Button variant="outlined" onClick={closeScheduleModal}>
+                                {t('cancel')}
+                            </Button>
+                        </Box>
+                    </Box>
+                </DialogContent>
+            </Dialog>
         </Box>
     );
 }
