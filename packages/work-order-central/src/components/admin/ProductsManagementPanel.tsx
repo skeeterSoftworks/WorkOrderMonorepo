@@ -78,8 +78,9 @@ export function ProductsManagementPanel() {
         setFormModalOpen(true);
     };
 
-    const handleMachineIdsChange = (ids: number[]) => {
-        setSelectedMachineIds(ids);
+    const handleMachineIdsChange = (value: unknown) => {
+        const ids = Array.isArray(value) ? value : [value];
+        setSelectedMachineIds(ids.filter((v): v is number => typeof v === 'number'));
     };
 
     const handleEditClick = (product: LocalProduct) => {
@@ -211,19 +212,20 @@ export function ProductsManagementPanel() {
                         />
                         <TextField
                             select
-                            SelectProps={{ multiple: true }}
+                            SelectProps={{
+                                multiple: true,
+                                renderValue: (selected) =>
+                                    (selected as number[]).length === 0
+                                        ? t('none')
+                                        : (selected as number[])
+                                              .map((id) => machines.find((m) => m.id === id)?.machineName ?? id)
+                                              .join(', '),
+                            }}
                             label={t('machine')}
                             value={selectedMachineIds}
-                            onChange={(e) => handleMachineIdsChange([].concat(e.target.value as number[]))}
+                            onChange={(e) => handleMachineIdsChange(e.target.value)}
                             size="small"
                             fullWidth
-                            renderValue={(selected: any) =>
-                                (selected as number[]).length === 0
-                                    ? t('none')
-                                    : (selected as number[])
-                                          .map((id) => machines.find((m) => m.id === id)?.machineName ?? id)
-                                          .join(', ')
-                            }
                         >
                             {machines.map((m) => (
                                 <MenuItem key={m.id} value={m.id}>
