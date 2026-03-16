@@ -18,14 +18,14 @@ import LinkIcon from '@mui/icons-material/Link';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
-import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import type { WorkOrderTO, PurchaseOrderTO, MachineTO, MachineBookingTO } from 'sf-common/src/models/ApiRequests';
-import { Server, ConfirmationModal } from 'sf-common';
+import {useEffect, useState} from 'react';
+import {useSearchParams} from 'react-router-dom';
+import {useTranslation} from 'react-i18next';
+import type {WorkOrderTO, PurchaseOrderTO, MachineTO, MachineBookingTO} from 'sf-common/src/models/ApiRequests';
+import {Server, ConfirmationModal} from 'sf-common';
 
 export function WorkOrdersManagementPanel() {
-    const { t } = useTranslation();
+    const {t} = useTranslation();
     const [searchParams, setSearchParams] = useSearchParams();
 
     const [workOrders, setWorkOrders] = useState<WorkOrderTO[]>([]);
@@ -57,7 +57,8 @@ export function WorkOrdersManagementPanel() {
                 else if (Array.isArray(response?.data?.data)) data = response.data.data;
                 setMachines(data);
             },
-            () => {},
+            () => {
+            },
         );
     }, []);
 
@@ -84,7 +85,8 @@ export function WorkOrdersManagementPanel() {
                 else if (Array.isArray(response?.data?.data)) data = response.data.data;
                 setPurchaseOrders(data);
             },
-            () => {},
+            () => {
+            },
         );
     };
 
@@ -96,7 +98,8 @@ export function WorkOrdersManagementPanel() {
                 else if (Array.isArray(response?.data?.data)) data = response.data.data;
                 setWorkOrders(data);
             },
-            () => {},
+            () => {
+            },
         );
     };
 
@@ -141,9 +144,11 @@ export function WorkOrdersManagementPanel() {
         };
 
         if (selectedId) {
-            Server.editWorkOrder(payload, onSuccess, () => {});
+            Server.editWorkOrder(payload, onSuccess, () => {
+            });
         } else {
-            Server.addWorkOrder(payload, onSuccess, () => {});
+            Server.addWorkOrder(payload, onSuccess, () => {
+            });
         }
     };
 
@@ -225,15 +230,15 @@ export function WorkOrdersManagementPanel() {
     };
 
     return (
-        <Box sx={{ mt: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Box sx={{mt: 3}}>
+            <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2}}>
                 <Typography variant="h6">{t('workOrdersList')}</Typography>
-                <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={openFormModal}>
+                <Button variant="contained" color="primary" startIcon={<AddIcon/>} onClick={openFormModal}>
                     {t('createNewWorkOrder')}
                 </Button>
             </Box>
 
-            <Paper sx={{ p: 2 }}>
+            <Paper sx={{p: 2}}>
                 <TableContainer>
                     <Table size="small">
                         <TableHead>
@@ -250,7 +255,7 @@ export function WorkOrdersManagementPanel() {
                             {workOrders.map((wo) => (
                                 <TableRow key={wo.id}>
                                     <TableCell>
-                                        {purchaseOrderLabel(purchaseOrders.find((p) => p.id === wo.purchaseOrderId) || { id: wo.purchaseOrderId })}
+                                        {purchaseOrderLabel(purchaseOrders.find((p) => p.id === wo.purchaseOrderId) || {id: wo.purchaseOrderId})}
                                     </TableCell>
                                     <TableCell>{formatDate(wo.dueDate)}</TableCell>
                                     <TableCell>{formatDate(wo.startDate)}</TableCell>
@@ -260,21 +265,23 @@ export function WorkOrdersManagementPanel() {
                                         <IconButton
                                             size="small"
                                             onClick={() => handleEditClick(wo)}
-                                            sx={{ mr: 1 }}
+                                            sx={{mr: 1}}
                                             title={t('editWorkOrder')}
                                         >
-                                            <LinkIcon fontSize="small" />
+                                            <LinkIcon fontSize="small"/>
                                         </IconButton>
                                         <IconButton
                                             size="small"
                                             onClick={() => openScheduleModal(wo)}
-                                            sx={{ mr: 1 }}
+                                            sx={{mr: 1}}
                                             title={t('scheduleOnMachine')}
                                         >
-                                            <AddIcon fontSize="small" />
+                                            <AddIcon fontSize="small"/>
                                         </IconButton>
-                                        <IconButton size="small" onClick={() => handleDeleteClick(wo)}>
-                                            <DeleteIcon fontSize="small" />
+                                        <IconButton size="small" onClick={() => handleDeleteClick(wo)}
+                                                    title={t('deleteWorkOrder')}
+                                        >
+                                            <DeleteIcon fontSize="small"/>
                                         </IconButton>
                                     </TableCell>
                                 </TableRow>
@@ -285,14 +292,14 @@ export function WorkOrdersManagementPanel() {
             </Paper>
 
             <Dialog open={formModalOpen} onClose={closeFormModal} maxWidth="sm" fullWidth scroll="paper">
-                <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <DialogTitle sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
                     {selectedId ? t('editWorkOrder') : t('createNewWorkOrder')}
                     <IconButton size="small" onClick={closeFormModal} aria-label={t('close')}>
-                        <CloseIcon />
+                        <CloseIcon/>
                     </IconButton>
                 </DialogTitle>
                 <DialogContent dividers>
-                    <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+                    <Box component="form" sx={{display: 'flex', flexDirection: 'column', gap: 2, pt: 1}}>
                         <TextField
                             select
                             label={t('purchaseOrder')}
@@ -316,7 +323,7 @@ export function WorkOrdersManagementPanel() {
                             onChange={(e) => setDueDate(e.target.value)}
                             size="small"
                             fullWidth
-                            InputLabelProps={{ shrink: true }}
+                            InputLabelProps={{shrink: true}}
                         />
                         <TextField
                             label={t('startDate')}
@@ -325,7 +332,7 @@ export function WorkOrdersManagementPanel() {
                             onChange={(e) => setStartDate(e.target.value)}
                             size="small"
                             fullWidth
-                            InputLabelProps={{ shrink: true }}
+                            InputLabelProps={{shrink: true}}
                         />
                         <TextField
                             label={t('endDate')}
@@ -334,7 +341,7 @@ export function WorkOrdersManagementPanel() {
                             onChange={(e) => setEndDate(e.target.value)}
                             size="small"
                             fullWidth
-                            InputLabelProps={{ shrink: true }}
+                            InputLabelProps={{shrink: true}}
                         />
                         <TextField
                             label={t('comment')}
@@ -345,7 +352,7 @@ export function WorkOrdersManagementPanel() {
                             multiline
                             minRows={2}
                         />
-                        <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                        <Box sx={{display: 'flex', gap: 1, mt: 2}}>
                             <Button variant="contained" color="primary" onClick={handleSubmit}>
                                 {selectedId ? t('editWorkOrder') : t('addWorkOrder')}
                             </Button>
@@ -365,14 +372,14 @@ export function WorkOrdersManagementPanel() {
             />
 
             <Dialog open={scheduleModalOpen} onClose={closeScheduleModal} maxWidth="sm" fullWidth scroll="paper">
-                <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <DialogTitle sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
                     {t('scheduleMachineForWorkOrder')}
                     <IconButton size="small" onClick={closeScheduleModal} aria-label={t('close')}>
-                        <CloseIcon />
+                        <CloseIcon/>
                     </IconButton>
                 </DialogTitle>
                 <DialogContent dividers>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+                    <Box sx={{display: 'flex', flexDirection: 'column', gap: 2, pt: 1}}>
                         <Typography variant="body2">
                             {t('workOrder')}: {scheduleWorkOrder?.id ?? '—'}
                         </Typography>
@@ -398,7 +405,7 @@ export function WorkOrdersManagementPanel() {
                             onChange={(e) => setScheduleStart(e.target.value)}
                             size="small"
                             fullWidth
-                            InputLabelProps={{ shrink: true }}
+                            InputLabelProps={{shrink: true}}
                         />
                         <TextField
                             label={t('endDateTime')}
@@ -407,7 +414,7 @@ export function WorkOrdersManagementPanel() {
                             onChange={(e) => setScheduleEnd(e.target.value)}
                             size="small"
                             fullWidth
-                            InputLabelProps={{ shrink: true }}
+                            InputLabelProps={{shrink: true}}
                         />
                         <TextField
                             select
@@ -427,7 +434,7 @@ export function WorkOrdersManagementPanel() {
                                 {scheduleError}
                             </Typography>
                         )}
-                        <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                        <Box sx={{display: 'flex', gap: 1, mt: 2}}>
                             <Button variant="contained" color="primary" onClick={handleScheduleSubmit}>
                                 {t('schedule')}
                             </Button>

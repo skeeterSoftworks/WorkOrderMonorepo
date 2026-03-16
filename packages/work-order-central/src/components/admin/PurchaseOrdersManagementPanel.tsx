@@ -427,6 +427,8 @@ export function PurchaseOrdersManagementPanel() {
                                         <IconButton
                                             size="small"
                                             onClick={() => handleDeleteClick(order)}
+                                            title={t('deletePurchaseOrder')}
+
                                         >
                                             <DeleteIcon fontSize="small" />
                                         </IconButton>

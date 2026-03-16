@@ -10,46 +10,49 @@ export function Home() {
     const { t } = useTranslation()
 
 
-    const homeButtonMarginStyle: any = {
-        height: "20vh",
-        width: "20vh",
-        borderRadius: "18px",
-
+    const homeButtonStyle: any = {
+        height: "18vh",
+        width: "18vh",
+        borderRadius: "20px",
+        textTransform: "none",
+        fontSize: "1.1rem",
+        fontWeight: 600,
+        boxShadow: 4,
     }
 
     return (
 
-        <Grid container sx={{ marginTop: "30vh" }}>
+        <Grid container sx={{ minHeight: "60vh", alignItems: "center", justifyContent: "center" }}>
             {userData && userData.role === "ADMIN" &&
-                <Grid container>
+                <Grid container spacing={3} sx={{ maxWidth: 1100, justifyContent: "center" }}>
 
                     {userData && userData.role === "ADMIN" &&
-                        <Grid item xs={3} md={3} sx={{ textAlign: "center" }}>
-                            <Button href="/purchase-orders" variant="contained" sx={homeButtonMarginStyle}>
+                        <Grid item xs="auto" sx={{ textAlign: "center" }}>
+                            <Button href="/purchase-orders" variant="contained" sx={homeButtonStyle}>
                                 {t("purchaseOrders")}
                             </Button>
                         </Grid>}
                     {userData && userData.role === "ADMIN" &&
-                        <Grid item xs={3} md={3} sx={{ textAlign: "center" }}>
-                            <Button href="/work-orders" variant="contained" sx={homeButtonMarginStyle}>
+                        <Grid item xs="auto" sx={{ textAlign: "center" }}>
+                            <Button href="/work-orders" variant="contained" sx={homeButtonStyle}>
                                 {t("workOrders")}
                             </Button>
                         </Grid>}
                     {userData && userData.role === "ADMIN" &&
-                        <Grid item xs={3} md={3} sx={{ textAlign: "center" }}>
-                            <Button href="/production" variant="contained" sx={homeButtonMarginStyle}>
+                        <Grid item xs="auto" sx={{ textAlign: "center" }}>
+                            <Button href="/production" variant="contained" sx={homeButtonStyle}>
                                 {t("production")}
                             </Button>
                         </Grid>}
                     {userData && userData.role === "ADMIN" &&
-                        <Grid item xs={3} md={3} sx={{ textAlign: "center" }}>
-                            <Button href="/stock" variant="contained" sx={homeButtonMarginStyle}>
+                        <Grid item xs="auto" sx={{ textAlign: "center" }}>
+                            <Button href="/stock" variant="contained" sx={homeButtonStyle}>
                                 {t("stock")}
                             </Button>
                         </Grid>}
                     {userData && userData.role === "ADMIN" &&
-                        <Grid item xs={3} md={3} sx={{ textAlign: "center" }}>
-                            <Button href="/admin" variant="contained" sx={homeButtonMarginStyle}>
+                        <Grid item xs="auto" sx={{ textAlign: "center" }}>
+                            <Button href="/admin" variant="contained" sx={homeButtonStyle}>
                                 {t("admin")}
                             </Button>
                         </Grid>}
