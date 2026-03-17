@@ -7,7 +7,7 @@ import type { QRData } from '../../models/ApiRequests';
 import { paddedContainer } from '../../styling/Custom';
 import { Server } from '../../api/Server';
 import { useTranslation } from 'react-i18next';
-import {useNavigate} from "react-router";
+import {useNavigate} from "react-router-dom";
 
 
 export function LoginForm() {
@@ -20,11 +20,12 @@ export function LoginForm() {
 
     const navigation = useNavigate();
 
-    const handleGetUserByQRResponse = (response) => {
+    const handleGetUserByQRResponse = (response: any) => {
 
-        if (response.data.responseStatus === "ERROR") {
+        // handle response from server and notify app about login
+        if (response.status !== 200) {
 
-            if (response.data.data === "NOT_FOUND") {
+            if (response.data === "NOT_FOUND") {
                 dispatch(openErrorModal(t("msg_userWithScannedQrNotExist")));
             } else {
                 dispatch(openErrorModal(t("msg_errorSearchingUser")));
@@ -32,7 +33,13 @@ export function LoginForm() {
 
         } else {
             sessionStorage.setItem("userData", JSON.stringify(response.data));
-            console.log("User data stored in sessionStorage: ", response);
+            console.log("User data stored in sessionStorage: ", response.data);
+            // Notify other parts of the app that a user has logged in and navigate to home
+            try {
+                window.dispatchEvent(new Event('userLoggedIn'));
+            } catch (e) {
+                /* ignore */
+            }
             navigation("/")
         }
     }

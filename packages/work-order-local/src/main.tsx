@@ -13,10 +13,13 @@ const root = ReactDOM.createRoot(
     document.getElementById('root') as HTMLElement
 );
 
+const SERVER_URL = (import.meta as any).env?.VITE_SERVER_URL || ((globalThis as any).process?.env?.REACT_APP_SERVER_URL) || '';
+
 root.render(
     <StrictMode>
         <Provider store={store}>
-            <WebsocketListener onMessage={() => {
+            <WebsocketListener  socketUrl={SERVER_URL}
+                onMessage={() => {
             }}/>
             <ErrorModal/>
             <BrowserRouter>
