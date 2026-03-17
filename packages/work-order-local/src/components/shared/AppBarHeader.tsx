@@ -1,7 +1,7 @@
 import { AppBar, IconButton, Toolbar, Typography } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
 import HomeIcon from '@mui/icons-material/Home';
-import streitNovaLogo from "../../res/streit-nova.png"
+import cubeLogo from "../../res/CubeLogo.png"
 import type {LoggedUser} from '../../models/Common';
 import englishFlag from "../../res/england-flag-icon.png"
 import serbianFlag from "../../res/serbia-flag-icon.png"
@@ -38,7 +38,7 @@ export function AppBarHeader() {
     return (
         <AppBar position="static">
             <Toolbar variant="dense">
-                <img src={streitNovaLogo} style={{ height: "auto", width: "5%", marginRight: "5vh" }} />
+                <img src={cubeLogo} style={{ height: "auto", width: "3%", marginRight: "5vh" }} />
                 <Typography variant="h6" color="inherit" component="div">
                     {userData ? `${userData.role}: ${userData.name} ${userData.surname}` : t("notLoggedIn")}
                 </Typography>
