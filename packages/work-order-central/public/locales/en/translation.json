@@ -353,6 +353,7 @@
   "confirmDeleteWorkOrder": "Confirm work order deletion",
   "purchaseOrder": "Purchase order",
   "dueDate": "Due date",
+  "dueDateFromPurchaseOrderDelivery": "Taken from the purchase order delivery date (read only).",
   "startDate": "Start date",
   "endDate": "End date",
   "addWorkOrder": "Add work order",

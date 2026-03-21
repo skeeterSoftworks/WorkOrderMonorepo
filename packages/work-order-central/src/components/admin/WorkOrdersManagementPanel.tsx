@@ -24,6 +24,23 @@ import {useTranslation} from 'react-i18next';
 import type {WorkOrderTO, PurchaseOrderTO, MachineTO, MachineBookingTO} from 'sf-common/src/models/ApiRequests';
 import {Server, ConfirmationModal} from 'sf-common';
 
+/** Normalize PO delivery date for HTML date input (yyyy-MM-dd). */
+function purchaseOrderDeliveryToDueDateInput(
+    deliveryDate: PurchaseOrderTO['deliveryDate']
+): string {
+    if (deliveryDate == null) return '';
+    if (typeof deliveryDate === 'string') {
+        return deliveryDate.length >= 10 ? deliveryDate.substring(0, 10) : deliveryDate;
+    }
+    if (Array.isArray(deliveryDate) && deliveryDate.length >= 3) {
+        const [y, m, d] = deliveryDate;
+        const mm = String(m).padStart(2, '0');
+        const dd = String(d).padStart(2, '0');
+        return `${y}-${mm}-${dd}`;
+    }
+    return '';
+}
+
 export function WorkOrdersManagementPanel() {
     const {t} = useTranslation();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -68,7 +85,6 @@ export function WorkOrdersManagementPanel() {
             const id = Number(presetId);
             setSelectedId(undefined);
             setPurchaseOrderId(id);
-            setDueDate('');
             setStartDate('');
             setEndDate('');
             setComment('');
@@ -76,6 +92,17 @@ export function WorkOrdersManagementPanel() {
             setSearchParams({});
         }
     }, [searchParams, setSearchParams]);
+
+    // When creating, keep due date aligned with selected PO delivery date (also covers URL preset after PO list loads).
+    useEffect(() => {
+        if (!formModalOpen || selectedId) return;
+        if (!purchaseOrderId) {
+            setDueDate('');
+            return;
+        }
+        const po = purchaseOrders.find((p) => p.id === purchaseOrderId);
+        setDueDate(po ? purchaseOrderDeliveryToDueDateInput(po.deliveryDate) : '');
+    }, [formModalOpen, selectedId, purchaseOrderId, purchaseOrders]);
 
     const loadPurchaseOrders = () => {
         Server.getAllPurchaseOrders(
@@ -304,7 +331,14 @@ export function WorkOrdersManagementPanel() {
                             select
                             label={t('purchaseOrder')}
                             value={purchaseOrderId ?? ''}
-                            onChange={(e) => setPurchaseOrderId(e.target.value ? Number(e.target.value) : undefined)}
+                            onChange={(e) => {
+                                const id = e.target.value ? Number(e.target.value) : undefined;
+                                setPurchaseOrderId(id);
+                                if (!selectedId) {
+                                    const po = id != null ? purchaseOrders.find((p) => p.id === id) : undefined;
+                                    setDueDate(po ? purchaseOrderDeliveryToDueDateInput(po.deliveryDate) : '');
+                                }
+                            }}
                             size="small"
                             fullWidth
                             required
@@ -320,10 +354,12 @@ export function WorkOrdersManagementPanel() {
                             label={t('dueDate')}
                             type="date"
                             value={dueDate}
-                            onChange={(e) => setDueDate(e.target.value)}
+                            onChange={selectedId ? (e) => setDueDate(e.target.value) : () => {}}
                             size="small"
                             fullWidth
                             InputLabelProps={{shrink: true}}
+                            InputProps={selectedId ? undefined : {readOnly: true}}
+                            helperText={!selectedId ? t('dueDateFromPurchaseOrderDelivery') : undefined}
                         />
                         <TextField
                             label={t('startDate')}

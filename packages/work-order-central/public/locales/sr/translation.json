@@ -353,6 +353,7 @@
   "confirmDeleteWorkOrder": "Potvrdite brisanje radnog naloga",
   "purchaseOrder": "Narudžbenica",
   "dueDate": "Rok",
+  "dueDateFromPurchaseOrderDelivery": "Preuzeto sa datuma isporuke narudžbenice.",
   "startDate": "Datum početka",
   "endDate": "Datum završetka",
   "addWorkOrder": "Dodaj radni nalog",
