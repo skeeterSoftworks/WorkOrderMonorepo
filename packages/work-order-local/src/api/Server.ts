@@ -53,6 +53,19 @@ export class Server {
 
     }
 
+    /**
+     * Station config from local server, including work-station preconditions JSON
+     * (local proxies to central {@code /config/get-wo-preconditions}).
+     */
+    static fetchStationConfigWithPreconditions(onSuccess: Function, onError?: Function) {
+        axios.get(`${getServerUrl()}/config/station-config`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError && onError(error);
+            });
+    }
+
     static updateStationConfig(stationConfigDTO: StationConfigDTO, onSuccess: Function, onError?: Function) {
         axios.post(`${getServerUrl()}/configuration/update_station_config`, stationConfigDTO)
             .then(response => {

@@ -77,6 +77,17 @@ export interface QRData {
     timeStamp?: string
 }
 
+/** Local `/config/station-config` (includes preconditions JSON from central). */
+export interface StationConfigWithPreconditionsTO {
+    machineName?: string,
+    woPreconditionsJSON?: string,
+}
+
+export interface WorkStationPreconditionItem {
+    sr?: string,
+    en?: string,
+}
+
 export interface StationConfigDTO {
     controlProductPrefix: string,
     genericProductPrefix: string,
