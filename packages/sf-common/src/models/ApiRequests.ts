@@ -27,6 +27,7 @@ export interface ProductTO {
 export interface MachineBookingTO {
     id?: number,
     machineId?: number,
+    machineName?: string,
     workOrderId?: number,
     startDateTime?: string,
     endDateTime?: string,

@@ -14,11 +14,15 @@ import MenuItem from '@mui/material/MenuItem';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
+import Divider from '@mui/material/Divider';
+import Stack from '@mui/material/Stack';
+import CircularProgress from '@mui/material/CircularProgress';
 import LinkIcon from '@mui/icons-material/Link';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
-import {useEffect, useState} from 'react';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import {useEffect, useMemo, useState, type ReactNode} from 'react';
 import {useSearchParams} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
 import type {WorkOrderTO, PurchaseOrderTO, ProductOrderTO, MachineTO, MachineBookingTO} from 'sf-common/src/models/ApiRequests';
@@ -81,6 +85,91 @@ function workOrderLineDisplay(wo: WorkOrderTO): string {
     return wo.productOrderId != null ? `#${wo.productOrderId}` : '—';
 }
 
+function findLineContext(
+    wo: WorkOrderTO,
+    purchaseOrders: PurchaseOrderTO[]
+): { line: ProductOrderTO; po: PurchaseOrderTO } | null {
+    if (wo.productOrderId == null) return null;
+    for (const po of purchaseOrders) {
+        const line = po.productOrderList?.find((l) => l.id === wo.productOrderId);
+        if (line) return { line, po };
+    }
+    return null;
+}
+
+/** Machine IDs linked to the product on this work order's purchase-order line (from loaded PO data). */
+function getProductMachineIdsForSchedule(
+    wo: WorkOrderTO | null | undefined,
+    purchaseOrders: PurchaseOrderTO[]
+): { ids: number[]; lineFound: boolean } {
+    if (!wo?.productOrderId) {
+        return { ids: [], lineFound: false };
+    }
+    const ctx = findLineContext(wo, purchaseOrders);
+    if (!ctx) {
+        return { ids: [], lineFound: false };
+    }
+    const raw = ctx.line.product?.machineIds;
+    const ids = (raw ?? []).filter((id): id is number => id != null);
+    return { ids, lineFound: true };
+}
+
+function formatDateTime(value: string | undefined): string {
+    if (!value) return '—';
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? value : d.toLocaleString();
+}
+
+function bookingTypeTranslationKey(type: string | undefined): string {
+    switch (type) {
+        case 'PRODUCTION':
+            return 'bookingTypeProduction';
+        case 'MAINTENANCE':
+            return 'bookingTypeMaintenance';
+        case 'SETUP':
+            return 'bookingTypeSetup';
+        case 'OTHER':
+            return 'bookingTypeOther';
+        default:
+            return '';
+    }
+}
+
+function bookingStatusTranslationKey(status: string | undefined): string {
+    switch (status) {
+        case 'PLANNED':
+            return 'bookingStatusPlanned';
+        case 'CONFIRMED':
+            return 'bookingStatusConfirmed';
+        case 'COMPLETED':
+            return 'bookingStatusCompleted';
+        case 'CANCELLED':
+            return 'bookingStatusCancelled';
+        default:
+            return '';
+    }
+}
+
+function machineDisplayName(b: MachineBookingTO, machines: MachineTO[]): string {
+    const n = b.machineName?.trim();
+    if (n) return n;
+    const m = machines.find((x) => x.id === b.machineId);
+    return m?.machineName ?? (b.machineId != null ? `#${b.machineId}` : '—');
+}
+
+function DetailField({ label, value }: { label: string; value: ReactNode }) {
+    return (
+        <Box sx={{display: 'flex', gap: 1, flexWrap: 'wrap', py: 0.25}}>
+            <Typography variant="body2" color="text.secondary" sx={{minWidth: 160}}>
+                {label}
+            </Typography>
+            <Typography variant="body2" component="div" sx={{flex: 1}}>
+                {value ?? '—'}
+            </Typography>
+        </Box>
+    );
+}
+
 export function WorkOrdersManagementPanel() {
     const {t} = useTranslation();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -104,6 +193,11 @@ export function WorkOrdersManagementPanel() {
     const [scheduleEnd, setScheduleEnd] = useState('');
     const [scheduleType, setScheduleType] = useState<'PRODUCTION' | 'MAINTENANCE' | 'SETUP' | 'OTHER'>('PRODUCTION');
     const [scheduleError, setScheduleError] = useState<string | null>(null);
+    const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+    const [detailsWorkOrder, setDetailsWorkOrder] = useState<WorkOrderTO | null>(null);
+    const [detailsBookings, setDetailsBookings] = useState<MachineBookingTO[]>([]);
+    const [detailsLoading, setDetailsLoading] = useState(false);
+    const [detailsError, setDetailsError] = useState<string | null>(null);
 
     useEffect(() => {
         loadWorkOrders();
@@ -237,6 +331,37 @@ export function WorkOrdersManagementPanel() {
         setOrderToDelete(wo);
     };
 
+    const closeDetailsModal = () => {
+        setDetailsModalOpen(false);
+        setDetailsWorkOrder(null);
+        setDetailsBookings([]);
+        setDetailsLoading(false);
+        setDetailsError(null);
+    };
+
+    const openDetailsModal = (wo: WorkOrderTO) => {
+        if (wo.id == null) return;
+        setDetailsWorkOrder(wo);
+        setDetailsBookings([]);
+        setDetailsError(null);
+        setDetailsLoading(true);
+        setDetailsModalOpen(true);
+        Server.getMachineBookingsForWorkOrder(
+            wo.id,
+            (response: any) => {
+                let data: MachineBookingTO[] = [];
+                if (Array.isArray(response?.data)) data = response.data;
+                else if (Array.isArray(response?.data?.data)) data = response.data.data;
+                setDetailsBookings(data);
+                setDetailsLoading(false);
+            },
+            () => {
+                setDetailsLoading(false);
+                setDetailsError(t('errorLoadingWorkOrderDetails'));
+            }
+        );
+    };
+
     const openScheduleModal = (wo: WorkOrderTO) => {
         setScheduleWorkOrder(wo);
         setScheduleMachineId(undefined);
@@ -254,8 +379,25 @@ export function WorkOrdersManagementPanel() {
     };
 
     const handleScheduleSubmit = () => {
-        if (!scheduleWorkOrder?.id || !scheduleMachineId || !scheduleStart || !scheduleEnd) {
+        if (!scheduleWorkOrder?.id || !scheduleStart || !scheduleEnd) {
             setScheduleError(t('allFieldsRequired'));
+            return;
+        }
+        const { ids: allowedIds, lineFound } = getProductMachineIdsForSchedule(
+            scheduleWorkOrder,
+            purchaseOrders
+        );
+        const allowed = new Set(allowedIds);
+        if (!lineFound || scheduleWorkOrder.productOrderId == null) {
+            setScheduleError(t('scheduleModalLineNotFound'));
+            return;
+        }
+        if (allowed.size === 0) {
+            setScheduleError(t('noMachinesLinkedToProduct'));
+            return;
+        }
+        if (scheduleMachineId == null || !allowed.has(scheduleMachineId)) {
+            setScheduleError(t('selectAllowedMachineForProduct'));
             return;
         }
         const booking: MachineBookingTO = {
@@ -315,6 +457,31 @@ export function WorkOrdersManagementPanel() {
         return cust ? `${core} (${cust})` : core;
     };
 
+    const scheduleProductMachines = useMemo(
+        () => getProductMachineIdsForSchedule(scheduleWorkOrder, purchaseOrders),
+        [scheduleWorkOrder, purchaseOrders]
+    );
+
+    const machinesForSchedulePicker = useMemo(() => {
+        const allowed = new Set(scheduleProductMachines.ids);
+        if (allowed.size === 0) return [];
+        return machines.filter((m) => m.id != null && allowed.has(m.id));
+    }, [machines, scheduleProductMachines.ids]);
+
+    const scheduleMachineHelperText = (() => {
+        if (!scheduleWorkOrder) return '';
+        if (scheduleWorkOrder.productOrderId == null) {
+            return t('scheduleModalMissingProductLine');
+        }
+        if (!scheduleProductMachines.lineFound) {
+            return t('scheduleModalLineNotFound');
+        }
+        if (scheduleProductMachines.ids.length === 0) {
+            return t('noMachinesLinkedToProduct');
+        }
+        return t('scheduleOnlyProductMachinesHelp');
+    })();
+
     return (
         <Box sx={{mt: 3}}>
             <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2}}>
@@ -350,6 +517,14 @@ export function WorkOrdersManagementPanel() {
                                     <TableCell>{formatDate(wo.endDate)}</TableCell>
                                     <TableCell>{wo.comment}</TableCell>
                                     <TableCell align="right">
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => openDetailsModal(wo)}
+                                            sx={{mr: 1}}
+                                            title={t('viewWorkOrderDetails')}
+                                        >
+                                            <InfoOutlinedIcon fontSize="small"/>
+                                        </IconButton>
                                         <IconButton
                                             size="small"
                                             onClick={() => handleEditClick(wo)}
@@ -503,6 +678,119 @@ export function WorkOrdersManagementPanel() {
                 onModalClose={() => setOrderToDelete(null)}
             />
 
+            <Dialog open={detailsModalOpen} onClose={closeDetailsModal} maxWidth="md" fullWidth scroll="paper">
+                <DialogTitle sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+                    {t('workOrderDetails')}
+                    <IconButton size="small" onClick={closeDetailsModal} aria-label={t('close')}>
+                        <CloseIcon/>
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent dividers>
+                    {detailsLoading && (
+                        <Box sx={{display: 'flex', justifyContent: 'center', py: 4}}>
+                            <CircularProgress size={32} aria-label={t('loadingDetails')}/>
+                        </Box>
+                    )}
+                    {!detailsLoading && detailsWorkOrder && (
+                        <Stack spacing={2} sx={{pt: 0.5}}>
+                            {detailsError && (
+                                <Typography color="error" variant="body2">
+                                    {detailsError}
+                                </Typography>
+                            )}
+                            <Typography variant="subtitle2" color="text.secondary">
+                                {t('workOrderSummarySection')}
+                            </Typography>
+                            {(() => {
+                                const ctx = findLineContext(detailsWorkOrder, purchaseOrders);
+                                const poLabel = detailsWorkOrder.purchaseOrderId
+                                    ? purchaseOrderLabel(
+                                          purchaseOrders.find((p) => p.id === detailsWorkOrder.purchaseOrderId) || {
+                                              id: detailsWorkOrder.purchaseOrderId,
+                                          }
+                                      )
+                                    : ctx
+                                      ? purchaseOrderLabel(ctx.po)
+                                      : '—';
+                                return (
+                                    <>
+                                        <DetailField label={t('workOrder')} value={detailsWorkOrder.id}/>
+                                        <DetailField label={t('purchaseOrder')} value={poLabel}/>
+                                        <DetailField
+                                            label={t('productOrderLine')}
+                                            value={workOrderLineDisplay(detailsWorkOrder)}
+                                        />
+                                        {ctx?.line?.quantity != null && (
+                                            <DetailField label={t('quantity')} value={ctx.line.quantity}/>
+                                        )}
+                                        {ctx?.line?.pricePerUnit != null && (
+                                            <DetailField label={t('pricePerUnit')} value={ctx.line.pricePerUnit}/>
+                                        )}
+                                        <DetailField label={t('dueDate')} value={formatDate(detailsWorkOrder.dueDate)}/>
+                                        <DetailField
+                                            label={t('startDate')}
+                                            value={formatDate(detailsWorkOrder.startDate)}
+                                        />
+                                        <DetailField label={t('endDate')} value={formatDate(detailsWorkOrder.endDate)}/>
+                                        <DetailField
+                                            label={t('comment')}
+                                            value={detailsWorkOrder.comment?.trim() ? detailsWorkOrder.comment : '—'}
+                                        />
+                                    </>
+                                );
+                            })()}
+                            <Divider/>
+                            <Typography variant="subtitle2" color="text.secondary">
+                                {t('machinesForWorkOrderTitle')}
+                            </Typography>
+                            {detailsBookings.length > 0 ? (
+                                <TableContainer>
+                                    <Table size="small">
+                                        <TableHead>
+                                            <TableRow>
+                                                <TableCell>{t('machineName')}</TableCell>
+                                                <TableCell>{t('startDateTime')}</TableCell>
+                                                <TableCell>{t('endDateTime')}</TableCell>
+                                                <TableCell>{t('bookingType')}</TableCell>
+                                                <TableCell>{t('status')}</TableCell>
+                                            </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                            {detailsBookings.map((b) => {
+                                                const typeKey = bookingTypeTranslationKey(b.type);
+                                                const statusKey = bookingStatusTranslationKey(b.status);
+                                                return (
+                                                    <TableRow key={b.id ?? `${b.machineId}-${b.startDateTime}`}>
+                                                        <TableCell>{machineDisplayName(b, machines)}</TableCell>
+                                                        <TableCell>{formatDateTime(b.startDateTime)}</TableCell>
+                                                        <TableCell>{formatDateTime(b.endDateTime)}</TableCell>
+                                                        <TableCell>
+                                                            {typeKey ? t(typeKey) : b.type ?? '—'}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {statusKey ? t(statusKey) : b.status ?? '—'}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                );
+                                            })}
+                                        </TableBody>
+                                    </Table>
+                                </TableContainer>
+                            ) : !detailsError ? (
+                                <Typography variant="body2" color="text.secondary">
+                                    {t('noMachineBookingsForWorkOrder')}
+                                </Typography>
+                            ) : null}
+                            <Box sx={{display: 'flex', justifyContent: 'flex-end', mt: 1}}>
+                                <Button variant="outlined" onClick={closeDetailsModal}>
+                                    {t('close')}
+                                </Button>
+                            </Box>
+                        </Stack>
+                    )}
+                </DialogContent>
+            </Dialog>
+
             <Dialog open={scheduleModalOpen} onClose={closeScheduleModal} maxWidth="sm" fullWidth scroll="paper">
                 <DialogTitle sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
                     {t('scheduleMachineForWorkOrder')}
@@ -536,9 +824,17 @@ export function WorkOrdersManagementPanel() {
                             onChange={(e) => setScheduleMachineId(e.target.value ? Number(e.target.value) : undefined)}
                             size="small"
                             fullWidth
+                            disabled={machinesForSchedulePicker.length === 0}
+                            helperText={scheduleMachineHelperText}
+                            FormHelperTextProps={{
+                                sx: {
+                                    color:
+                                        machinesForSchedulePicker.length === 0 ? 'error.main' : 'text.secondary',
+                                },
+                            }}
                         >
                             <MenuItem value="">{t('none')}</MenuItem>
-                            {machines.map((m) => (
+                            {machinesForSchedulePicker.map((m) => (
                                 <MenuItem key={m.id} value={m.id}>
                                     {m.machineName}
                                 </MenuItem>
@@ -581,7 +877,15 @@ export function WorkOrdersManagementPanel() {
                             </Typography>
                         )}
                         <Box sx={{display: 'flex', gap: 1, mt: 2}}>
-                            <Button variant="contained" color="primary" onClick={handleScheduleSubmit}>
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                onClick={handleScheduleSubmit}
+                                disabled={
+                                    machinesForSchedulePicker.length === 0 ||
+                                    scheduleMachineId == null
+                                }
+                            >
                                 {t('schedule')}
                             </Button>
                             <Button variant="outlined" onClick={closeScheduleModal}>

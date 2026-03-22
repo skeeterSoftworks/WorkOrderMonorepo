@@ -179,6 +179,15 @@ export class Server {
             });
     }
 
+    static getMachineBookingsForWorkOrder(workOrderId: number, onSuccess: Function, onError: Function) {
+        axios.get(`${getServerUrl()}/machine-bookings/work-order/${workOrderId}`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
     static addMachineBooking(booking: MachineBookingTO, onSuccess: Function, onError: Function) {
         axios.post(`${getServerUrl()}/machine-bookings/add`, booking)
             .then(response => onSuccess(response))
