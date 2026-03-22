@@ -34,7 +34,14 @@ import {
 
 type LocalPurchaseOrder = PurchaseOrderTO;
 
-type ProductOrderRow = { id?: number; productId?: number; quantity: string; pricePerUnit: string };
+type ProductOrderRow = {
+    id?: number;
+    productId?: number;
+    quantity: string;
+    pricePerUnit: string;
+    /** Product catalogue / reference ID (stored on Product, editable per line). */
+    catalogueReference: string;
+};
 
 export function PurchaseOrdersManagementPanel() {
     const { t } = useTranslation();
@@ -45,7 +52,6 @@ export function PurchaseOrdersManagementPanel() {
     const [products, setProducts] = useState<ProductTO[]>([]);
     const [selectedOrderId, setSelectedOrderId] = useState<number | undefined>(undefined);
     const [selectedCustomerId, setSelectedCustomerId] = useState<number | undefined>(undefined);
-    const [reference, setReference] = useState('');
     const [currency, setCurrency] = useState('');
     const [deliveryDate, setDeliveryDate] = useState<string>('');
     const [deliveryTerms, setDeliveryTerms] = useState('');
@@ -106,7 +112,6 @@ export function PurchaseOrdersManagementPanel() {
     const resetForm = () => {
         setSelectedOrderId(undefined);
         setSelectedCustomerId(undefined);
-        setReference('');
         setCurrency('');
         setDeliveryDate('');
         setDeliveryTerms('');
@@ -116,7 +121,7 @@ export function PurchaseOrdersManagementPanel() {
     };
 
     const addProductOrderRow = () => {
-        setProductOrderRows((prev) => [...prev, { quantity: '', pricePerUnit: '' }]);
+        setProductOrderRows((prev) => [...prev, { quantity: '', pricePerUnit: '', catalogueReference: '' }]);
     };
 
     const removeProductOrderRow = (index: number) => {
@@ -137,7 +142,6 @@ export function PurchaseOrdersManagementPanel() {
     const handleEditClick = (order: LocalPurchaseOrder) => {
         setSelectedOrderId(order.id);
         setSelectedCustomerId(order.customer?.id);
-        setReference(order.reference || '');
         setCurrency(order.currency || '');
         if (order.deliveryDate) {
             if (Array.isArray(order.deliveryDate)) {
@@ -159,6 +163,7 @@ export function PurchaseOrdersManagementPanel() {
                 productId: po.product?.id,
                 quantity: String(po.quantity ?? ''),
                 pricePerUnit: String(po.pricePerUnit ?? ''),
+                catalogueReference: po.product?.reference ?? '',
             })),
         );
         setFormModalOpen(true);
@@ -173,10 +178,9 @@ export function PurchaseOrdersManagementPanel() {
                 quantity: Number(row.quantity) || 0,
                 pricePerUnit: Number(row.pricePerUnit) || 0,
             }));
-        const customerId = selectedCustomerId && Number(selectedCustomerId) ;
+        const customerId = selectedCustomerId && Number(selectedCustomerId);
         const payload: PurchaseOrderTO = {
             id: selectedOrderId,
-            reference,
             currency,
             deliveryDate: deliveryDate || undefined,
             deliveryTerms: deliveryTerms || undefined,
@@ -189,15 +193,64 @@ export function PurchaseOrdersManagementPanel() {
 
         const onSuccess = () => {
             loadOrders();
+            loadProducts();
             resetForm();
             setFormModalOpen(false);
         };
 
-        if (selectedOrderId) {
-            Server.editPurchaseOrder(payload, onSuccess, () => {});
-        } else {
-            Server.addPurchaseOrder(payload, onSuccess, () => {});
+        const savePurchaseOrder = () => {
+            if (selectedOrderId) {
+                Server.editPurchaseOrder(payload, onSuccess, () => {});
+            } else {
+                Server.addPurchaseOrder(payload, onSuccess, () => {});
+            }
+        };
+
+        const rowsToSync = productOrderRows.filter((row) => {
+            if (!row.productId) return false;
+            const p = products.find((pr) => pr.id === row.productId);
+            const newR = (row.catalogueReference ?? '').trim();
+            const oldR = (p?.reference ?? '').trim();
+            return newR !== oldR;
+        });
+
+        if (rowsToSync.length === 0) {
+            savePurchaseOrder();
+            return;
         }
+
+        let remaining = rowsToSync.length;
+        let errors = 0;
+        const onEditDone = () => {
+            remaining -= 1;
+            if (remaining === 0) {
+                loadProducts();
+                if (errors === 0) {
+                    savePurchaseOrder();
+                }
+            }
+        };
+        rowsToSync.forEach((row) => {
+            const p = products.find((pr) => pr.id === row.productId);
+            if (!p?.id) {
+                onEditDone();
+                return;
+            }
+            Server.editProduct(
+                {
+                    id: p.id,
+                    name: p.name,
+                    description: p.description,
+                    reference: (row.catalogueReference ?? '').trim(),
+                    machineIds: p.machineIds,
+                },
+                onEditDone,
+                () => {
+                    errors += 1;
+                    onEditDone();
+                },
+            );
+        });
     };
 
     const handleDeleteClick = (order: LocalPurchaseOrder) => {
@@ -224,6 +277,28 @@ export function PurchaseOrdersManagementPanel() {
                 setDeleteError(msg);
                 setOrderToDelete(null);
             }
+        );
+    };
+
+    const catalogueSummary = (order: LocalPurchaseOrder): string => {
+        const refs = (order.productOrderList || [])
+            .map((po) => po.product?.reference)
+            .filter((r): r is string => !!r && r.trim() !== '');
+        if (refs.length === 0) return '—';
+        return [...new Set(refs)].join(', ');
+    };
+
+    const setProductOrderRowProduct = (index: number, productId: number | undefined) => {
+        setProductOrderRows((prev) =>
+            prev.map((row, i) => {
+                if (i !== index) return row;
+                const p = productId != null ? products.find((pr) => pr.id === productId) : undefined;
+                return {
+                    ...row,
+                    productId,
+                    catalogueReference: p?.reference ?? '',
+                };
+            }),
         );
     };
 
@@ -313,7 +388,6 @@ export function PurchaseOrdersManagementPanel() {
     const applyParsedOrder = (parsed: ParsedPurchaseOrder) => {
         setSelectedOrderId(undefined);
         setSelectedCustomerId(resolveCustomerId(parsed.customerCompanyName));
-        setReference(parsed.reference);
         setCurrency(parsed.currency);
         setDeliveryDate(parsed.deliveryDate ? parsed.deliveryDate.substring(0, 10) : '');
         setDeliveryTerms(parsed.deliveryTerms);
@@ -322,11 +396,17 @@ export function PurchaseOrdersManagementPanel() {
         setProductOrderRows(
             parsed.productRows
                 .filter((row) => row.productNameOrId)
-                .map((row) => ({
-                    productId: resolveProductId(row.productNameOrId),
-                    quantity: String(row.quantity),
-                    pricePerUnit: String(row.pricePerUnit),
-                })),
+                .map((row) => {
+                    const pid = resolveProductId(row.productNameOrId);
+                    const p = pid != null ? products.find((pr) => pr.id === pid) : undefined;
+                    const cat = row.catalogueId?.trim() || p?.reference || '';
+                    return {
+                        productId: pid,
+                        catalogueReference: cat,
+                        quantity: String(row.quantity),
+                        pricePerUnit: String(row.pricePerUnit),
+                    };
+                }),
         );
         setFormModalOpen(true);
     };
@@ -386,7 +466,7 @@ export function PurchaseOrdersManagementPanel() {
                         <TableHead>
                             <TableRow>
                                 <TableCell>{t('customer')}</TableCell>
-                                <TableCell>{t('reference')}</TableCell>
+                                <TableCell>{t('catalogueId')}</TableCell>
                                 <TableCell>{t('currency')}</TableCell>
                                 <TableCell>{t('status')}</TableCell>
                                 <TableCell>{t('deliveryDate')}</TableCell>
@@ -398,9 +478,9 @@ export function PurchaseOrdersManagementPanel() {
                         </TableHead>
                         <TableBody>
                             {orders.map((order) => (
-                                <TableRow key={order.id || order.reference}>
+                                <TableRow key={order.id}>
                                     <TableCell>{order.customer?.companyName}</TableCell>
-                                    <TableCell>{order.reference}</TableCell>
+                                    <TableCell>{catalogueSummary(order)}</TableCell>
                                     <TableCell>{order.currency}</TableCell>
                                     <TableCell>{order.orderStatus}</TableCell>
                                     <TableCell>{formatDeliveryDate(order.deliveryDate)}</TableCell>
@@ -465,13 +545,6 @@ export function PurchaseOrdersManagementPanel() {
                             ))}
                         </TextField>
                         <TextField
-                            label={t('reference')}
-                            value={reference}
-                            onChange={(e) => setReference(e.target.value)}
-                            size="small"
-                            fullWidth
-                        />
-                        <TextField
                             label={t('currency')}
                             value={currency}
                             onChange={(e) => setCurrency(e.target.value)}
@@ -514,6 +587,9 @@ export function PurchaseOrdersManagementPanel() {
                         />
 
                         <Typography variant="subtitle2" sx={{ mt: 1 }}>{t('productOrders')}</Typography>
+                        <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
+                            {t('catalogueIdProductHint')}
+                        </Typography>
                         {productOrderRows.map((row, index) => (
                             <Box key={index} sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
                                 <TextField
@@ -521,7 +597,10 @@ export function PurchaseOrdersManagementPanel() {
                                     label={t('product')}
                                     value={row.productId ?? ''}
                                     onChange={(e) =>
-                                        updateProductOrderRow(index, 'productId', e.target.value && Number(e.target.value) )}
+                                        setProductOrderRowProduct(
+                                            index,
+                                            e.target.value ? Number(e.target.value) : undefined,
+                                        )}
                                     size="small"
                                     sx={{ minWidth: 160, flex: 1 }}
                                 >
@@ -532,6 +611,13 @@ export function PurchaseOrdersManagementPanel() {
                                         </MenuItem>
                                     ))}
                                 </TextField>
+                                <TextField
+                                    label={t('catalogueId')}
+                                    value={row.catalogueReference}
+                                    onChange={(e) => updateProductOrderRow(index, 'catalogueReference', e.target.value)}
+                                    size="small"
+                                    sx={{ minWidth: 140 }}
+                                />
                                 <TextField
                                     type="number"
                                     label={t('quantity')}
@@ -620,8 +706,7 @@ export function PurchaseOrdersManagementPanel() {
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                             <Box sx={{ display: 'flex', flexDirection: 'row', gap: 3, flexWrap: 'wrap' }}>
                                 <Box sx={{ flex: 1, minWidth: 160 }}>
-                                    <Typography variant="body2"><strong>{t('reference')}:</strong> {detailsOrder.reference ?? '—'}</Typography>
-                                    <Typography variant="body2" sx={{ mt: 0.5 }}><strong>{t('customer')}:</strong> {detailsOrder.customer?.companyName ?? '—'}</Typography>
+                                    <Typography variant="body2"><strong>{t('customer')}:</strong> {detailsOrder.customer?.companyName ?? '—'}</Typography>
                                     <Typography variant="body2" sx={{ mt: 0.5 }}><strong>{t('currency')}:</strong> {detailsOrder.currency ?? '—'}</Typography>
                                 </Box>
                                 <Box sx={{ flex: 1, minWidth: 160 }}>
@@ -638,6 +723,7 @@ export function PurchaseOrdersManagementPanel() {
                                 <TableHead>
                                     <TableRow>
                                         <TableCell>{t('product')}</TableCell>
+                                        <TableCell>{t('catalogueId')}</TableCell>
                                         <TableCell align="right">{t('quantity')}</TableCell>
                                         <TableCell align="right">{t('pricePerUnit')}</TableCell>
                                     </TableRow>
@@ -646,6 +732,7 @@ export function PurchaseOrdersManagementPanel() {
                                     {(detailsOrder.productOrderList || []).map((po, idx) => (
                                         <TableRow key={po.id ?? idx}>
                                             <TableCell>{po.product?.name ?? '—'}</TableCell>
+                                            <TableCell>{po.product?.reference ?? '—'}</TableCell>
                                             <TableCell align="right">{po.quantity ?? 0}</TableCell>
                                             <TableCell align="right">{po.pricePerUnit ?? 0}</TableCell>
                                         </TableRow>

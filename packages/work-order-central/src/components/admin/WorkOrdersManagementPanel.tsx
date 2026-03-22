@@ -251,9 +251,14 @@ export function WorkOrdersManagementPanel() {
     };
 
     const purchaseOrderLabel = (po: PurchaseOrderTO) => {
-        const ref = po.reference || '';
+        const lines = po.productOrderList || [];
+        const cat =
+            lines.map((l) => l.product?.reference).find((r) => r && r.trim() !== '') ||
+            lines[0]?.product?.name ||
+            '';
         const cust = po.customer?.companyName || '';
-        return cust ? `${ref} (${cust})` : (ref || `#${po.id}`);
+        const core = cat || `#${po.id}`;
+        return cust ? `${core} (${cust})` : core;
     };
 
     return (

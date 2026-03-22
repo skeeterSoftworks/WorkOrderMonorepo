@@ -246,6 +246,8 @@
   "description": "Opis",
   "productName": "Naziv proizvoda",
   "referenceNumber": "Broj reference",
+  "catalogueId": "Kataloški ID",
+  "catalogueIdProductHint": "Kataloški ID se čuva na proizvodu. Čuvanje narudžbenice ažurira proizvode ako je kataloški ID izmenjen.",
   "nextAction": "Dalje",
   "basicData": "Osnovni podaci",
   "buyerData": "Podaci o kupcu",

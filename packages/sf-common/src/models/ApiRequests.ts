@@ -19,6 +19,8 @@ export interface ProductTO {
     id?: number,
     name?: string,
     description?: string,
+    /** Catalogue / reference ID for the product */
+    reference?: string,
     machineIds?: number[],
 }
 
@@ -126,7 +128,6 @@ export interface PurchaseOrderTO {
     orderStatus?: string,
     currency?: string,
     deliveryDate?: string | number[] | null,
-    reference?: string,
     deliveryTerms?: string,
     shippingAddress?: string,
     comment?: string,

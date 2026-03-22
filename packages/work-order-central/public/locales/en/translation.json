@@ -245,6 +245,8 @@
   "description": "Description",
   "productName": "Product name",
   "referenceNumber": "Reference number",
+  "catalogueId": "Catalogue ID",
+  "catalogueIdProductHint": "Catalogue ID is stored on each product. Saving the order updates products when a line’s catalogue ID changed.",
   "nextAction": "Next",
   "basicData": "Basic data",
   "buyerData": "Buyer data",

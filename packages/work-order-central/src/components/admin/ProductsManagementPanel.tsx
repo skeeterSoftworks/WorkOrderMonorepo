@@ -33,6 +33,7 @@ export function ProductsManagementPanel() {
     const [selectedProductId, setSelectedProductId] = useState<number | undefined>(undefined);
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
+    const [reference, setReference] = useState('');
     const [selectedMachineIds, setSelectedMachineIds] = useState<number[]>([]);
     const [productToDelete, setProductToDelete] = useState<LocalProduct | null>(null);
     const [formModalOpen, setFormModalOpen] = useState(false);
@@ -70,6 +71,7 @@ export function ProductsManagementPanel() {
         setSelectedProductId(undefined);
         setName('');
         setDescription('');
+        setReference('');
         setSelectedMachineIds([]);
     };
 
@@ -87,6 +89,7 @@ export function ProductsManagementPanel() {
         setSelectedProductId(product.id as number | undefined);
         setName(product.name || '');
         setDescription(product.description || '');
+        setReference(product.reference || '');
         setSelectedMachineIds(product.machineIds ?? []);
         setFormModalOpen(true);
     };
@@ -96,6 +99,7 @@ export function ProductsManagementPanel() {
             id: selectedProductId,
             name,
             description,
+            reference: reference.trim(),
             machineIds: selectedMachineIds.length > 0 ? selectedMachineIds : undefined,
         };
         const onSuccess = () => {
@@ -137,8 +141,6 @@ export function ProductsManagementPanel() {
         resetForm();
     };
 
-    // @ts-ignore
-    // @ts-ignore
     return (
         <Box sx={{ mt: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -154,6 +156,7 @@ export function ProductsManagementPanel() {
                         <TableHead>
                             <TableRow>
                                 <TableCell>{t('name')}</TableCell>
+                                <TableCell>{t('catalogueId')}</TableCell>
                                 <TableCell>{t('description')}</TableCell>
                                 <TableCell>{t('machine')}</TableCell>
                                 <TableCell align="right">{t('actions')}</TableCell>
@@ -163,6 +166,7 @@ export function ProductsManagementPanel() {
                             {products.map((product) => (
                                 <TableRow key={product.id || product.name}>
                                     <TableCell>{product.name}</TableCell>
+                                    <TableCell>{product.reference ?? '—'}</TableCell>
                                     <TableCell>{product.description}</TableCell>
                                     <TableCell>{getMachineNames(product.machineIds)}</TableCell>
                                     <TableCell align="right">
@@ -198,6 +202,13 @@ export function ProductsManagementPanel() {
                             label={t('name')}
                             value={name}
                             onChange={(e) => setName(e.target.value)}
+                            size="small"
+                            fullWidth
+                        />
+                        <TextField
+                            label={t('catalogueId')}
+                            value={reference}
+                            onChange={(e) => setReference(e.target.value)}
                             size="small"
                             fullWidth
                         />

@@ -1,17 +1,17 @@
 import * as XLSX from 'xlsx-js-style';
 
 const TEMPLATE_ORDER_ROW = 1; // 0-based: row 2 in Excel (order header data)
-const TEMPLATE_PRODUCTS_START_ROW = 4; // 0-based: row 5 in Excel (first product data row; row 4 = product headers)
+
+const TEMPLATE_PRODUCTS_START_ROW = 4; // first product data row
 const COLS = {
   customer: 0,
-  reference: 1,
-  currency: 2,
-  deliveryDate: 3,
-  deliveryTerms: 4,
-  shippingAddress: 5,
-  comment: 6,
+  currency: 1,
+  deliveryDate: 2,
+  deliveryTerms: 3,
+  shippingAddress: 4,
+  comment: 5,
 };
-const PRODUCT_COLS = { product: 0, quantity: 1, pricePerUnit: 2 };
+const PRODUCT_COLS = { product: 0, catalogueId: 1, quantity: 2, pricePerUnit: 3 };
 
 const thinBorder = {
   top: { style: 'thin', color: { rgb: '000000' } },
@@ -59,13 +59,17 @@ function applyRangeBorders(
 
 export interface ParsedPurchaseOrder {
   customerCompanyName: string;
-  reference: string;
   currency: string;
   deliveryDate: string;
   deliveryTerms: string;
   shippingAddress: string;
   comment: string;
-  productRows: { productNameOrId: string; quantity: number; pricePerUnit: number }[];
+  productRows: {
+    productNameOrId: string;
+    catalogueId: string;
+    quantity: number;
+    pricePerUnit: number;
+  }[];
 }
 
 function cell(sheet: XLSX.WorkSheet, r: number, c: number): string | number | undefined {
@@ -84,45 +88,33 @@ function safeNum(val: string | number | undefined): number {
 
 /**
  * Build and download an Excel template for a new purchase order.
- * Structure: row 1 = headers (Customer, Reference, Currency, Delivery date, Delivery terms, Shipping address, Comment),
- * row 2 = order data (empty), row 4 = product headers, row 5+ = product rows (empty).
- * Table borders and light header styling are applied.
+ * Row 2 = order (Customer, Currency, Delivery date, …); row 4 = product headers including Catalogue ID per line.
  */
 export function downloadPurchaseOrderTemplate(): void {
   const wsData: (string | number)[][] = [
     [
       'Customer (company name)',
-      'Reference',
       'Currency',
       'Delivery date (YYYY-MM-DD)',
       'Delivery terms',
       'Shipping address',
       'Comment',
     ],
-    ['', '', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
     [],
-    ['Product (name or ID)', 'Quantity', 'Price per unit'],
-    ['', '', ''],
-    ['', '', ''],
-    ['', '', ''],
-    ['', '', ''],
+    ['Product (name or ID)', 'Catalogue ID', 'Quantity', 'Price per unit'],
+    ['', '', '', ''],
+    ['', '', '', ''],
+    ['', '', '', ''],
+    ['', '', '', ''],
+    ['', '', '', ''],
   ];
   const ws = XLSX.utils.aoa_to_sheet(wsData);
-  const colWidths = [
-    { wch: 25 },
-    { wch: 20 },
-    { wch: 12 },
-    { wch: 22 },
-    { wch: 18 },
-    { wch: 28 },
-    { wch: 30 },
-  ];
+  const colWidths = [{ wch: 25 }, { wch: 12 }, { wch: 22 }, { wch: 18 }, { wch: 28 }, { wch: 30 }];
   ws['!cols'] = colWidths;
 
-  // Order table: rows 0–1, cols A–G (header + one data row)
-  applyRangeBorders(ws, 0, 1, 0, 6, 0);
-  // Product table: rows 3–7, cols A–C (header + five data rows)
-  applyRangeBorders(ws, 3, 7, 0, 2, 3);
+  applyRangeBorders(ws, 0, 1, 0, 5, 0);
+  applyRangeBorders(ws, 3, 8, 0, 3, 3);
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Purchase order');
@@ -131,7 +123,7 @@ export function downloadPurchaseOrderTemplate(): void {
 
 /**
  * Parse an uploaded Excel file into ParsedPurchaseOrder.
- * Expects same layout as template: order on row 2, products from row 5.
+ * Order on row 2; product lines from row 5 with optional Catalogue ID per product.
  */
 export function parsePurchaseOrderFile(file: File): Promise<ParsedPurchaseOrder> {
   return new Promise((resolve, reject) => {
@@ -151,17 +143,17 @@ export function parsePurchaseOrderFile(file: File): Promise<ParsedPurchaseOrder>
           return;
         }
         const orderCustomer = cell(sheet, TEMPLATE_ORDER_ROW, COLS.customer);
-        const orderReference = cell(sheet, TEMPLATE_ORDER_ROW, COLS.reference);
         const orderCurrency = cell(sheet, TEMPLATE_ORDER_ROW, COLS.currency);
         const orderDeliveryDate = cell(sheet, TEMPLATE_ORDER_ROW, COLS.deliveryDate);
         const orderDeliveryTerms = cell(sheet, TEMPLATE_ORDER_ROW, COLS.deliveryTerms);
         const orderShippingAddress = cell(sheet, TEMPLATE_ORDER_ROW, COLS.shippingAddress);
         const orderComment = cell(sheet, TEMPLATE_ORDER_ROW, COLS.comment);
 
-        const productRows: { productNameOrId: string; quantity: number; pricePerUnit: number }[] = [];
-        let r = TEMPLATE_PRODUCTS_START_ROW; // first data row after header
+        const productRows: ParsedPurchaseOrder['productRows'] = [];
+        let r = TEMPLATE_PRODUCTS_START_ROW;
         for (;;) {
           const productVal = cell(sheet, r, PRODUCT_COLS.product);
+          const catalogueVal = cell(sheet, r, PRODUCT_COLS.catalogueId);
           const qtyVal = cell(sheet, r, PRODUCT_COLS.quantity);
           const priceVal = cell(sheet, r, PRODUCT_COLS.pricePerUnit);
           const hasProduct = productVal !== undefined && productVal !== null && String(productVal).trim() !== '';
@@ -169,6 +161,7 @@ export function parsePurchaseOrderFile(file: File): Promise<ParsedPurchaseOrder>
           if (!hasProduct && !hasQty) break;
           productRows.push({
             productNameOrId: hasProduct ? String(productVal).trim() : '',
+            catalogueId: catalogueVal != null ? String(catalogueVal).trim() : '',
             quantity: safeNum(qtyVal),
             pricePerUnit: safeNum(priceVal),
           });
@@ -177,7 +170,6 @@ export function parsePurchaseOrderFile(file: File): Promise<ParsedPurchaseOrder>
 
         resolve({
           customerCompanyName: orderCustomer != null ? String(orderCustomer) : '',
-          reference: orderReference != null ? String(orderReference) : '',
           currency: orderCurrency != null ? String(orderCurrency) : '',
           deliveryDate: orderDeliveryDate != null ? String(orderDeliveryDate) : '',
           deliveryTerms: orderDeliveryTerms != null ? String(orderDeliveryTerms) : '',
