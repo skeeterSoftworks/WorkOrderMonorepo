@@ -1,4 +1,5 @@
 import {useEffect, useState} from 'react';
+import {Link} from 'react-router-dom';
 import {
     Box,
     Button,
@@ -16,6 +17,7 @@ import {
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CloseIcon from '@mui/icons-material/Close';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import type {LoggedUser} from '../../models/Common.ts';
 import type {WorkStationPreconditionItem} from '../../models/ApiRequests.ts';
 import {useTranslation} from 'react-i18next';
@@ -31,12 +33,23 @@ function preconditionText(item: WorkStationPreconditionItem, lang: 'sr' | 'en'):
     return (item.en || item.sr || '').trim();
 }
 
+function loadWorkstationMachineFlag(setReady: (v: boolean) => void) {
+    Server.getWorkstationMachine(
+        (resp: {data?: {machineName?: string | null}}) => {
+            const n = resp?.data?.machineName;
+            setReady(!!n && String(n).trim().length > 0);
+        },
+        () => setReady(false)
+    );
+}
+
 export function Home() {
     const userDataString = sessionStorage.getItem('userData');
     const userData: LoggedUser = userDataString && JSON.parse(userDataString);
     const {t, i18n} = useTranslation();
     const navigate = useNavigate();
 
+    const [workstationMachineReady, setWorkstationMachineReady] = useState(false);
     const [preModalOpen, setPreModalOpen] = useState(false);
     const [preconditionItems, setPreconditionItems] = useState<WorkStationPreconditionItem[]>([]);
     const [loadingPreconditions, setLoadingPreconditions] = useState(false);
@@ -44,6 +57,13 @@ export function Home() {
     const [canStartProduction, setCanStartProduction] = useState(false);
 
     const lang: 'sr' | 'en' = i18n.language?.toLowerCase().startsWith('sr') ? 'sr' : 'en';
+
+    useEffect(() => {
+        loadWorkstationMachineFlag(setWorkstationMachineReady);
+        const onUpdated = () => loadWorkstationMachineFlag(setWorkstationMachineReady);
+        window.addEventListener('workstationMachineUpdated', onUpdated);
+        return () => window.removeEventListener('workstationMachineUpdated', onUpdated);
+    }, []);
 
     useEffect(() => {
         if (!preModalOpen) {
@@ -111,22 +131,40 @@ export function Home() {
         navigate('/production');
     };
 
+    const isAdmin = userData && userData.role === 'ADMIN';
+
     return (
-        <Grid container sx={{minHeight: '60vh', alignItems: 'center', justifyContent: 'center'}}>
-            {userData && userData.role === 'ADMIN' && (
-                <Grid container spacing={3} sx={{maxWidth: 1100, justifyContent: 'center'}}>
-                    <Grid item xs="auto" sx={{textAlign: 'center'}}>
-                        <Button variant="contained" sx={homeButtonStyle} onClick={() => setPreModalOpen(true)}>
-                            {t('production')}
-                        </Button>
-                    </Grid>
-                    <Grid item xs="auto" sx={{textAlign: 'center'}}>
-                        <Button href="/information-management" variant="contained" sx={homeButtonStyle}>
-                            {t('informationManagement')}
-                        </Button>
-                    </Grid>
-                </Grid>
+        <Box sx={{position: 'relative', width: '100%', minHeight: '60vh'}}>
+            {isAdmin && (
+                <IconButton
+                    component={Link}
+                    to="/admin"
+                    sx={{position: 'absolute', top: 8, right: 8, zIndex: 1}}
+                    aria-label={t('adminPageLink')}
+                    title={t('adminPageLink')}
+                    size="large"
+                    color="primary"
+                >
+                    <AdminPanelSettingsIcon fontSize="large" />
+                </IconButton>
             )}
+
+            <Grid container sx={{minHeight: '60vh', alignItems: 'center', justifyContent: 'center'}}>
+                {isAdmin && workstationMachineReady && (
+                    <Grid container spacing={3} sx={{maxWidth: 1100, justifyContent: 'center'}}>
+                        <Grid item xs="auto" sx={{textAlign: 'center'}}>
+                            <Button variant="contained" sx={homeButtonStyle} onClick={() => setPreModalOpen(true)}>
+                                {t('production')}
+                            </Button>
+                        </Grid>
+                        <Grid item xs="auto" sx={{textAlign: 'center'}}>
+                            <Button href="/information-management" variant="contained" sx={homeButtonStyle}>
+                                {t('informationManagement')}
+                            </Button>
+                        </Grid>
+                    </Grid>
+                )}
+            </Grid>
 
             <Dialog open={preModalOpen} onClose={() => setPreModalOpen(false)} fullWidth maxWidth="sm">
                 <DialogTitle sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', pr: 1}}>
@@ -175,6 +213,6 @@ export function Home() {
                     </Button>
                 </DialogActions>
             </Dialog>
-        </Grid>
+        </Box>
     );
 }

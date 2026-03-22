@@ -1,4 +1,4 @@
-import type {ApplicationUserTO, StationConfigDTO} from "../models/ApiRequests";
+import type {ApplicationUserTO, StationConfigDTO, WorkstationMachineConfigTO} from "../models/ApiRequests";
 import axios from "axios";
 import {getServerUrl} from "../util/EnvUtils";
 
@@ -59,6 +59,33 @@ export class Server {
      */
     static fetchStationConfigWithPreconditions(onSuccess: Function, onError?: Function) {
         axios.get(`${getServerUrl()}/config/station-config`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError && onError(error);
+            });
+    }
+
+    static getWorkstationMachine(onSuccess: Function, onError?: Function) {
+        axios.get(`${getServerUrl()}/config/workstation-machine`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError && onError(error);
+            });
+    }
+
+    static saveWorkstationMachine(config: WorkstationMachineConfigTO, onSuccess: Function, onError?: Function) {
+        axios.post(`${getServerUrl()}/config/workstation-machine`, config)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError && onError(error);
+            });
+    }
+
+    static getMachinesFromCentralViaLocal(onSuccess: Function, onError?: Function) {
+        axios.get(`${getServerUrl()}/machines/all`)
             .then(response => onSuccess(response))
             .catch(error => {
                 console.log(error);

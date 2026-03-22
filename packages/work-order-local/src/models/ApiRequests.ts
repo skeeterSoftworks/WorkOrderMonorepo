@@ -83,6 +83,17 @@ export interface StationConfigWithPreconditionsTO {
     woPreconditionsJSON?: string,
 }
 
+/** Local `workstation-machine.json` + `/config/workstation-machine`. */
+export interface WorkstationMachineConfigTO {
+    machineName?: string | null,
+}
+
+/** Proxied from central `/machines/all`. */
+export interface CentralMachineTO {
+    id?: number,
+    machineName?: string,
+}
+
 export interface WorkStationPreconditionItem {
     sr?: string,
     en?: string,
