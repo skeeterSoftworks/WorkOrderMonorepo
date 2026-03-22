@@ -86,6 +86,20 @@ export interface StationConfigWithPreconditionsTO {
 /** Local `workstation-machine.json` + `/config/workstation-machine`. */
 export interface WorkstationMachineConfigTO {
     machineName?: string | null,
+    machineId?: number | null,
+}
+
+/** Proxied from central for production (subset of fields). */
+export interface ProductionWorkOrderTO {
+    id?: number,
+    productOrderId?: number,
+    purchaseOrderId?: number,
+    productName?: string,
+    productReference?: string,
+    dueDate?: string,
+    startDate?: string,
+    endDate?: string,
+    comment?: string,
 }
 
 /** Proxied from central `/machines/all`. */

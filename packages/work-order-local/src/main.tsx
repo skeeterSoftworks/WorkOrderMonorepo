@@ -8,6 +8,7 @@ import {HOC} from "./containers/HOC.tsx";
 import {Home} from "./components/home/Home.tsx";
 import {MockQr} from "./containers/MockQr.tsx";
 import {ProductionPage} from "./components/production/ProductionPage.tsx";
+import {WorkSessionPage} from "./components/production/WorkSessionPage.tsx";
 import {InformationManagementPage} from "./components/information/InformationManagementPage.tsx";
 import {AdminPage} from "./components/admin/AdminPage.tsx";
 import {AdminMachineDetailsPage} from "./components/admin/AdminMachineDetailsPage.tsx";
@@ -31,6 +32,7 @@ root.render(
                     <Routes>
                         <Route path="/" element={<Home/>}/>
                         <Route path="/production" element={<ProductionPage/>}/>
+                        <Route path="/production/work-session" element={<WorkSessionPage/>}/>
                         <Route path="/information-management" element={<InformationManagementPage/>}/>
                         <Route path="/admin" element={<AdminPage/>}/>
                         <Route path="/admin/machine-details" element={<AdminMachineDetailsPage/>}/>

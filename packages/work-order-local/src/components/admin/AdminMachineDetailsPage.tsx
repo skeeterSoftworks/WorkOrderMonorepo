@@ -14,15 +14,17 @@ import Alert from '@mui/material/Alert';
 import {useNavigate} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
 import type {LoggedUser} from '../../models/Common.ts';
-import type {CentralMachineTO} from '../../models/ApiRequests.ts';
+import type {CentralMachineTO, WorkstationMachineConfigTO} from '../../models/ApiRequests.ts';
 import {Server} from '../../api/Server.ts';
+
+const NONE = '';
 
 export function AdminMachineDetailsPage() {
     const {t} = useTranslation();
     const navigate = useNavigate();
 
     const [machines, setMachines] = useState<CentralMachineTO[]>([]);
-    const [selectedName, setSelectedName] = useState<string>('');
+    const [selectedMachineId, setSelectedMachineId] = useState<string>(NONE);
     const [loadingMachines, setLoadingMachines] = useState(true);
     const [loadingSave, setLoadingSave] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -36,12 +38,10 @@ export function AdminMachineDetailsPage() {
         }
     }, [navigate]);
 
-    const machineNames = useMemo(() => {
-        const names = machines
-            .map((m) => m.machineName?.trim())
-            .filter((n): n is string => !!n && n.length > 0);
-        return [...new Set(names)].sort((a, b) => a.localeCompare(b));
-    }, [machines]);
+    const machinesWithId = useMemo(
+        () => machines.filter((m) => m.id != null && m.machineName && m.machineName.trim().length > 0),
+        [machines]
+    );
 
     useEffect(() => {
         setLoadingMachines(true);
@@ -60,25 +60,45 @@ export function AdminMachineDetailsPage() {
     }, [t]);
 
     useEffect(() => {
+        if (!machinesWithId.length) return;
         Server.getWorkstationMachine(
-            (resp: {data?: {machineName?: string | null}}) => {
-                const n = resp?.data?.machineName;
-                setSelectedName(n && n.trim() ? n.trim() : '');
+            (resp: {data?: WorkstationMachineConfigTO}) => {
+                const cfg = resp?.data;
+                const mid = cfg?.machineId;
+                if (mid != null && machinesWithId.some((m) => m.id === mid)) {
+                    setSelectedMachineId(String(mid));
+                    return;
+                }
+                const name = cfg?.machineName?.trim();
+                if (name) {
+                    const m = machinesWithId.find((x) => x.machineName?.trim() === name);
+                    if (m?.id != null) setSelectedMachineId(String(m.id));
+                }
             },
             () => {}
         );
-    }, []);
+    }, [machinesWithId]);
 
     const handleSave = () => {
-        if (!selectedName.trim()) {
+        if (!selectedMachineId || selectedMachineId === NONE) {
+            setError(t('selectMachineRequired'));
+            return;
+        }
+        const id = Number(selectedMachineId);
+        const sel = machinesWithId.find((m) => m.id === id);
+        if (!sel?.machineName?.trim()) {
             setError(t('selectMachineRequired'));
             return;
         }
         setError(null);
         setSaveOk(false);
         setLoadingSave(true);
+        const payload: WorkstationMachineConfigTO = {
+            machineName: sel.machineName.trim(),
+            machineId: id,
+        };
         Server.saveWorkstationMachine(
-            {machineName: selectedName.trim()},
+            payload,
             () => {
                 setLoadingSave(false);
                 setSaveOk(true);
@@ -127,20 +147,20 @@ export function AdminMachineDetailsPage() {
                         fullWidth
                         size="small"
                         label={t('workstationMachineSelect')}
-                        value={selectedName}
-                        onChange={(e) => setSelectedName(e.target.value)}
+                        value={selectedMachineId}
+                        onChange={(e) => setSelectedMachineId(e.target.value)}
                         sx={{mb: 2}}
                     >
-                        <MenuItem value="">
+                        <MenuItem value={NONE}>
                             <em>{t('none')}</em>
                         </MenuItem>
-                        {machineNames.map((name) => (
-                            <MenuItem key={name} value={name}>
-                                {name}
+                        {machinesWithId.map((m) => (
+                            <MenuItem key={m.id} value={String(m.id)}>
+                                {m.machineName}
                             </MenuItem>
                         ))}
                     </TextField>
-                    <Button variant="contained" onClick={handleSave} disabled={loadingSave || !selectedName.trim()}>
+                    <Button variant="contained" onClick={handleSave} disabled={loadingSave || !selectedMachineId || selectedMachineId === NONE}>
                         {loadingSave ? <CircularProgress size={22} color="inherit" /> : t('save')}
                     </Button>
                 </>

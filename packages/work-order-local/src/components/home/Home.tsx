@@ -35,9 +35,12 @@ function preconditionText(item: WorkStationPreconditionItem, lang: 'sr' | 'en'):
 
 function loadWorkstationMachineFlag(setReady: (v: boolean) => void) {
     Server.getWorkstationMachine(
-        (resp: {data?: {machineName?: string | null}}) => {
+        (resp: {data?: {machineName?: string | null; machineId?: number | null}}) => {
             const n = resp?.data?.machineName;
-            setReady(!!n && String(n).trim().length > 0);
+            const id = resp?.data?.machineId;
+            const nameOk = !!n && String(n).trim().length > 0;
+            const idOk = id != null && Number(id) > 0;
+            setReady(nameOk || idOk);
         },
         () => setReady(false)
     );

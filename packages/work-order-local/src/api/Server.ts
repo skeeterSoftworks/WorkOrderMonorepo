@@ -93,6 +93,16 @@ export class Server {
             });
     }
 
+    /** Work orders with non-cancelled bookings on the workstation's bound machine (local → central). */
+    static getProductionWorkOrdersForBoundMachine(onSuccess: Function, onError?: Function) {
+        axios.get(`${getServerUrl()}/production/work-orders`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError && onError(error);
+            });
+    }
+
     static updateStationConfig(stationConfigDTO: StationConfigDTO, onSuccess: Function, onError?: Function) {
         axios.post(`${getServerUrl()}/configuration/update_station_config`, stationConfigDTO)
             .then(response => {
