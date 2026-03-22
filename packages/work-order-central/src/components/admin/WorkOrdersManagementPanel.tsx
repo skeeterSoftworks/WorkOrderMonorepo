@@ -21,7 +21,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import {useEffect, useState} from 'react';
 import {useSearchParams} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
-import type {WorkOrderTO, PurchaseOrderTO, MachineTO, MachineBookingTO} from 'sf-common/src/models/ApiRequests';
+import type {WorkOrderTO, PurchaseOrderTO, ProductOrderTO, MachineTO, MachineBookingTO} from 'sf-common/src/models/ApiRequests';
 import {Server, ConfirmationModal} from 'sf-common';
 
 /** Normalize PO delivery date for HTML date input (yyyy-MM-dd). */
@@ -41,6 +41,46 @@ function purchaseOrderDeliveryToDueDateInput(
     return '';
 }
 
+function productOrderLineLabel(line: ProductOrderTO): string {
+    const ref = line.product?.reference?.trim();
+    const name = line.product?.name?.trim();
+    const qty = line.quantity != null ? `×${line.quantity}` : '';
+    const core = [ref, name].filter(Boolean).join(' · ') || (line.id != null ? `#${line.id}` : '');
+    return qty ? `${core} ${qty}` : core;
+}
+
+/** Lines that can get a work order: unused lines, plus the line currently edited. */
+function getSelectableProductLines(
+    purchaseOrderId: number | undefined,
+    purchaseOrders: PurchaseOrderTO[],
+    workOrders: WorkOrderTO[],
+    editingWorkOrderId: number | undefined
+): ProductOrderTO[] {
+    if (purchaseOrderId == null) return [];
+    const po = purchaseOrders.find((p) => p.id === purchaseOrderId);
+    const lines = (po?.productOrderList ?? []).filter((l) => l.id != null) as ProductOrderTO[];
+    const usedLineIds = new Set(
+        workOrders
+            .filter((w) => editingWorkOrderId == null || w.id !== editingWorkOrderId)
+            .map((w) => w.productOrderId)
+            .filter((id): id is number => id != null)
+    );
+    const editing = editingWorkOrderId != null ? workOrders.find((w) => w.id === editingWorkOrderId) : undefined;
+    return lines.filter(
+        (l) =>
+            l.id != null &&
+            (!usedLineIds.has(l.id) || (editing?.productOrderId != null && l.id === editing.productOrderId))
+    );
+}
+
+function workOrderLineDisplay(wo: WorkOrderTO): string {
+    const ref = wo.productReference?.trim();
+    const name = wo.productName?.trim();
+    const parts = [ref, name].filter(Boolean);
+    if (parts.length) return parts.join(' · ');
+    return wo.productOrderId != null ? `#${wo.productOrderId}` : '—';
+}
+
 export function WorkOrdersManagementPanel() {
     const {t} = useTranslation();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -49,6 +89,7 @@ export function WorkOrdersManagementPanel() {
     const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrderTO[]>([]);
     const [selectedId, setSelectedId] = useState<number | undefined>(undefined);
     const [purchaseOrderId, setPurchaseOrderId] = useState<number | undefined>(undefined);
+    const [productOrderLineId, setProductOrderLineId] = useState<number | undefined>(undefined);
     const [dueDate, setDueDate] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -85,6 +126,7 @@ export function WorkOrdersManagementPanel() {
             const id = Number(presetId);
             setSelectedId(undefined);
             setPurchaseOrderId(id);
+            setProductOrderLineId(undefined);
             setStartDate('');
             setEndDate('');
             setComment('');
@@ -133,6 +175,7 @@ export function WorkOrdersManagementPanel() {
     const resetForm = () => {
         setSelectedId(undefined);
         setPurchaseOrderId(undefined);
+        setProductOrderLineId(undefined);
         setDueDate('');
         setStartDate('');
         setEndDate('');
@@ -146,7 +189,15 @@ export function WorkOrdersManagementPanel() {
 
     const handleEditClick = (wo: WorkOrderTO) => {
         setSelectedId(wo.id);
-        setPurchaseOrderId(wo.purchaseOrderId);
+        let poId = wo.purchaseOrderId;
+        if (poId == null && wo.productOrderId != null) {
+            const po = purchaseOrders.find((p) =>
+                (p.productOrderList ?? []).some((l) => l.id === wo.productOrderId)
+            );
+            poId = po?.id;
+        }
+        setPurchaseOrderId(poId);
+        setProductOrderLineId(wo.productOrderId);
         setDueDate(wo.dueDate ? wo.dueDate.substring(0, 10) : '');
         setStartDate(wo.startDate ? wo.startDate.substring(0, 10) : '');
         setEndDate(wo.endDate ? wo.endDate.substring(0, 10) : '');
@@ -155,9 +206,12 @@ export function WorkOrdersManagementPanel() {
     };
 
     const handleSubmit = () => {
+        if (productOrderLineId == null) {
+            return;
+        }
         const payload: WorkOrderTO = {
             id: selectedId,
-            purchaseOrderId: purchaseOrderId || undefined,
+            productOrderId: productOrderLineId,
             dueDate: dueDate || undefined,
             startDate: startDate || undefined,
             endDate: endDate || undefined,
@@ -276,6 +330,7 @@ export function WorkOrdersManagementPanel() {
                         <TableHead>
                             <TableRow>
                                 <TableCell>{t('purchaseOrder')}</TableCell>
+                                <TableCell>{t('productOrderLine')}</TableCell>
                                 <TableCell>{t('dueDate')}</TableCell>
                                 <TableCell>{t('startDate')}</TableCell>
                                 <TableCell>{t('endDate')}</TableCell>
@@ -289,6 +344,7 @@ export function WorkOrdersManagementPanel() {
                                     <TableCell>
                                         {purchaseOrderLabel(purchaseOrders.find((p) => p.id === wo.purchaseOrderId) || {id: wo.purchaseOrderId})}
                                     </TableCell>
+                                    <TableCell>{workOrderLineDisplay(wo)}</TableCell>
                                     <TableCell>{formatDate(wo.dueDate)}</TableCell>
                                     <TableCell>{formatDate(wo.startDate)}</TableCell>
                                     <TableCell>{formatDate(wo.endDate)}</TableCell>
@@ -339,6 +395,7 @@ export function WorkOrdersManagementPanel() {
                             onChange={(e) => {
                                 const id = e.target.value ? Number(e.target.value) : undefined;
                                 setPurchaseOrderId(id);
+                                setProductOrderLineId(undefined);
                                 if (!selectedId) {
                                     const po = id != null ? purchaseOrders.find((p) => p.id === id) : undefined;
                                     setDueDate(po ? purchaseOrderDeliveryToDueDateInput(po.deliveryDate) : '');
@@ -352,6 +409,35 @@ export function WorkOrdersManagementPanel() {
                             {purchaseOrders.map((po) => (
                                 <MenuItem key={po.id} value={po.id}>
                                     {purchaseOrderLabel(po)}
+                                </MenuItem>
+                            ))}
+                        </TextField>
+                        <TextField
+                            select
+                            label={t('productOrderLine')}
+                            value={productOrderLineId ?? ''}
+                            onChange={(e) =>
+                                setProductOrderLineId(e.target.value ? Number(e.target.value) : undefined)
+                            }
+                            size="small"
+                            fullWidth
+                            required
+                            disabled={purchaseOrderId == null}
+                            helperText={
+                                purchaseOrderId == null
+                                    ? t('productOrderLineSelectFirst')
+                                    : t('productOrderLineHelper')
+                            }
+                        >
+                            <MenuItem value="">{t('none')}</MenuItem>
+                            {getSelectableProductLines(
+                                purchaseOrderId,
+                                purchaseOrders,
+                                workOrders,
+                                selectedId
+                            ).map((line) => (
+                                <MenuItem key={line.id} value={line.id}>
+                                    {productOrderLineLabel(line)}
                                 </MenuItem>
                             ))}
                         </TextField>
@@ -394,7 +480,12 @@ export function WorkOrdersManagementPanel() {
                             minRows={2}
                         />
                         <Box sx={{display: 'flex', gap: 1, mt: 2}}>
-                            <Button variant="contained" color="primary" onClick={handleSubmit}>
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                onClick={handleSubmit}
+                                disabled={productOrderLineId == null}
+                            >
                                 {selectedId ? t('editWorkOrder') : t('addWorkOrder')}
                             </Button>
                             <Button variant="outlined" onClick={closeFormModal}>
@@ -421,6 +512,20 @@ export function WorkOrdersManagementPanel() {
                 </DialogTitle>
                 <DialogContent dividers>
                     <Box sx={{display: 'flex', flexDirection: 'column', gap: 2, pt: 1}}>
+                        <Typography variant="body2">
+                            {t('purchaseOrder')}:{' '}
+                            {scheduleWorkOrder?.purchaseOrderId != null
+                                ? purchaseOrderLabel(
+                                      purchaseOrders.find((p) => p.id === scheduleWorkOrder.purchaseOrderId) || {
+                                          id: scheduleWorkOrder.purchaseOrderId,
+                                      }
+                                  )
+                                : '—'}
+                        </Typography>
+                        <Typography variant="body2">
+                            {t('productOrderLine')}:{' '}
+                            {scheduleWorkOrder ? workOrderLineDisplay(scheduleWorkOrder) : '—'}
+                        </Typography>
                         <Typography variant="body2">
                             {t('workOrder')}: {scheduleWorkOrder?.id ?? '—'}
                         </Typography>

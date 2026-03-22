@@ -140,7 +140,12 @@ export interface PurchaseOrderTO {
 
 export interface WorkOrderTO {
     id?: number,
+    /** Purchase order line (product line) this work order belongs to. */
+    productOrderId?: number,
+    /** Denormalized: parent purchase order (read from API for display). */
     purchaseOrderId?: number,
+    productName?: string,
+    productReference?: string,
     dueDate?: string,
     startDate?: string,
     endDate?: string,
