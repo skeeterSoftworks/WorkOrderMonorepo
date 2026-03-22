@@ -10,30 +10,32 @@ export function Home() {
     const { t } = useTranslation()
 
 
-    const homeButtonMarginStyle: any = {
-        height: "20vh",
-        width: "20vh",
-        borderRadius: "18px",
-
+    const homeButtonStyle: any = {
+        height: "18vh",
+        width: "18vh",
+        borderRadius: "20px",
+        textTransform: "none",
+        fontSize: "1.1rem",
+        fontWeight: 600,
+        boxShadow: 4,
     }
 
     return (
 
-        <Grid container sx={{ marginTop: "30vh" }}>
+        <Grid container sx={{ minHeight: "60vh", alignItems: "center", justifyContent: "center" }}>
             {userData && userData.role === "ADMIN" &&
-                <Grid container>
+                <Grid container spacing={3} sx={{ maxWidth: 1100, justifyContent: "center" }}>
 
                     {userData && userData.role === "ADMIN" &&
-                        <Grid item xs={4} md={4} sx={{ textAlign: "center" }}>
-                            <Button href="/work-orders-local" variant="contained" sx={homeButtonMarginStyle}>
-                                {t("workOrders")}
+                        <Grid item xs="auto" sx={{ textAlign: "center" }}>
+                            <Button href="/production" variant="contained" sx={homeButtonStyle}>
+                                {t("production")}
                             </Button>
                         </Grid>}
-
                     {userData && userData.role === "ADMIN" &&
-                        <Grid item xs={4} md={4} sx={{ textAlign: "center" }}>
-                            <Button href="/mock-qr" variant="contained" sx={homeButtonMarginStyle}>
-                                MOCK Qr Panel
+                        <Grid item xs="auto" sx={{ textAlign: "center" }}>
+                            <Button href="/information-management" variant="contained" sx={homeButtonStyle}>
+                                {t("informationManagement")}
                             </Button>
                         </Grid>}
 

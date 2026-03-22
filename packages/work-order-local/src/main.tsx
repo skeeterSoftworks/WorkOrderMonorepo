@@ -7,6 +7,8 @@ import {BrowserRouter, Route, Routes} from "react-router-dom";
 import {HOC} from "./containers/HOC.tsx";
 import {Home} from "./components/home/Home.tsx";
 import {MockQr} from "./containers/MockQr.tsx";
+import {ProductionPage} from "./components/production/ProductionPage.tsx";
+import {InformationManagementPage} from "./components/information/InformationManagementPage.tsx";
 
 
 const root = ReactDOM.createRoot(
@@ -26,6 +28,8 @@ root.render(
                 <HOC>
                     <Routes>
                         <Route path="/" element={<Home/>}/>
+                        <Route path="/production" element={<ProductionPage/>}/>
+                        <Route path="/information-management" element={<InformationManagementPage/>}/>
                         <Route path="/mock-qr" element={<MockQr/>}/>
                     </Routes>
                 </HOC>

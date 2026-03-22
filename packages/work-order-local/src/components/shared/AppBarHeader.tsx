@@ -8,6 +8,7 @@ import serbianFlag from "../../res/serbia-flag-icon.png"
 import { useTranslation } from 'react-i18next';
 import { useEffect } from 'react';
 import { useCookies } from 'react-cookie';
+import QrCodeIcon from '@mui/icons-material/QrCode';
 
 
 
@@ -29,7 +30,7 @@ export function AppBarHeader() {
         i18n.changeLanguage(cookies?.locale || "sr")
     }, []);
 
-    const changeLanguageHandler = (lang) => {
+    const changeLanguageHandler = (lang: string) => {
         i18n.changeLanguage(lang)
         setCookie('locale', lang, { path: '/' })
     }
@@ -42,6 +43,14 @@ export function AppBarHeader() {
                 <Typography variant="h6" color="inherit" component="div">
                     {userData ? `${userData.role}: ${userData.name} ${userData.surname}` : t("notLoggedIn")}
                 </Typography>
+
+                {userData && userData.role === "ADMIN" &&
+                <IconButton size="small" color="inherit" sx={{ marginLeft: 'auto' }}
+                    onClick={() => { window.location.href = "/mock-qr" }}
+                    aria-label={t("mockQrPanel")}>
+                    <QrCodeIcon />
+                </IconButton>
+                }
 
                 <IconButton size="small" aria-label="search" color="inherit" sx={{ marginLeft: 'auto' }}
                     onClick={() => { changeLanguageHandler("sr") }}>
