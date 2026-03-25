@@ -11,6 +11,7 @@ import DialogActions from '@mui/material/DialogActions';
 import TextField from '@mui/material/TextField';
 import Stack from '@mui/material/Stack';
 import Divider from '@mui/material/Divider';
+import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
@@ -22,6 +23,7 @@ import type {
     WorkSessionResponseTO,
     WorkstationMachineConfigTO,
 } from '../../models/ApiRequests.ts';
+import {isWorkOrderClosedForProduction} from './workOrderProductionHelpers.ts';
 
 const STORAGE_SESSION = 'activeWorkSessionId';
 
@@ -139,9 +141,18 @@ export type ProductionWorkSessionPanelProps = {
     onClearSelection: () => void;
     /** Reload work orders from the server (e.g. after good counts may have updated on central). */
     onWorkOrdersRefresh?: () => Promise<void>;
+    /**
+     * When {@code true}, the production work order dropdown should be read-only (session opening or open).
+     */
+    onWorkOrderSelectorLockedChange?: (locked: boolean) => void;
 };
 
-export function ProductionWorkSessionPanel({workOrder, onClearSelection, onWorkOrdersRefresh}: ProductionWorkSessionPanelProps) {
+export function ProductionWorkSessionPanel({
+    workOrder,
+    onClearSelection,
+    onWorkOrdersRefresh,
+    onWorkOrderSelectorLockedChange,
+}: ProductionWorkSessionPanelProps) {
     const {t} = useTranslation();
 
     const [openingSession, setOpeningSession] = useState(true);
@@ -168,8 +179,11 @@ export function ProductionWorkSessionPanel({workOrder, onClearSelection, onWorkO
 
     const [submitting, setSubmitting] = useState(false);
     const [actionError, setActionError] = useState<string | null>(null);
+    const [productionTargetReachedOpen, setProductionTargetReachedOpen] = useState(false);
 
     const sessionIdRef = useRef<number | null>(null);
+    const workOrderSelectorLockCbRef = useRef(onWorkOrderSelectorLockedChange);
+    workOrderSelectorLockCbRef.current = onWorkOrderSelectorLockedChange;
 
     useEffect(() => {
         sessionIdRef.current = session?.id ?? null;
@@ -179,7 +193,14 @@ export function ProductionWorkSessionPanel({workOrder, onClearSelection, onWorkO
         const woId = workOrder.id;
         if (woId == null) return;
 
+        if (isWorkOrderClosedForProduction(workOrder)) {
+            setOpeningSession(false);
+            setOpenError(t('workOrderAlreadyComplete'));
+            return;
+        }
+
         let cancelled = false;
+        workOrderSelectorLockCbRef.current?.(true);
 
         (async () => {
             setOpeningSession(true);
@@ -233,7 +254,11 @@ export function ProductionWorkSessionPanel({workOrder, onClearSelection, onWorkO
                 }
                 setInitialModalOpen(true);
             } catch (e) {
-                if (!cancelled) setOpenError(extractError(e));
+                if (!cancelled) {
+                    const raw = extractError(e);
+                    setOpenError(raw === 'WORK_ORDER_COMPLETE' ? t('workOrderAlreadyComplete') : raw);
+                    workOrderSelectorLockCbRef.current?.(false);
+                }
             } finally {
                 if (!cancelled) setOpeningSession(false);
             }
@@ -241,6 +266,7 @@ export function ProductionWorkSessionPanel({workOrder, onClearSelection, onWorkO
 
         return () => {
             cancelled = true;
+            workOrderSelectorLockCbRef.current?.(false);
         };
     }, [workOrder.id]);
 
@@ -255,6 +281,22 @@ export function ProductionWorkSessionPanel({workOrder, onClearSelection, onWorkO
     }, []);
 
     const sessionId = session?.id;
+    const sessionIsClosed = Boolean(session?.sessionEnd);
+
+    const acknowledgeProductionTargetReached = async () => {
+        setProductionTargetReachedOpen(false);
+        sessionStorage.removeItem(STORAGE_SESSION);
+        sessionStorage.removeItem('selectedWorkOrderId');
+        sessionStorage.removeItem('selectedWorkOrder');
+        sessionIdRef.current = null;
+        workOrderSelectorLockCbRef.current?.(false);
+        try {
+            await onWorkOrdersRefresh?.();
+        } catch {
+            /* ignore */
+        }
+        onClearSelection();
+    };
 
     const updateRow = (setRows: Dispatch<SetStateAction<MeasuringRow[]>>, index: number, field: keyof MeasuringRow, value: string) => {
         setRows((prev) => {
@@ -346,6 +388,9 @@ export function ProductionWorkSessionPanel({workOrder, onClearSelection, onWorkO
             setGoodOpen(false);
             setGoodDelta('1');
             setGoodRef('');
+            if (updated.workOrderCompletedByTarget) {
+                setProductionTargetReachedOpen(true);
+            }
             if (onWorkOrdersRefresh) {
                 try {
                     await onWorkOrdersRefresh();
@@ -363,6 +408,7 @@ export function ProductionWorkSessionPanel({workOrder, onClearSelection, onWorkO
     const endAndClearSelection = async () => {
         if (sessionId == null) {
             sessionStorage.removeItem(STORAGE_SESSION);
+            workOrderSelectorLockCbRef.current?.(false);
             onClearSelection();
             return;
         }
@@ -377,6 +423,7 @@ export function ProductionWorkSessionPanel({workOrder, onClearSelection, onWorkO
             sessionStorage.removeItem('selectedWorkOrder');
             setSubmitting(false);
             sessionIdRef.current = null;
+            workOrderSelectorLockCbRef.current?.(false);
             onClearSelection();
         }
     };
@@ -388,8 +435,18 @@ export function ProductionWorkSessionPanel({workOrder, onClearSelection, onWorkO
     return (
         <Box sx={{mt: 2}}>
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{mb: 1}}>
-                {sessionId != null && (
-                    <Button size="small" onClick={() => void endAndClearSelection()} disabled={submitting}>
+                <Typography variant="subtitle2" color="text.secondary" sx={{flex: 1, pr: 1}}>
+                    {t('workSession')}
+                </Typography>
+                {sessionId != null && !sessionIsClosed && (
+                    <Button
+                        size="small"
+                        variant="outlined"
+                        color="primary"
+                        onClick={() => void endAndClearSelection()}
+                        disabled={submitting}
+                        sx={{flexShrink: 0, borderWidth: 2}}
+                    >
                         {t('workSessionEnd')}
                     </Button>
                 )}
@@ -426,17 +483,44 @@ export function ProductionWorkSessionPanel({workOrder, onClearSelection, onWorkO
                 </Stack>
             )}
 
-            {!openingSession && !openError && firstControlDone && (
+            {!openingSession && !openError && firstControlDone && !sessionIsClosed && (
                 <Box sx={{mt: 2}}>
                     <Typography variant="subtitle2" sx={{mb: 1.5}}>
                         {t('workSessionProcessingPanel')}
                     </Typography>
-                    <Stack spacing={1.5}>
+                    <Stack
+                        direction="row"
+                        spacing={1}
+                        useFlexGap
+                        sx={{
+                            width: '100%',
+                            flexWrap: 'nowrap',
+                            overflowX: 'auto',
+                            pb: 0.5,
+                            '& .MuiButton-root': {
+                                flex: '1 1 0',
+                                minWidth: 0,
+                                py: 1.2,
+                                textTransform: 'none',
+                            },
+                        }}
+                    >
                         <Button
-                            fullWidth
-                            size="large"
+                            size="medium"
+                            variant="outlined"
+                            color="inherit"
+                            sx={{bgcolor: '#fafafa', color: 'text.primary', borderColor: 'divider'}}
+                            onClick={() => {
+                                setActionError(null);
+                                setGoodOpen(true);
+                            }}
+                        >
+                            {t('workSessionRecordGood')}
+                        </Button>
+                        <Button
+                            size="medium"
                             variant="contained"
-                            sx={{bgcolor: '#c62828', '&:hover': {bgcolor: '#b71c1c'}, py: 1.5}}
+                            sx={{bgcolor: '#c62828', '&:hover': {bgcolor: '#b71c1c'}}}
                             onClick={() => {
                                 setActionError(null);
                                 setFaultyOpen(true);
@@ -445,10 +529,9 @@ export function ProductionWorkSessionPanel({workOrder, onClearSelection, onWorkO
                             {t('workSessionDeclareFaulty')}
                         </Button>
                         <Button
-                            fullWidth
-                            size="large"
+                            size="medium"
                             variant="contained"
-                            sx={{bgcolor: '#2e7d32', '&:hover': {bgcolor: '#1b5e20'}, py: 1.5}}
+                            sx={{bgcolor: '#2e7d32', '&:hover': {bgcolor: '#1b5e20'}}}
                             onClick={() => {
                                 setActionError(null);
                                 setControlOpen(true);
@@ -457,29 +540,15 @@ export function ProductionWorkSessionPanel({workOrder, onClearSelection, onWorkO
                             {t('workSessionRecordControl')}
                         </Button>
                         <Button
-                            fullWidth
-                            size="large"
+                            size="medium"
                             variant="contained"
-                            sx={{bgcolor: '#6a1b9a', '&:hover': {bgcolor: '#4a148c'}, py: 1.5}}
+                            sx={{bgcolor: '#6a1b9a', '&:hover': {bgcolor: '#4a148c'}}}
                             onClick={() => {
                                 setActionError(null);
                                 setToolOpen(true);
                             }}
                         >
                             {t('workSessionToolChange')}
-                        </Button>
-                        <Button
-                            fullWidth
-                            size="large"
-                            variant="outlined"
-                            color="inherit"
-                            sx={{bgcolor: '#fafafa', color: 'text.primary', borderColor: 'divider', py: 1.5}}
-                            onClick={() => {
-                                setActionError(null);
-                                setGoodOpen(true);
-                            }}
-                        >
-                            {t('workSessionRecordGood')}
                         </Button>
                     </Stack>
                 </Box>
@@ -564,6 +633,20 @@ export function ProductionWorkSessionPanel({workOrder, onClearSelection, onWorkO
                 </DialogActions>
             </Dialog>
 
+            <Dialog open={productionTargetReachedOpen} onClose={() => void acknowledgeProductionTargetReached()}>
+                <DialogTitle>{t('workOrderProductionTargetReachedTitle')}</DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" sx={{mt: 1}}>
+                        {t('workOrderProductionTargetReachedBody')}
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => void acknowledgeProductionTargetReached()} variant="contained">
+                        {t('close')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
             <Dialog open={goodOpen} onClose={() => setGoodOpen(false)} fullWidth maxWidth="sm">
                 <DialogTitle>{t('workSessionRecordGood')}</DialogTitle>
                 <DialogContent>
@@ -604,6 +687,8 @@ function SessionSummary({workOrder, session}: {workOrder: ProductionWorkOrderTO;
     const required = workOrder.requiredQuantity;
     const producedWo = workOrder.producedGoodQuantity ?? 0;
     const sessionGood = session.productCount ?? 0;
+    const residualOverOrder =
+        required != null && required > 0 && producedWo > required ? producedWo - required : 0;
     return (
         <Box sx={{p: 1.5, bgcolor: 'action.hover', borderRadius: 1}}>
             {required != null && (
@@ -622,7 +707,20 @@ function SessionSummary({workOrder, session}: {workOrder: ProductionWorkOrderTO;
                     {t('productReferenceID')}: {session.productReferenceID}
                 </Typography>
             )}
+            {residualOverOrder > 0 && (
+                <Alert severity="info" sx={{mt: 1.5}} variant="outlined">
+                    <Typography variant="body2" component="span">
+                        {t('workOrderOverproductionResidualStock', {count: residualOverOrder})}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" display="block" sx={{mt: 0.75}}>
+                        {t('workOrderStockHandlingTbd')}
+                    </Typography>
+                </Alert>
+            )}
             <Divider sx={{my: 1}} />
+            <Typography variant="caption" color="text.secondary">
+                {t('workSessionGoodFlushHintShort')}
+            </Typography>
         </Box>
     );
 }

@@ -14,8 +14,10 @@ import LinearProgress from '@mui/material/LinearProgress';
 import {useNavigate} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
 import type {ProductionWorkOrderTO} from '../../models/ApiRequests.ts';
+import type {TFunction} from 'i18next';
 import {Server} from '../../api/Server.ts';
 import {ProductionWorkSessionPanel} from './ProductionWorkSessionPanel.tsx';
+import {isWorkOrderClosedForProduction} from './workOrderProductionHelpers.ts';
 
 const SELECT_NONE = '';
 
@@ -25,11 +27,12 @@ function formatDate(value: string | undefined): string {
     return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString();
 }
 
-function workOrderLabel(wo: ProductionWorkOrderTO): string {
+function workOrderLabel(wo: ProductionWorkOrderTO, t: TFunction): string {
     const ref = wo.productReference?.trim();
     const name = wo.productName?.trim();
     const core = [ref, name].filter(Boolean).join(' · ');
-    return wo.id != null ? `#${wo.id}${core ? ` — ${core}` : ''}` : core || '—';
+    const base = wo.id != null ? `#${wo.id}${core ? ` — ${core}` : ''}` : core || '—';
+    return isWorkOrderClosedForProduction(wo) ? `${base} (${t('workOrderStateComplete')})` : base;
 }
 
 export function ProductionPage() {
@@ -40,6 +43,7 @@ export function ProductionPage() {
     const [errorKey, setErrorKey] = useState<string | null>(null);
     const [workOrders, setWorkOrders] = useState<ProductionWorkOrderTO[]>([]);
     const [selectedId, setSelectedId] = useState<string>(SELECT_NONE);
+    const [workOrderSelectorLocked, setWorkOrderSelectorLocked] = useState(false);
 
     useEffect(() => {
         setListLoading(true);
@@ -73,6 +77,20 @@ export function ProductionPage() {
     const handleClearWorkOrderSelection = () => {
         setSelectedId(SELECT_NONE);
     };
+
+    useEffect(() => {
+        if (selectedId === SELECT_NONE) {
+            setWorkOrderSelectorLocked(false);
+        }
+    }, [selectedId]);
+
+    useEffect(() => {
+        if (selectedId === SELECT_NONE) return;
+        const sel = workOrders.find((w) => w.id === Number(selectedId));
+        if (sel && isWorkOrderClosedForProduction(sel)) {
+            setSelectedId(SELECT_NONE);
+        }
+    }, [workOrders, selectedId]);
 
     const refreshWorkOrders = useCallback((): Promise<void> => {
         return new Promise((resolve) => {
@@ -122,14 +140,20 @@ export function ProductionPage() {
                             label={t('productionSelectWorkOrder')}
                             value={selectedId}
                             onChange={(e) => setSelectedId(e.target.value)}
+                            disabled={workOrderSelectorLocked}
+                            helperText={workOrderSelectorLocked ? t('productionWorkOrderLockedHint') : undefined}
                         >
                             <MenuItem value={SELECT_NONE}>
                                 <em>{t('none')}</em>
                             </MenuItem>
                             {workOrders.map((wo) =>
                                 wo.id != null ? (
-                                    <MenuItem key={wo.id} value={String(wo.id)}>
-                                        {workOrderLabel(wo)}
+                                    <MenuItem
+                                        key={wo.id}
+                                        value={String(wo.id)}
+                                        disabled={isWorkOrderClosedForProduction(wo)}
+                                    >
+                                        {workOrderLabel(wo, t)}
                                     </MenuItem>
                                 ) : null
                             )}
@@ -163,6 +187,7 @@ export function ProductionPage() {
                                     workOrder={selected}
                                     onClearSelection={handleClearWorkOrderSelection}
                                     onWorkOrdersRefresh={refreshWorkOrders}
+                                    onWorkOrderSelectorLockedChange={setWorkOrderSelectorLocked}
                                 />
                             </Paper>
                         )}

@@ -109,6 +109,7 @@ export interface WorkSessionResponseTO {
     operatorName?: string;
     operatorSurname?: string;
     stationId?: string;
+    workOrderCompletedByTarget?: boolean;
 }
 
 export interface WorkSessionMeasuringFeatureInputTO {
@@ -135,6 +136,8 @@ export interface WorkSessionGoodDeltaTO {
 }
 
 /** Proxied from central for production (subset of fields). */
+export type ProductionWorkOrderState = 'INCOMPLETE' | 'COMPLETE';
+
 export interface ProductionWorkOrderTO {
     id?: number,
     productOrderId?: number,
@@ -143,6 +146,7 @@ export interface ProductionWorkOrderTO {
     productReference?: string,
     requiredQuantity?: number,
     producedGoodQuantity?: number,
+    state?: ProductionWorkOrderState,
     dueDate?: string,
     startDate?: string,
     endDate?: string,
