@@ -139,6 +139,9 @@ export interface PurchaseOrderTO {
     deliveredAt?: string
 }
 
+/** Work Order Central `EWorkOrderState` as returned by the API (Jackson default enum serialization). */
+export type WorkOrderState = 'INCOMPLETE' | 'COMPLETE'
+
 export interface WorkOrderTO {
     id?: number,
     /** Purchase order line (product line) this work order belongs to. */
@@ -150,7 +153,8 @@ export interface WorkOrderTO {
     dueDate?: string,
     startDate?: string,
     endDate?: string,
-    comment?: string
+    comment?: string,
+    state?: WorkOrderState,
 }
 
 export interface ProductProfileTO {

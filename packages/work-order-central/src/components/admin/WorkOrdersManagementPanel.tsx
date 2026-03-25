@@ -26,6 +26,7 @@ import {useEffect, useMemo, useState, type ReactNode} from 'react';
 import {useSearchParams} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
 import type {WorkOrderTO, PurchaseOrderTO, ProductOrderTO, MachineTO, MachineBookingTO} from 'sf-common/src/models/ApiRequests';
+import type {TFunction} from 'i18next';
 import {Server, ConfirmationModal} from 'sf-common';
 
 /** Normalize PO delivery date for HTML date input (yyyy-MM-dd). */
@@ -83,6 +84,16 @@ function workOrderLineDisplay(wo: WorkOrderTO): string {
     const parts = [ref, name].filter(Boolean);
     if (parts.length) return parts.join(' · ');
     return wo.productOrderId != null ? `#${wo.productOrderId}` : '—';
+}
+
+function isWorkOrderComplete(wo: WorkOrderTO): boolean {
+    return wo.state === 'COMPLETE';
+}
+
+function workOrderStateDisplay(wo: WorkOrderTO, t: TFunction): string {
+    if (wo.state === 'COMPLETE') return t('workOrderStateComplete');
+    if (wo.state === 'INCOMPLETE') return t('workOrderStateIncomplete');
+    return t('workOrderStateIncomplete');
 }
 
 function findLineContext(
@@ -282,6 +293,7 @@ export function WorkOrdersManagementPanel() {
     };
 
     const handleEditClick = (wo: WorkOrderTO) => {
+        if (isWorkOrderComplete(wo)) return;
         setSelectedId(wo.id);
         let poId = wo.purchaseOrderId;
         if (poId == null && wo.productOrderId != null) {
@@ -300,6 +312,12 @@ export function WorkOrdersManagementPanel() {
     };
 
     const handleSubmit = () => {
+        if (selectedId != null) {
+            const existing = workOrders.find((w) => w.id === selectedId);
+            if (existing && isWorkOrderComplete(existing)) {
+                return;
+            }
+        }
         if (productOrderLineId == null) {
             return;
         }
@@ -328,6 +346,7 @@ export function WorkOrdersManagementPanel() {
     };
 
     const handleDeleteClick = (wo: WorkOrderTO) => {
+        if (isWorkOrderComplete(wo)) return;
         setOrderToDelete(wo);
     };
 
@@ -363,6 +382,7 @@ export function WorkOrdersManagementPanel() {
     };
 
     const openScheduleModal = (wo: WorkOrderTO) => {
+        if (isWorkOrderComplete(wo)) return;
         setScheduleWorkOrder(wo);
         setScheduleMachineId(undefined);
         setScheduleStart('');
@@ -379,6 +399,10 @@ export function WorkOrdersManagementPanel() {
     };
 
     const handleScheduleSubmit = () => {
+        if (scheduleWorkOrder && isWorkOrderComplete(scheduleWorkOrder)) {
+            setScheduleError(t('workOrderCompleteActionDisabled'));
+            return;
+        }
         if (!scheduleWorkOrder?.id || !scheduleStart || !scheduleEnd) {
             setScheduleError(t('allFieldsRequired'));
             return;
@@ -498,6 +522,7 @@ export function WorkOrdersManagementPanel() {
                             <TableRow>
                                 <TableCell>{t('purchaseOrder')}</TableCell>
                                 <TableCell>{t('productOrderLine')}</TableCell>
+                                <TableCell>{t('workOrderState')}</TableCell>
                                 <TableCell>{t('dueDate')}</TableCell>
                                 <TableCell>{t('startDate')}</TableCell>
                                 <TableCell>{t('endDate')}</TableCell>
@@ -512,6 +537,7 @@ export function WorkOrdersManagementPanel() {
                                         {purchaseOrderLabel(purchaseOrders.find((p) => p.id === wo.purchaseOrderId) || {id: wo.purchaseOrderId})}
                                     </TableCell>
                                     <TableCell>{workOrderLineDisplay(wo)}</TableCell>
+                                    <TableCell>{workOrderStateDisplay(wo, t)}</TableCell>
                                     <TableCell>{formatDate(wo.dueDate)}</TableCell>
                                     <TableCell>{formatDate(wo.startDate)}</TableCell>
                                     <TableCell>{formatDate(wo.endDate)}</TableCell>
@@ -529,7 +555,12 @@ export function WorkOrdersManagementPanel() {
                                             size="small"
                                             onClick={() => handleEditClick(wo)}
                                             sx={{mr: 1}}
-                                            title={t('editWorkOrder')}
+                                            disabled={isWorkOrderComplete(wo)}
+                                            title={
+                                                isWorkOrderComplete(wo)
+                                                    ? t('workOrderCompleteActionDisabled')
+                                                    : t('editWorkOrder')
+                                            }
                                         >
                                             <LinkIcon fontSize="small"/>
                                         </IconButton>
@@ -537,12 +568,24 @@ export function WorkOrdersManagementPanel() {
                                             size="small"
                                             onClick={() => openScheduleModal(wo)}
                                             sx={{mr: 1}}
-                                            title={t('scheduleOnMachine')}
+                                            disabled={isWorkOrderComplete(wo)}
+                                            title={
+                                                isWorkOrderComplete(wo)
+                                                    ? t('workOrderCompleteActionDisabled')
+                                                    : t('scheduleOnMachine')
+                                            }
                                         >
                                             <AddIcon fontSize="small"/>
                                         </IconButton>
-                                        <IconButton size="small" onClick={() => handleDeleteClick(wo)}
-                                                    title={t('deleteWorkOrder')}
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => handleDeleteClick(wo)}
+                                            disabled={isWorkOrderComplete(wo)}
+                                            title={
+                                                isWorkOrderComplete(wo)
+                                                    ? t('workOrderCompleteActionDisabled')
+                                                    : t('deleteWorkOrder')
+                                            }
                                         >
                                             <DeleteIcon fontSize="small"/>
                                         </IconButton>
@@ -715,6 +758,10 @@ export function WorkOrdersManagementPanel() {
                                 return (
                                     <>
                                         <DetailField label={t('workOrder')} value={detailsWorkOrder.id}/>
+                                        <DetailField
+                                            label={t('workOrderState')}
+                                            value={workOrderStateDisplay(detailsWorkOrder, t)}
+                                        />
                                         <DetailField label={t('purchaseOrder')} value={poLabel}/>
                                         <DetailField
                                             label={t('productOrderLine')}
