@@ -1,31 +1,10 @@
-import Container from '@mui/material/Container';
-import AppBar from '@mui/material/AppBar';
-import Toolbar from '@mui/material/Toolbar';
-import Typography from '@mui/material/Typography';
-import IconButton from '@mui/material/IconButton';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import Box from '@mui/material/Box';
-import {useNavigate} from 'react-router-dom';
-import {useTranslation} from 'react-i18next';
+import {useEffect} from 'react';
+import {Navigate} from 'react-router-dom';
 
-/** Placeholder until work session flow is implemented. */
+/** Work session UI lives on {@link ProductionPage} when a work order is selected. */
 export function WorkSessionPage() {
-    const {t} = useTranslation();
-    const navigate = useNavigate();
-
-    return (
-        <Container>
-            <AppBar position="static">
-                <Toolbar>
-                    <IconButton color="inherit" onClick={() => navigate('/production')} sx={{mr: 1}} aria-label={t('backToHome')}>
-                        <ArrowBackIcon />
-                    </IconButton>
-                    <Typography variant="h6">{t('workSession')}</Typography>
-                </Toolbar>
-            </AppBar>
-            <Box sx={{mt: 3}}>
-                <Typography color="text.secondary">{t('workSessionPanelTbd')}</Typography>
-            </Box>
-        </Container>
-    );
+    useEffect(() => {
+        sessionStorage.removeItem('activeWorkSessionId');
+    }, []);
+    return <Navigate to="/production" replace />;
 }

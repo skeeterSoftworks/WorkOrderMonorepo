@@ -34,6 +34,14 @@ import {
 
 type LocalPurchaseOrder = PurchaseOrderTO;
 
+const PURCHASE_ORDER_CURRENCIES = ['RSD', 'EUR'] as const;
+type PurchaseOrderCurrency = (typeof PURCHASE_ORDER_CURRENCIES)[number];
+
+function normalizePurchaseOrderCurrency(value: string | undefined | null): PurchaseOrderCurrency {
+    const v = (value ?? '').trim().toUpperCase();
+    return v === 'EUR' ? 'EUR' : 'RSD';
+}
+
 type ProductOrderRow = {
     id?: number;
     productId?: number;
@@ -52,7 +60,7 @@ export function PurchaseOrdersManagementPanel() {
     const [products, setProducts] = useState<ProductTO[]>([]);
     const [selectedOrderId, setSelectedOrderId] = useState<number | undefined>(undefined);
     const [selectedCustomerId, setSelectedCustomerId] = useState<number | undefined>(undefined);
-    const [currency, setCurrency] = useState('');
+    const [currency, setCurrency] = useState<PurchaseOrderCurrency>('RSD');
     const [deliveryDate, setDeliveryDate] = useState<string>('');
     const [deliveryTerms, setDeliveryTerms] = useState('');
     const [shippingAddress, setShippingAddress] = useState('');
@@ -112,7 +120,7 @@ export function PurchaseOrdersManagementPanel() {
     const resetForm = () => {
         setSelectedOrderId(undefined);
         setSelectedCustomerId(undefined);
-        setCurrency('');
+        setCurrency('RSD');
         setDeliveryDate('');
         setDeliveryTerms('');
         setShippingAddress('');
@@ -142,7 +150,7 @@ export function PurchaseOrdersManagementPanel() {
     const handleEditClick = (order: LocalPurchaseOrder) => {
         setSelectedOrderId(order.id);
         setSelectedCustomerId(order.customer?.id);
-        setCurrency(order.currency || '');
+        setCurrency(normalizePurchaseOrderCurrency(order.currency));
         if (order.deliveryDate) {
             if (Array.isArray(order.deliveryDate)) {
                 const [year, month = 1, day = 1] = order.deliveryDate as any[];
@@ -388,7 +396,7 @@ export function PurchaseOrdersManagementPanel() {
     const applyParsedOrder = (parsed: ParsedPurchaseOrder) => {
         setSelectedOrderId(undefined);
         setSelectedCustomerId(resolveCustomerId(parsed.customerCompanyName));
-        setCurrency(parsed.currency);
+        setCurrency(normalizePurchaseOrderCurrency(parsed.currency));
         setDeliveryDate(parsed.deliveryDate ? parsed.deliveryDate.substring(0, 10) : '');
         setDeliveryTerms(parsed.deliveryTerms);
         setShippingAddress(parsed.shippingAddress);
@@ -545,12 +553,19 @@ export function PurchaseOrdersManagementPanel() {
                             ))}
                         </TextField>
                         <TextField
+                            select
                             label={t('currency')}
                             value={currency}
-                            onChange={(e) => setCurrency(e.target.value)}
+                            onChange={(e) => setCurrency(e.target.value as PurchaseOrderCurrency)}
                             size="small"
                             fullWidth
-                        />
+                        >
+                            {PURCHASE_ORDER_CURRENCIES.map((c) => (
+                                <MenuItem key={c} value={c}>
+                                    {c}
+                                </MenuItem>
+                            ))}
+                        </TextField>
                         <TextField
                             label={t('deliveryDate')}
                             type="date"

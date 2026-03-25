@@ -1,4 +1,13 @@
-import type {ApplicationUserTO, StationConfigDTO, WorkstationMachineConfigTO} from "../models/ApiRequests";
+import type {
+    ApplicationUserTO,
+    StationConfigDTO,
+    WorkstationMachineConfigTO,
+    WorkSessionControlProductCreateTO,
+    WorkSessionFaultyProductCreateTO,
+    WorkSessionGoodDeltaTO,
+    WorkSessionOpenRequestTO,
+    WorkSessionResponseTO,
+} from "../models/ApiRequests";
 import axios from "axios";
 import {getServerUrl} from "../util/EnvUtils";
 
@@ -101,6 +110,46 @@ export class Server {
                 console.log(error);
                 onError && onError(error);
             });
+    }
+
+    static async openProductionWorkSession(body: WorkSessionOpenRequestTO): Promise<WorkSessionResponseTO> {
+        const r = await axios.post<WorkSessionResponseTO>(`${getServerUrl()}/production/work-sessions/open`, body);
+        return r.data;
+    }
+
+    static async endProductionWorkSession(sessionId: number): Promise<WorkSessionResponseTO> {
+        const r = await axios.post<WorkSessionResponseTO>(`${getServerUrl()}/production/work-sessions/${sessionId}/end`);
+        return r.data;
+    }
+
+    /** Records good count and flushes to central; response body is the updated work session. */
+    static async postProductionGoodDelta(sessionId: number, body: WorkSessionGoodDeltaTO): Promise<WorkSessionResponseTO> {
+        const r = await axios.post<WorkSessionResponseTO>(
+            `${getServerUrl()}/production/work-sessions/${sessionId}/good-delta`,
+            body
+        );
+        return r.data;
+    }
+
+    static async postProductionControlProduct(sessionId: number, body: WorkSessionControlProductCreateTO): Promise<WorkSessionResponseTO> {
+        const r = await axios.post<WorkSessionResponseTO>(
+            `${getServerUrl()}/production/work-sessions/${sessionId}/control-products`,
+            body
+        );
+        return r.data;
+    }
+
+    static async postProductionFaultyProduct(sessionId: number, body: WorkSessionFaultyProductCreateTO): Promise<WorkSessionResponseTO> {
+        const r = await axios.post<WorkSessionResponseTO>(
+            `${getServerUrl()}/production/work-sessions/${sessionId}/faulty-products`,
+            body
+        );
+        return r.data;
+    }
+
+    static async getProductionWorkSession(sessionId: number): Promise<WorkSessionResponseTO> {
+        const r = await axios.get<WorkSessionResponseTO>(`${getServerUrl()}/production/work-sessions/${sessionId}`);
+        return r.data;
     }
 
     static updateStationConfig(stationConfigDTO: StationConfigDTO, onSuccess: Function, onError?: Function) {

@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useState} from 'react';
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import AppBar from '@mui/material/AppBar';
@@ -8,14 +8,14 @@ import IconButton from '@mui/material/IconButton';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
-import Button from '@mui/material/Button';
 import Paper from '@mui/material/Paper';
 import Divider from '@mui/material/Divider';
-import CircularProgress from '@mui/material/CircularProgress';
+import LinearProgress from '@mui/material/LinearProgress';
 import {useNavigate} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
 import type {ProductionWorkOrderTO} from '../../models/ApiRequests.ts';
 import {Server} from '../../api/Server.ts';
+import {ProductionWorkSessionPanel} from './ProductionWorkSessionPanel.tsx';
 
 const SELECT_NONE = '';
 
@@ -36,13 +36,13 @@ export function ProductionPage() {
     const {t} = useTranslation();
     const navigate = useNavigate();
 
-    const [loading, setLoading] = useState(true);
+    const [listLoading, setListLoading] = useState(true);
     const [errorKey, setErrorKey] = useState<string | null>(null);
     const [workOrders, setWorkOrders] = useState<ProductionWorkOrderTO[]>([]);
     const [selectedId, setSelectedId] = useState<string>(SELECT_NONE);
 
     useEffect(() => {
-        setLoading(true);
+        setListLoading(true);
         setErrorKey(null);
         setWorkOrders([]);
         setSelectedId(SELECT_NONE);
@@ -50,10 +50,10 @@ export function ProductionPage() {
             (resp: {data?: ProductionWorkOrderTO[]}) => {
                 const data = Array.isArray(resp?.data) ? resp.data : [];
                 setWorkOrders(data);
-                setLoading(false);
+                setListLoading(false);
             },
             (err: {response?: {data?: string; status?: number}}) => {
-                setLoading(false);
+                setListLoading(false);
                 const body = err?.response?.data;
                 if (err?.response?.status === 400 && body === 'WORKSTATION_MACHINE_NOT_CONFIGURED') {
                     setErrorKey('workstationNotConfiguredProduction');
@@ -70,12 +70,22 @@ export function ProductionPage() {
         return workOrders.find((w) => w.id === id) ?? null;
     }, [selectedId, workOrders]);
 
-    const handleStartWorkSession = () => {
-        if (!selected?.id) return;
-        sessionStorage.setItem('selectedWorkOrderId', String(selected.id));
-        sessionStorage.setItem('selectedWorkOrder', JSON.stringify(selected));
-        navigate('/production/work-session');
+    const handleClearWorkOrderSelection = () => {
+        setSelectedId(SELECT_NONE);
     };
+
+    const refreshWorkOrders = useCallback((): Promise<void> => {
+        return new Promise((resolve) => {
+            Server.getProductionWorkOrdersForBoundMachine(
+                (resp: {data?: ProductionWorkOrderTO[]}) => {
+                    const data = Array.isArray(resp?.data) ? resp.data : [];
+                    setWorkOrders(data);
+                    resolve();
+                },
+                () => resolve(),
+            );
+        });
+    }, []);
 
     return (
         <Container maxWidth="md">
@@ -89,25 +99,21 @@ export function ProductionPage() {
             </AppBar>
 
             <Box sx={{mt: 3}}>
-                {loading && (
-                    <Box sx={{display: 'flex', justifyContent: 'center', py: 6}}>
-                        <CircularProgress />
-                    </Box>
-                )}
+                {listLoading && <LinearProgress sx={{mb: 2}} />}
 
-                {!loading && errorKey && (
+                {!listLoading && errorKey && (
                     <Typography color="error" variant="body2">
                         {t(errorKey)}
                     </Typography>
                 )}
 
-                {!loading && !errorKey && workOrders.length === 0 && (
+                {!listLoading && !errorKey && workOrders.length === 0 && (
                     <Typography color="text.secondary" variant="body1">
                         {t('productionNoWorkOrders')}
                     </Typography>
                 )}
 
-                {!loading && !errorKey && workOrders.length > 0 && (
+                {!listLoading && !errorKey && workOrders.length > 0 && (
                     <Box sx={{display: 'flex', flexDirection: 'column', gap: 2}}>
                         <TextField
                             select
@@ -136,17 +142,8 @@ export function ProductionPage() {
                                 </Typography>
                                 <Divider sx={{my: 1}} />
                                 <Typography variant="body2">
-                                    <strong>{t('woId')}:</strong> {selected.id ?? '—'}
-                                </Typography>
-                                <Typography variant="body2">
-                                    <strong>{t('woPurchaseOrder')}:</strong> {selected.purchaseOrderId ?? '—'}
-                                </Typography>
-                                <Typography variant="body2">
                                     <strong>{t('woProductLine')}:</strong>{' '}
                                     {[selected.productReference, selected.productName].filter(Boolean).join(' · ') || '—'}
-                                </Typography>
-                                <Typography variant="body2">
-                                    <strong>{t('woProductOrderId')}:</strong> {selected.productOrderId ?? '—'}
                                 </Typography>
                                 <Typography variant="body2">
                                     <strong>{t('dueDate')}:</strong> {formatDate(selected.dueDate)}
@@ -160,11 +157,13 @@ export function ProductionPage() {
                                 <Typography variant="body2" sx={{mt: 1}}>
                                     <strong>{t('comment')}:</strong> {selected.comment?.trim() ? selected.comment : '—'}
                                 </Typography>
-                                <Box sx={{mt: 2}}>
-                                    <Button variant="contained" color="primary" onClick={handleStartWorkSession}>
-                                        {t('startWorkSession')}
-                                    </Button>
-                                </Box>
+
+                                <ProductionWorkSessionPanel
+                                    key={selected.id}
+                                    workOrder={selected}
+                                    onClearSelection={handleClearWorkOrderSelection}
+                                    onWorkOrdersRefresh={refreshWorkOrders}
+                                />
                             </Paper>
                         )}
                     </Box>

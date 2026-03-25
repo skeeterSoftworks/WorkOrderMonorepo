@@ -89,6 +89,51 @@ export interface WorkstationMachineConfigTO {
     machineId?: number | null,
 }
 
+/** Local → central (proxied) work session. */
+export interface WorkSessionOpenRequestTO {
+    workOrderId?: number;
+    operatorQrCode?: string;
+    operatorName?: string;
+    operatorSurname?: string;
+    stationId?: string;
+}
+
+export interface WorkSessionResponseTO {
+    id?: number;
+    workOrderId?: number;
+    sessionStart?: string;
+    sessionEnd?: string;
+    productCount?: number;
+    productReferenceID?: string;
+    operatorQrCode?: string;
+    operatorName?: string;
+    operatorSurname?: string;
+    stationId?: string;
+}
+
+export interface WorkSessionMeasuringFeatureInputTO {
+    featureName?: string;
+    width?: number | null;
+    height?: number | null;
+    depth?: number | null;
+    diameter?: number | null;
+}
+
+export interface WorkSessionControlProductCreateTO {
+    measuringFeatures?: WorkSessionMeasuringFeatureInputTO[];
+}
+
+export interface WorkSessionFaultyProductCreateTO {
+    rejectReason?: string;
+    rejectCause?: string;
+    rejectComment?: string;
+}
+
+export interface WorkSessionGoodDeltaTO {
+    delta: number;
+    productReferenceID?: string;
+}
+
 /** Proxied from central for production (subset of fields). */
 export interface ProductionWorkOrderTO {
     id?: number,
@@ -96,6 +141,8 @@ export interface ProductionWorkOrderTO {
     purchaseOrderId?: number,
     productName?: string,
     productReference?: string,
+    requiredQuantity?: number,
+    producedGoodQuantity?: number,
     dueDate?: string,
     startDate?: string,
     endDate?: string,
