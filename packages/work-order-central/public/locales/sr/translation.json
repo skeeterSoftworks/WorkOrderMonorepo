@@ -130,6 +130,8 @@
   "checkoutTime": "Vreme zaduživanja",
   "dateFrom": "Datum od",
   "dateUntil": "Datum do",
+  "productionDateRangeMaxDays": "Opseg datuma ne sme biti duži od {{max}} dana (uključujući krajeve).",
+  "productionDateRangeOrderInvalid": "„Datum do“ mora biti isti ili kasniji od „Datum od“.",
   "filterAction": "Filtriraj",
   "enterDateToFilterSearch": "Unesite željeni datum za filtriranje pretrage:",
   "checkoutsOverview": "Pregled izdavanja",

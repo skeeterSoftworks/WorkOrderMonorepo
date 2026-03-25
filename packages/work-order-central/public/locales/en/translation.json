@@ -129,6 +129,8 @@
   "checkoutTime": "Checkout time",
   "dateFrom": "Date from",
   "dateUntil": "Date until",
+  "productionDateRangeMaxDays": "The date range cannot exceed {{max}} days (inclusive).",
+  "productionDateRangeOrderInvalid": "\"Date until\" must be on or after \"Date from\".",
   "filterAction": "Filter",
   "enterDateToFilterSearch": "Enter date to filter search:",
   "checkoutsOverview": "Checkouts overview",

@@ -15,6 +15,8 @@ import { useTranslation } from 'react-i18next';
 import type { MachineTO, MachineBookingTO } from 'sf-common/src/models/ApiRequests';
 import { Server } from 'sf-common';
 
+const MAX_CALENDAR_RANGE_DAYS_INCLUSIVE = 14;
+
 function toIsoRange(fromDate: string, toDate: string): { from: string; to: string } | null {
     if (!fromDate || !toDate) return null;
     // local midnight to end of day
@@ -22,6 +24,28 @@ function toIsoRange(fromDate: string, toDate: string): { from: string; to: strin
         from: `${fromDate}T00:00`,
         to: `${toDate}T23:59`,
     };
+}
+
+/** Inclusive number of calendar days from `fromYmd` through `toYmd`, or `null` if invalid. */
+function inclusiveDaySpan(fromYmd: string, toYmd: string): number | null {
+    if (!fromYmd || !toYmd) return null;
+    const [y1, m1, d1] = fromYmd.split('-').map(Number);
+    const [y2, m2, d2] = toYmd.split('-').map(Number);
+    if ([y1, m1, d1, y2, m2, d2].some((n) => Number.isNaN(n))) return null;
+    const start = new Date(y1, m1 - 1, d1);
+    const end = new Date(y2, m2 - 1, d2);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+    const diffDays = Math.round((end.getTime() - start.getTime()) / 86400000);
+    return diffDays + 1;
+}
+
+function addCalendarDaysToYmd(ymd: string, deltaDays: number): string {
+    const [y, m, d] = ymd.split('-').map(Number);
+    const dt = new Date(y, m - 1, d + deltaDays);
+    const yy = dt.getFullYear();
+    const mm = String(dt.getMonth() + 1).padStart(2, '0');
+    const dd = String(dt.getDate()).padStart(2, '0');
+    return `${yy}-${mm}-${dd}`;
 }
 
 export function ProductionPanel() {
@@ -34,6 +58,13 @@ export function ProductionPanel() {
     const [bookings, setBookings] = useState<MachineBookingTO[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    /** Set after a successful search; drives the calendar grid only. */
+    const [calendarRange, setCalendarRange] = useState<{ from: string; to: string } | null>(null);
+
+    useEffect(() => {
+        setCalendarRange(null);
+        setBookings([]);
+    }, [fromDate, toDate, selectedMachineId]);
 
     useEffect(() => {
         Server.getAllMachines(
@@ -47,10 +78,30 @@ export function ProductionPanel() {
         );
     }, []);
 
+    const daySpan = inclusiveDaySpan(fromDate, toDate);
+    const rangeOrderInvalid = fromDate !== '' && toDate !== '' && daySpan != null && daySpan < 1;
+    const rangeTooLong =
+        fromDate !== '' && toDate !== '' && daySpan != null && daySpan > MAX_CALENDAR_RANGE_DAYS_INCLUSIVE;
+
+    const canSearch =
+        selectedMachineId != null &&
+        fromDate !== '' &&
+        toDate !== '' &&
+        daySpan != null &&
+        daySpan >= 1 &&
+        daySpan <= MAX_CALENDAR_RANGE_DAYS_INCLUSIVE &&
+        !loading;
+
     const handleLoadBookings = () => {
         setError(null);
-        if (!selectedMachineId || !fromDate || !toDate) {
-            setError(t('allFieldsRequired'));
+        if (!canSearch || !selectedMachineId) {
+            if (!selectedMachineId || !fromDate || !toDate) {
+                setError(t('allFieldsRequired'));
+            } else if (rangeOrderInvalid) {
+                setError(t('productionDateRangeOrderInvalid'));
+            } else if (rangeTooLong) {
+                setError(t('productionDateRangeMaxDays', { max: MAX_CALENDAR_RANGE_DAYS_INCLUSIVE }));
+            }
             return;
         }
         const range = toIsoRange(fromDate, toDate);
@@ -68,6 +119,7 @@ export function ProductionPanel() {
                 if (Array.isArray(response?.data)) data = response.data;
                 else if (Array.isArray(response?.data?.data)) data = response.data.data;
                 setBookings(data);
+                setCalendarRange({ from: fromDate, to: toDate });
                 setLoading(false);
             },
             (err: any) => {
@@ -85,12 +137,18 @@ export function ProductionPanel() {
     };
 
     const daysInRange: string[] = (() => {
-        if (!fromDate || !toDate) return [];
+        if (!calendarRange) return [];
+        const { from: crFrom, to: crTo } = calendarRange;
         const result: string[] = [];
-        const start = new Date(fromDate);
-        const end = new Date(toDate);
+        const [sy, sm, sd] = crFrom.split('-').map(Number);
+        const [ey, em, ed] = crTo.split('-').map(Number);
+        const start = new Date(sy, sm - 1, sd);
+        const end = new Date(ey, em - 1, ed);
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-            result.push(d.toISOString().slice(0, 10));
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            result.push(`${y}-${m}-${day}`);
         }
         return result;
     })();
@@ -143,6 +201,12 @@ export function ProductionPanel() {
                         onChange={(e) => setFromDate(e.target.value)}
                         size="small"
                         InputLabelProps={{ shrink: true }}
+                        inputProps={{
+                            max: toDate || undefined,
+                            ...(toDate
+                                ? { min: addCalendarDaysToYmd(toDate, -(MAX_CALENDAR_RANGE_DAYS_INCLUSIVE - 1)) }
+                                : {}),
+                        }}
                     />
                     <TextField
                         label={t('dateUntil')}
@@ -151,11 +215,24 @@ export function ProductionPanel() {
                         onChange={(e) => setToDate(e.target.value)}
                         size="small"
                         InputLabelProps={{ shrink: true }}
+                        inputProps={{
+                            min: fromDate || undefined,
+                            ...(fromDate
+                                ? { max: addCalendarDaysToYmd(fromDate, MAX_CALENDAR_RANGE_DAYS_INCLUSIVE - 1) }
+                                : {}),
+                        }}
                     />
-                    <Button variant="contained" color="primary" onClick={handleLoadBookings} disabled={loading}>
+                    <Button variant="contained" color="primary" onClick={handleLoadBookings} disabled={!canSearch}>
                         {t('searchAction')}
                     </Button>
                 </Box>
+                {(rangeOrderInvalid || rangeTooLong) && !error && (
+                    <Typography color="error" variant="body2" sx={{ mt: 1 }}>
+                        {rangeOrderInvalid
+                            ? t('productionDateRangeOrderInvalid')
+                            : t('productionDateRangeMaxDays', { max: MAX_CALENDAR_RANGE_DAYS_INCLUSIVE })}
+                    </Typography>
+                )}
                 {error && (
                     <Typography color="error" variant="body2" sx={{ mt: 1 }}>
                         {error}
@@ -204,7 +281,7 @@ export function ProductionPanel() {
                 </TableContainer>
             </Paper>
 
-            {daysInRange.length > 0 && (
+            {calendarRange != null && daysInRange.length > 0 && (
                 <Paper sx={{ p: 2 }}>
                     <Typography variant="h6" gutterBottom>
                         {t('calendar')}
