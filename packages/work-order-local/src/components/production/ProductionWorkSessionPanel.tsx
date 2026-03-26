@@ -9,7 +9,6 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import TextField from '@mui/material/TextField';
 import Stack from '@mui/material/Stack';
-import Divider from '@mui/material/Divider';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import Checkbox from '@mui/material/Checkbox';
@@ -108,9 +107,11 @@ function MeasuringFeaturesForm({
                                 <Typography variant="body2">
                                     {t('measuringTool')}: {proto.measuringTool ?? '—'}
                                 </Typography>
-                                <Typography variant="body2">
-                                    {t('absoluteMeasure')}: {proto.absoluteMeasure ? '✓' : ''}
-                                </Typography>
+                                {proto.absoluteMeasure ? (
+                                    <Typography variant="body2">
+                                        {t('absoluteMeasure')}: ✓
+                                    </Typography>
+                                ) : null}
                             </Box>
 
                             {/* Column 3: tolerances + assessed input */}
@@ -559,9 +560,6 @@ export function ProductionWorkSessionPanel({
 
             {!openingSession && !openError && firstControlDone && !sessionIsClosed && (
                 <Box sx={{mt: 2}}>
-                    <Typography variant="subtitle2" sx={{mb: 1.5}}>
-                        {t('workSessionProcessingPanel')}
-                    </Typography>
                     <Stack
                         direction="row"
                         spacing={1}
@@ -793,10 +791,6 @@ function SessionSummary({workOrder, session}: {workOrder: ProductionWorkOrderTO;
                     </Typography>
                 </Alert>
             )}
-            <Divider sx={{my: 1}} />
-            <Typography variant="caption" color="text.secondary">
-                {t('workSessionGoodFlushHintShort')}
-            </Typography>
         </Box>
     );
 }

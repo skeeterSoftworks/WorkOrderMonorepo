@@ -422,7 +422,7 @@
   "workSession": "Sesija rada",
   "workSessionOpening": "Otvaranje sesije…",
   "productionClearWorkOrderSelection": "Poništi izbor radnog naloga",
-  "productionWorkOrderLockedHint": "Završite sesiju rada da biste izabrali drugi radni nalog.",
+  "productionWorkOrderLockedHint": "Završite radnu sesiju da biste izabrali drugi radni nalog.",
   "workOrderStateComplete": "Završeno",
   "workOrderAlreadyComplete": "Ovaj radni nalog je već završen. Nije moguće započeti novu sesiju proizvodnje.",
   "workOrderProductionTargetReachedTitle": "Radni nalog završen",
