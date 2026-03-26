@@ -431,8 +431,8 @@
   "workOrderStockHandlingTbd": "Stock transfer and inventory updates are not implemented yet (TBD).",
   "workSessionPanelTbd": "Work session screen will be available here.",
   "workSessionMandatoryFirstControl": "First control product — measurements",
-  "workSessionMandatoryFirstControlHint": "Enter at least one measuring feature (name required). Dimensions are optional integers.",
-  "workSessionFirstControlRequired": "Add at least one measuring feature with a name.",
+  "workSessionMandatoryFirstControlHint": "Enter assessed values: digits for measured features, and mark good for attributive features.",
+  "workSessionFirstControlRequired": "No measuring features are defined for this product.",
   "workSessionProcessingPanel": "Production actions",
   "workSessionDeclareFaulty": "Declare faulty product",
   "workSessionRecordControl": "Record control product",
@@ -443,7 +443,7 @@
   "workSessionGoodCountDelta": "Good pieces count",
   "workSessionGoodDeltaInvalid": "Enter a positive whole number for good pieces.",
   "workSessionGoodFlushHint": "Counts are sent to the server in batches on a schedule configured on the workstation server.",
-  "workSessionControlFeaturesRequired": "Add at least one measuring feature with a name.",
+  "workSessionControlFeaturesRequired": "No measuring features are defined for this product.",
   "workSessionMeasuringSample": "Sample {{index}}",
   "workSessionAbortSession": "Abort session",
   "workSessionEnd": "End session",
@@ -497,5 +497,10 @@
   "machines": "Machines",
   "welcome": "Welcome",
   "machine": "Machine",
-  "status": "Status"
+  "status": "Status",
+  "assessedValue": "Assessed value",
+  "assessedValueGood": "Assessed value OK",
+  "absoluteMeasure": "Absolute measure",
+  "absolute": "Absolute",
+  "relative": "Relative"
 }

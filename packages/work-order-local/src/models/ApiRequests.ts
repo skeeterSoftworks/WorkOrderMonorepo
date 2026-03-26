@@ -72,6 +72,21 @@ export interface MeasuringFeatureTO {
     absoluteMeasure?: boolean
 }
 
+export interface MeasuringFeaturePrototypeTO {
+    id?: number
+    catalogueId?: string
+    description?: string
+    absoluteMeasure?: boolean
+    refValue?: number
+    minTolerance?: number
+    maxTolerance?: number
+    classType?: string
+    frequency?: string
+    checkType?: 'ATTRIBUTIVE' | 'MEASURED' | string
+    toolType?: string
+    measuringTool?: string
+}
+
 export interface QRData {
     qrText: string,
     timeStamp?: string
@@ -110,14 +125,15 @@ export interface WorkSessionResponseTO {
     operatorSurname?: string;
     stationId?: string;
     workOrderCompletedByTarget?: boolean;
+    measuringFeaturePrototypes?: MeasuringFeaturePrototypeTO[];
 }
 
 export interface WorkSessionMeasuringFeatureInputTO {
-    featureName?: string;
-    width?: number | null;
-    height?: number | null;
-    depth?: number | null;
-    diameter?: number | null;
+    catalogueId?: string;
+    /** Digits-only for MEASURED features. */
+    assessedValue?: string;
+    /** For ATTRIBUTIVE features. */
+    assessedValueGood?: boolean;
 }
 
 export interface WorkSessionControlProductCreateTO {

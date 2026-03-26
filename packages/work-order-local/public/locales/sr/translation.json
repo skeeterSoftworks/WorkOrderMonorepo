@@ -431,8 +431,8 @@
   "workOrderStockHandlingTbd": "Prenos na skladište i ažuriranje zaliha još nisu implementirani (TBD).",
   "workSessionPanelTbd": "Ekran sesije rada će biti dostupan ovde.",
   "workSessionMandatoryFirstControl": "Prvi kontrolni proizvod — merenja",
-  "workSessionMandatoryFirstControlHint": "Unesite bar jednu meru (naziv obavezan). Dimenzije su opcioni celi brojevi.",
-  "workSessionFirstControlRequired": "Dodajte bar jednu meru sa nazivom.",
+  "workSessionMandatoryFirstControlHint": "Unesite procene: cifre za mereno i označite kao dobro za atributivne karakteristike.",
+  "workSessionFirstControlRequired": "Za ovaj proizvod nisu definisane merne karakteristike.",
   "workSessionProcessingPanel": "Akcije u proizvodnji",
   "workSessionDeclareFaulty": "Prijavi neispravan proizvod",
   "workSessionRecordControl": "Evidentiraj kontrolni proizvod",
@@ -443,7 +443,7 @@
   "workSessionGoodCountDelta": "Broj ispravnih komada",
   "workSessionGoodDeltaInvalid": "Unesite pozitivan ceo broj ispravnih komada.",
   "workSessionGoodFlushHint": "Brojači se u grupama šalju na server prema rasporedu podešenom na serveru radne stanice.",
-  "workSessionControlFeaturesRequired": "Dodajte bar jednu meru sa nazivom.",
+  "workSessionControlFeaturesRequired": "Za ovaj proizvod nisu definisane merne karakteristike.",
   "workSessionMeasuringSample": "Uzorak {{index}}",
   "workSessionAbortSession": "Prekini sesiju",
   "workSessionEnd": "Završi sesiju",
@@ -497,5 +497,10 @@
   "machines": "Mašine",
   "welcome": "Dobro došli",
   "machine": "Mašina",
-  "status": "Status"
+  "status": "Status",
+  "assessedValue": "Izmerena vrednost",
+  "assessedValueGood": "Procena OK",
+  "absoluteMeasure": "Apsolutno merenje",
+  "absolute": "Apsolutno",
+  "relative": "Relativno"
 }

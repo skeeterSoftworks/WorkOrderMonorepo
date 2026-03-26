@@ -1,9 +1,8 @@
-import {useEffect, useRef, useState, type Dispatch, type SetStateAction} from 'react';
+import {type Dispatch, type SetStateAction, useEffect, useRef, useState} from 'react';
 import axios from 'axios';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
-import IconButton from '@mui/material/IconButton';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -13,11 +12,12 @@ import Stack from '@mui/material/Stack';
 import Divider from '@mui/material/Divider';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
-import AddIcon from '@mui/icons-material/Add';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import {useTranslation} from 'react-i18next';
 import {Server} from '../../api/Server.ts';
 import type {
+    MeasuringFeaturePrototypeTO,
     ProductionWorkOrderTO,
     WorkSessionMeasuringFeatureInputTO,
     WorkSessionResponseTO,
@@ -27,36 +27,26 @@ import {isWorkOrderClosedForProduction} from './workOrderProductionHelpers.ts';
 
 const STORAGE_SESSION = 'activeWorkSessionId';
 
-type MeasuringRow = {
-    featureName: string;
-    width: string;
-    height: string;
-    depth: string;
-    diameter: string;
-};
-
-function emptyRow(): MeasuringRow {
-    return {featureName: '', width: '', height: '', depth: '', diameter: ''};
+function digitsOnly(v: string): string {
+    return v.replace(/[^0-9]/g, '');
 }
 
-function parseOptionalLong(s: string): number | null | undefined {
-    const t = s.trim();
-    if (!t) return undefined;
-    const n = Number(t);
-    if (!Number.isFinite(n)) return undefined;
-    return Math.trunc(n);
-}
-
-function rowsToMeasuringFeatures(rows: MeasuringRow[]): WorkSessionMeasuringFeatureInputTO[] {
-    return rows
-        .filter((r) => r.featureName.trim().length > 0)
-        .map((r) => ({
-            featureName: r.featureName.trim(),
-            width: parseOptionalLong(r.width) ?? null,
-            height: parseOptionalLong(r.height) ?? null,
-            depth: parseOptionalLong(r.depth) ?? null,
-            diameter: parseOptionalLong(r.diameter) ?? null,
-        }));
+function buildAssessmentsFromPrototypes(prototypes: MeasuringFeaturePrototypeTO[]): WorkSessionMeasuringFeatureInputTO[] {
+    return prototypes.map((p) => {
+        const checkType = p.checkType;
+        if (checkType === 'MEASURED') {
+            return {
+                catalogueId: p.catalogueId,
+                assessedValue: '',
+                assessedValueGood: false,
+            };
+        }
+        return {
+            catalogueId: p.catalogueId,
+            assessedValue: undefined,
+            assessedValueGood: false,
+        };
+    });
 }
 
 function extractError(err: unknown): string {
@@ -69,68 +59,106 @@ function extractError(err: unknown): string {
 }
 
 function MeasuringFeaturesForm({
-    rows,
-    onChange,
-    onAddRow,
-    onRemoveRow,
+    prototypes,
+    assessments,
+    onAssessmentChange,
 }: {
-    rows: MeasuringRow[];
-    onChange: (index: number, field: keyof MeasuringRow, value: string) => void;
-    onAddRow: () => void;
-    onRemoveRow: (index: number) => void;
+    prototypes: MeasuringFeaturePrototypeTO[];
+    assessments: WorkSessionMeasuringFeatureInputTO[];
+    onAssessmentChange: (
+        index: number,
+        field: keyof WorkSessionMeasuringFeatureInputTO,
+        value: string | boolean
+    ) => void;
 }) {
     const {t} = useTranslation();
     return (
         <Stack spacing={2} sx={{mt: 1}}>
-            {rows.map((row, index) => (
-                <Box key={index} sx={{border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5}}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{mb: 1}}>
-                        <Typography variant="subtitle2">{t('workSessionMeasuringSample', {index: index + 1})}</Typography>
-                        {rows.length > 1 && (
-                            <IconButton size="small" onClick={() => onRemoveRow(index)} aria-label={t('removeRow')}>
-                                <DeleteOutlineIcon fontSize="small" />
-                            </IconButton>
-                        )}
-                    </Stack>
-                    <TextField
-                        fullWidth
-                        size="small"
-                        label={t('featureName')}
-                        value={row.featureName}
-                        onChange={(e) => onChange(index, 'featureName', e.target.value)}
-                        sx={{mb: 1}}
-                    />
-                    <Stack direction={{xs: 'column', sm: 'row'}} spacing={1}>
-                        <TextField
-                            size="small"
-                            label={t('width')}
-                            value={row.width}
-                            onChange={(e) => onChange(index, 'width', e.target.value)}
-                        />
-                        <TextField
-                            size="small"
-                            label={t('height')}
-                            value={row.height}
-                            onChange={(e) => onChange(index, 'height', e.target.value)}
-                        />
-                        <TextField
-                            size="small"
-                            label={t('depth')}
-                            value={row.depth}
-                            onChange={(e) => onChange(index, 'depth', e.target.value)}
-                        />
-                        <TextField
-                            size="small"
-                            label={t('diameter')}
-                            value={row.diameter}
-                            onChange={(e) => onChange(index, 'diameter', e.target.value)}
-                        />
-                    </Stack>
-                </Box>
-            ))}
-            <Button startIcon={<AddIcon />} onClick={onAddRow} size="small" variant="outlined">
-                {t('addMeasuringRow')}
-            </Button>
+            {prototypes.map((proto, index) => {
+                const assessment = assessments[index];
+                const checkType = proto.checkType;
+                const isMeasured = checkType === 'MEASURED';
+                const assessedValue = typeof assessment?.assessedValue === 'string' ? assessment.assessedValue : '';
+                const assessedValueGood = Boolean(assessment?.assessedValueGood);
+
+                return (
+                    <Box
+                        key={proto.catalogueId ?? index}
+                        sx={{border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5}}
+                    >
+                        <Stack direction={{xs: 'column', md: 'row'}} spacing={2} alignItems="stretch">
+                            {/* Column 1: catalogueID, class, frequency */}
+                            <Box sx={{flex: 1, minWidth: 220}}>
+                                <Typography variant="body2">
+                                    {t('catalogueId')}: {proto.catalogueId ?? '—'}
+                                </Typography>
+                                <Typography variant="body2">
+                                    {t('class')}: {proto.classType ?? '—'}
+                                </Typography>
+                                <Typography variant="body2">
+                                    {t('frequency')}: {proto.frequency ?? '—'}
+                                </Typography>
+                            </Box>
+
+                            {/* Column 2: toolType, measuring tool, absoluteMeasure checkmark */}
+                            <Box sx={{flex: 1, minWidth: 240}}>
+                                <Typography variant="body2">
+                                    {t('toolType')}: {proto.toolType ?? '—'}
+                                </Typography>
+                                <Typography variant="body2">
+                                    {t('measuringTool')}: {proto.measuringTool ?? '—'}
+                                </Typography>
+                                <Typography variant="body2">
+                                    {t('absoluteMeasure')}: {proto.absoluteMeasure ? '✓' : ''}
+                                </Typography>
+                            </Box>
+
+                            {/* Column 3: tolerances + assessed input */}
+                            <Box sx={{flex: 1, minWidth: 260}}>
+                                <Typography variant="body2">
+                                    {t('toleranceMin')}: {proto.minTolerance ?? '—'}
+                                </Typography>
+                                <Typography variant="body2">
+                                    {t('toleranceMax')}: {proto.maxTolerance ?? '—'}
+                                </Typography>
+                                {isMeasured ? (
+                                    <TextField
+                                        label={t('assessedValue')}
+                                        value={assessedValue}
+                                        onChange={(e) =>
+                                            onAssessmentChange(index, 'assessedValue', digitsOnly(e.target.value))
+                                        }
+                                        size="small"
+                                        fullWidth
+                                        inputProps={{inputMode: 'numeric', pattern: '[0-9]*'}}
+                                        sx={{mt: 1}}
+                                    />
+                                ) : (
+                                    <FormControlLabel
+                                        sx={{mt: 0.5}}
+                                        control={
+                                            <Checkbox
+                                                checked={assessedValueGood}
+                                                onChange={(e) =>
+                                                    onAssessmentChange(index, 'assessedValueGood', e.target.checked)
+                                                }
+                                            />
+                                        }
+                                        label={t('assessedValueGood')}
+                                    />
+                                )}
+                            </Box>
+                        </Stack>
+
+                        {/* Description row underneath */}
+                        <Box sx={{mt: 1}}>
+                            <Typography variant="body2" color="text.secondary">
+                                {t('description')}: {proto.description ?? '—'}
+                            </Typography>
+                        </Box>
+                    </Box>
+                );
+            })}
         </Stack>
     );
 }
@@ -167,8 +195,8 @@ export function ProductionWorkSessionPanel({
     const [toolOpen, setToolOpen] = useState(false);
     const [goodOpen, setGoodOpen] = useState(false);
 
-    const [rowsInitial, setRowsInitial] = useState<MeasuringRow[]>([emptyRow()]);
-    const [rowsControl, setRowsControl] = useState<MeasuringRow[]>([emptyRow()]);
+    const [rowsInitial, setRowsInitial] = useState<WorkSessionMeasuringFeatureInputTO[]>([]);
+    const [rowsControl, setRowsControl] = useState<WorkSessionMeasuringFeatureInputTO[]>([]);
 
     const [faultyReason, setFaultyReason] = useState('');
     const [faultyCause, setFaultyCause] = useState('');
@@ -208,8 +236,8 @@ export function ProductionWorkSessionPanel({
             setSession(null);
             setFirstControlDone(false);
             setInitialModalOpen(false);
-            setRowsInitial([emptyRow()]);
-            setRowsControl([emptyRow()]);
+            setRowsInitial([]);
+            setRowsControl([]);
             setActionError(null);
             try {
                 let userQr: string | undefined;
@@ -249,6 +277,9 @@ export function ProductionWorkSessionPanel({
                 });
                 if (cancelled) return;
                 setSession(created);
+                const prototypes = created.measuringFeaturePrototypes ?? [];
+                setRowsInitial(buildAssessmentsFromPrototypes(prototypes));
+                setRowsControl(buildAssessmentsFromPrototypes(prototypes));
                 if (created.id != null) {
                     sessionStorage.setItem(STORAGE_SESSION, String(created.id));
                 }
@@ -298,21 +329,46 @@ export function ProductionWorkSessionPanel({
         onClearSelection();
     };
 
-    const updateRow = (setRows: Dispatch<SetStateAction<MeasuringRow[]>>, index: number, field: keyof MeasuringRow, value: string) => {
-        setRows((prev) => {
+    const updateAssessment = (
+        setAssessments: Dispatch<SetStateAction<WorkSessionMeasuringFeatureInputTO[]>>,
+        index: number,
+        field: keyof WorkSessionMeasuringFeatureInputTO,
+        value: string | boolean
+    ) => {
+        setAssessments((prev) => {
             const next = [...prev];
-            next[index] = {...next[index], [field]: value};
+            next[index] = {
+                ...(next[index] ?? {}),
+                [field]: value,
+            };
             return next;
         });
     };
 
     const handleSaveInitialControl = async () => {
         if (sessionId == null) return;
-        const features = rowsToMeasuringFeatures(rowsInitial);
-        if (features.length === 0) {
+        const prototypes = session?.measuringFeaturePrototypes ?? [];
+        if (prototypes.length === 0 || rowsInitial.length === 0) {
             setActionError(t('workSessionFirstControlRequired'));
             return;
         }
+
+        const measuredMissing = prototypes.some((p, idx) => {
+            if (p.checkType !== 'MEASURED') return false;
+            const v = rowsInitial[idx]?.assessedValue ?? '';
+            return digitsOnly(v).trim().length === 0;
+        });
+        if (measuredMissing) {
+            setActionError(t('allFieldsRequired'));
+            return;
+        }
+
+        const features: WorkSessionMeasuringFeatureInputTO[] = rowsInitial.map((a) => ({
+            catalogueId: a.catalogueId ?? undefined,
+            assessedValue: a.assessedValue?.trim() ? digitsOnly(a.assessedValue) : undefined,
+            assessedValueGood: Boolean(a.assessedValueGood),
+        }));
+
         setSubmitting(true);
         setActionError(null);
         try {
@@ -329,18 +385,36 @@ export function ProductionWorkSessionPanel({
 
     const handleSaveOnDemandControl = async () => {
         if (sessionId == null) return;
-        const features = rowsToMeasuringFeatures(rowsControl);
-        if (features.length === 0) {
+        const prototypes = session?.measuringFeaturePrototypes ?? [];
+        if (prototypes.length === 0 || rowsControl.length === 0) {
             setActionError(t('workSessionControlFeaturesRequired'));
             return;
         }
+
+        const measuredMissing = prototypes.some((p, idx) => {
+            if (p.checkType !== 'MEASURED') return false;
+            const v = rowsControl[idx]?.assessedValue ?? '';
+            return digitsOnly(v).trim().length === 0;
+        });
+        if (measuredMissing) {
+            setActionError(t('allFieldsRequired'));
+            return;
+        }
+
+        const features: WorkSessionMeasuringFeatureInputTO[] = rowsControl.map((a) => ({
+            catalogueId: a.catalogueId ?? undefined,
+            assessedValue: a.assessedValue?.trim() ? digitsOnly(a.assessedValue) : undefined,
+            assessedValueGood: Boolean(a.assessedValueGood),
+        }));
+
         setSubmitting(true);
         setActionError(null);
         try {
             const updated = await Server.postProductionControlProduct(sessionId, {measuringFeatures: features});
             setSession(updated);
             setControlOpen(false);
-            setRowsControl([emptyRow()]);
+            const prototypes2 = updated.measuringFeaturePrototypes ?? prototypes;
+            setRowsControl(buildAssessmentsFromPrototypes(prototypes2));
         } catch (e) {
             setActionError(extractError(e));
         } finally {
@@ -561,10 +635,11 @@ export function ProductionWorkSessionPanel({
                         {t('workSessionMandatoryFirstControlHint')}
                     </Typography>
                     <MeasuringFeaturesForm
-                        rows={rowsInitial}
-                        onChange={(i, f, v) => updateRow(setRowsInitial, i, f, v)}
-                        onAddRow={() => setRowsInitial((r) => [...r, emptyRow()])}
-                        onRemoveRow={(i) => setRowsInitial((r) => r.filter((_, j) => j !== i))}
+                        prototypes={session?.measuringFeaturePrototypes ?? []}
+                        assessments={rowsInitial}
+                        onAssessmentChange={(i, field, value) =>
+                            updateAssessment(setRowsInitial, i, field, value)
+                        }
                     />
                 </DialogContent>
                 <DialogActions>
@@ -605,10 +680,11 @@ export function ProductionWorkSessionPanel({
                 <DialogTitle>{t('workSessionRecordControl')}</DialogTitle>
                 <DialogContent>
                     <MeasuringFeaturesForm
-                        rows={rowsControl}
-                        onChange={(i, f, v) => updateRow(setRowsControl, i, f, v)}
-                        onAddRow={() => setRowsControl((r) => [...r, emptyRow()])}
-                        onRemoveRow={(i) => setRowsControl((r) => r.filter((_, j) => j !== i))}
+                        prototypes={session?.measuringFeaturePrototypes ?? []}
+                        assessments={rowsControl}
+                        onAssessmentChange={(i, field, value) =>
+                            updateAssessment(setRowsControl, i, field, value)
+                        }
                     />
                 </DialogContent>
                 <DialogActions>
