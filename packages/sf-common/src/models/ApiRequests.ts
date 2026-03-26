@@ -170,6 +170,10 @@ export interface WorkOrderTO {
     startDate?: string,
     endDate?: string,
     comment?: string,
+    /** Quantity required by the product-order line (denormalized from backend). */
+    requiredQuantity?: number,
+    /** Produced good quantity aggregated across sessions (denormalized from backend). */
+    producedGoodQuantity?: number,
     state?: WorkOrderState,
 }
 

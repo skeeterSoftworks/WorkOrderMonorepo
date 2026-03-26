@@ -510,9 +510,6 @@ export function ProductionWorkSessionPanel({
     return (
         <Box sx={{mt: 2}}>
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{mb: 1}}>
-                <Typography variant="subtitle2" color="text.secondary" sx={{flex: 1, pr: 1}}>
-                    {t('workSession')}
-                </Typography>
                 {sessionId != null && !sessionIsClosed && (
                     <Button
                         size="small"

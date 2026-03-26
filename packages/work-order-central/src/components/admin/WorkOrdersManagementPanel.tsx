@@ -17,6 +17,7 @@ import DialogContent from '@mui/material/DialogContent';
 import Divider from '@mui/material/Divider';
 import Stack from '@mui/material/Stack';
 import CircularProgress from '@mui/material/CircularProgress';
+import LinearProgress from '@mui/material/LinearProgress';
 import LinkIcon from '@mui/icons-material/Link';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
@@ -94,6 +95,22 @@ function workOrderStateDisplay(wo: WorkOrderTO, t: TFunction): string {
     if (wo.state === 'COMPLETE') return t('workOrderStateComplete');
     if (wo.state === 'INCOMPLETE') return t('workOrderStateIncomplete');
     return t('workOrderStateIncomplete');
+}
+
+function workOrderProgress(wo: WorkOrderTO, purchaseOrders: PurchaseOrderTO[]): { pct: number | null; label: string } {
+    const produced = wo.producedGoodQuantity ?? 0;
+    const required =
+        wo.requiredQuantity ??
+        (wo.productOrderId != null
+            ? purchaseOrders
+                  .flatMap((p) => p.productOrderList ?? [])
+                  .find((l) => l.id === wo.productOrderId)?.quantity
+            : undefined);
+
+    if (required == null || required <= 0) return { pct: null, label: '—' };
+    const raw = (produced / required) * 100;
+    const pct = Math.max(0, Math.min(100, Number.isFinite(raw) ? raw : 0));
+    return { pct, label: `${Math.min(produced, required)}/${required}` };
 }
 
 function findLineContext(
@@ -537,7 +554,43 @@ export function WorkOrdersManagementPanel() {
                                         {purchaseOrderLabel(purchaseOrders.find((p) => p.id === wo.purchaseOrderId) || {id: wo.purchaseOrderId})}
                                     </TableCell>
                                     <TableCell>{workOrderLineDisplay(wo)}</TableCell>
-                                    <TableCell>{workOrderStateDisplay(wo, t)}</TableCell>
+                                    <TableCell sx={{minWidth: 160}}>
+                                        {isWorkOrderComplete(wo) ? (
+                                            workOrderStateDisplay(wo, t)
+                                        ) : (
+                                            (() => {
+                                                const p = workOrderProgress(wo, purchaseOrders);
+                                                return (
+                                                    <Box sx={{display: 'flex', flexDirection: 'column', gap: 0.5}}>
+                                                        <Typography variant="body2">
+                                                            {workOrderStateDisplay(wo, t)}
+                                                        </Typography>
+                                                        {p.pct == null ? (
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                —
+                                                            </Typography>
+                                                        ) : (
+                                                            <>
+                                                                <LinearProgress
+                                                                    variant="determinate"
+                                                                    value={p.pct}
+                                                                    sx={{height: 6, borderRadius: 1}}
+                                                                />
+                                                                <Typography
+                                                                    variant="caption"
+                                                                    color="text.secondary"
+                                                                    sx={{display: 'flex', justifyContent: 'space-between'}}
+                                                                >
+                                                                    <span>{p.label}</span>
+                                                                    <span>{Math.round(p.pct)}%</span>
+                                                                </Typography>
+                                                            </>
+                                                        )}
+                                                    </Box>
+                                                );
+                                            })()
+                                        )}
+                                    </TableCell>
                                     <TableCell>{formatDate(wo.dueDate)}</TableCell>
                                     <TableCell>{formatDate(wo.startDate)}</TableCell>
                                     <TableCell>{formatDate(wo.endDate)}</TableCell>
