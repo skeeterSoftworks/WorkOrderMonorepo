@@ -22,6 +22,7 @@ export interface ProductTO {
     /** Catalogue / reference ID for the product */
     reference?: string,
     machineIds?: number[],
+    measuringFeaturePrototypes?: MeasuringFeaturePrototypeTO[],
 }
 
 export interface MachineBookingTO {
@@ -61,6 +62,21 @@ export interface MeasuringFeatureTO {
     maxTolerance?: number,
     toolType?: string,
     absoluteMeasure?: boolean
+}
+
+export interface MeasuringFeaturePrototypeTO {
+    id?: number,
+    catalogueId?: string,
+    description?: string,
+    absoluteMeasure?: boolean,
+    refValue?: number,
+    minTolerance?: number,
+    maxTolerance?: number,
+    classType?: string,
+    frequency?: string,
+    checkType?: "ATTRIBUTIVE" | "MEASURED" | string,
+    toolType?: string,
+    measuringTool?: string,
 }
 
 export interface QRData {

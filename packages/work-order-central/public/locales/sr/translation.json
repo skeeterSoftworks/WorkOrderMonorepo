@@ -451,5 +451,11 @@
   "machines": "Mašine",
   "welcome": "Dobro došli",
   "machine": "Mašina",
-  "status": "Status"
+  "status": "Status",
+  "measuringFeaturePrototypes": "Merne karakteristike",
+  "addMeasuringFeaturePrototype": "Dodaj",
+  "absoluteMeasure": "Apsolutno merenje",
+  "absolute": "Apsolutno",
+  "relative": "Relativno",
+  "assessedValue": "Izmerena vrednost"
 }

@@ -153,7 +153,7 @@ export function Home() {
             )}
 
             <Grid container sx={{minHeight: '60vh', alignItems: 'center', justifyContent: 'center'}}>
-                {isAdmin && workstationMachineReady && (
+                {workstationMachineReady && (
                     <Grid container spacing={3} sx={{maxWidth: 1100, justifyContent: 'center'}}>
                         <Grid item xs="auto" sx={{textAlign: 'center'}}>
                             <Button variant="contained" sx={homeButtonStyle} onClick={() => setPreModalOpen(true)}>

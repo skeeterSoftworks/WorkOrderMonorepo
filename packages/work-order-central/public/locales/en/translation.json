@@ -451,5 +451,11 @@
   "machines": "Machines",
   "welcome": "Welcome",
   "machine": "Machine",
-  "status": "Status"
+  "status": "Status",
+  "measuringFeaturePrototypes": "Measuring features",
+  "addMeasuringFeaturePrototype": "Add measuring feature",
+  "absoluteMeasure": "Absolute measure",
+  "absolute": "Absolute",
+  "relative": "Relative",
+  "assessedValue": "Assessed value"
 }
