@@ -473,7 +473,7 @@
   "qualityInfoStepsSelectPlaceholder": "Izaberite proizvod…",
   "qualityInfoStepsNoProducts": "Nijedan proizvod nije povezan sa mašinom ove radne stanice.",
   "qualityInfoStepsWorkstationRequired": "Podesite mašinu ove radne stanice u Admin → Detalji mašine pre uređivanja koraka kvaliteta.",
-  "qualityInfoStepsEditorHint": "Ovde se mogu menjati samo informacije kvaliteta. Povežite proizvode sa ovom mašinom u Work Order Central ako nedostaju sa liste.",
+  "qualityInfoStepsEditorHint": "Ovde se mogu menjati samo informacije kvaliteta. Povežite proizvode sa ovom mašinom u Centralnom Admin panelu ukoliko ih ne vidite na ovoj listi .",
   "qualityInfoStepsLoading": "Učitavanje proizvoda…",
   "qualityInfoStepsLoadError": "Nije moguće učitati proizvode za ovu mašinu.",
   "qualityInfoStepsSaveError": "Nije moguće sačuvati informacije kvaliteta.",
