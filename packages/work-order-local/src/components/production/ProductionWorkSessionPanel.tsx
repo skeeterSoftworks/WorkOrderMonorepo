@@ -12,12 +12,17 @@ import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import Checkbox from '@mui/material/Checkbox';
+import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import FormLabel from '@mui/material/FormLabel';
+import Radio from '@mui/material/Radio';
+import RadioGroup from '@mui/material/RadioGroup';
 import {useTranslation} from 'react-i18next';
 import {Server} from '../../api/Server.ts';
 import type {
     MeasuringFeaturePrototypeTO,
     ProductionWorkOrderTO,
+    QualityInfoStepTO,
     WorkSessionMeasuringFeatureInputTO,
     WorkSessionResponseTO,
     WorkstationMachineConfigTO,
@@ -28,6 +33,11 @@ const STORAGE_SESSION = 'activeWorkSessionId';
 
 function digitsOnly(v: string): string {
     return v.replace(/[^0-9]/g, '');
+}
+
+function qualityStepImageSrc(b64: string | undefined): string | undefined {
+    if (!b64?.trim()) return undefined;
+    return b64.startsWith('data:') ? b64 : `data:image/png;base64,${b64}`;
 }
 
 function buildAssessmentsFromPrototypes(prototypes: MeasuringFeaturePrototypeTO[]): WorkSessionMeasuringFeatureInputTO[] {
@@ -77,6 +87,7 @@ function MeasuringFeaturesForm({
                 const assessment = assessments[index];
                 const checkType = proto.checkType;
                 const isMeasured = checkType === 'MEASURED';
+                const isAttributive = checkType === 'ATTRIBUTIVE';
                 const assessedValue = typeof assessment?.assessedValue === 'string' ? assessment.assessedValue : '';
                 const assessedValueGood = Boolean(assessment?.assessedValueGood);
 
@@ -114,39 +125,82 @@ function MeasuringFeaturesForm({
                                 ) : null}
                             </Box>
 
-                            {/* Column 3: tolerances + assessed input */}
+                            {/* Column 3: MEASURED = ref/tolerances + assessed value; ATTRIBUTIVE = OK/NOK → assessedValueGood */}
                             <Box sx={{flex: 1, minWidth: 260}}>
-                                <Typography variant="body2">
-                                    {t('toleranceMin')}: {proto.minTolerance ?? '—'}
-                                </Typography>
-                                <Typography variant="body2">
-                                    {t('toleranceMax')}: {proto.maxTolerance ?? '—'}
-                                </Typography>
                                 {isMeasured ? (
-                                    <TextField
-                                        label={t('assessedValue')}
-                                        value={assessedValue}
-                                        onChange={(e) =>
-                                            onAssessmentChange(index, 'assessedValue', digitsOnly(e.target.value))
-                                        }
-                                        size="small"
-                                        fullWidth
-                                        inputProps={{inputMode: 'numeric', pattern: '[0-9]*'}}
-                                        sx={{mt: 1}}
-                                    />
-                                ) : (
-                                    <FormControlLabel
-                                        sx={{mt: 0.5}}
-                                        control={
-                                            <Checkbox
-                                                checked={assessedValueGood}
-                                                onChange={(e) =>
-                                                    onAssessmentChange(index, 'assessedValueGood', e.target.checked)
-                                                }
+                                    <>
+                                        <Typography variant="body2">
+                                            {t('refValue')}: {proto.refValue ?? '—'}
+                                        </Typography>
+                                        <Typography variant="body2">
+                                            {t('toleranceMin')}: {proto.minTolerance ?? '—'}
+                                        </Typography>
+                                        <Typography variant="body2">
+                                            {t('toleranceMax')}: {proto.maxTolerance ?? '—'}
+                                        </Typography>
+                                        <TextField
+                                            label={t('assessedValue')}
+                                            value={assessedValue}
+                                            onChange={(e) =>
+                                                onAssessmentChange(index, 'assessedValue', digitsOnly(e.target.value))
+                                            }
+                                            size="small"
+                                            fullWidth
+                                            inputProps={{inputMode: 'numeric', pattern: '[0-9]*'}}
+                                            sx={{mt: 1}}
+                                        />
+                                    </>
+                                ) : isAttributive ? (
+                                    <FormControl sx={{mt: 0.5}} component="fieldset" variant="standard">
+                                        <FormLabel component="legend">{t('okNokChoice')}</FormLabel>
+                                        <RadioGroup
+                                            row
+                                            value={assessedValueGood ? 'ok' : 'nok'}
+                                            onChange={(e) =>
+                                                onAssessmentChange(
+                                                    index,
+                                                    'assessedValueGood',
+                                                    e.target.value === 'ok',
+                                                )
+                                            }
+                                        >
+                                            <FormControlLabel
+                                                value="ok"
+                                                control={<Radio size="small" />}
+                                                label={t('ok')}
                                             />
-                                        }
-                                        label={t('assessedValueGood')}
-                                    />
+                                            <FormControlLabel
+                                                value="nok"
+                                                control={<Radio size="small" />}
+                                                label={t('nok')}
+                                            />
+                                        </RadioGroup>
+                                    </FormControl>
+                                ) : (
+                                    <>
+                                        <Typography variant="body2">
+                                            {t('toleranceMin')}: {proto.minTolerance ?? '—'}
+                                        </Typography>
+                                        <Typography variant="body2">
+                                            {t('toleranceMax')}: {proto.maxTolerance ?? '—'}
+                                        </Typography>
+                                        <FormControlLabel
+                                            sx={{mt: 0.5}}
+                                            control={
+                                                <Checkbox
+                                                    checked={assessedValueGood}
+                                                    onChange={(e) =>
+                                                        onAssessmentChange(
+                                                            index,
+                                                            'assessedValueGood',
+                                                            e.target.checked,
+                                                        )
+                                                    }
+                                                />
+                                            }
+                                            label={t('assessedValueGood')}
+                                        />
+                                    </>
                                 )}
                             </Box>
                         </Stack>
@@ -210,6 +264,10 @@ export function ProductionWorkSessionPanel({
     const [actionError, setActionError] = useState<string | null>(null);
     const [productionTargetReachedOpen, setProductionTargetReachedOpen] = useState(false);
 
+    const [qualityInfoModalOpen, setQualityInfoModalOpen] = useState(false);
+    const [qualityInfoSteps, setQualityInfoSteps] = useState<QualityInfoStepTO[]>([]);
+    const [qualityInfoStepIndex, setQualityInfoStepIndex] = useState(0);
+
     const sessionIdRef = useRef<number | null>(null);
     const workOrderSelectorLockCbRef = useRef(onWorkOrderSelectorLockedChange);
     workOrderSelectorLockCbRef.current = onWorkOrderSelectorLockedChange;
@@ -240,55 +298,26 @@ export function ProductionWorkSessionPanel({
             setRowsInitial([]);
             setRowsControl([]);
             setActionError(null);
+            setQualityInfoModalOpen(false);
+            setQualityInfoSteps([]);
+            setQualityInfoStepIndex(0);
             try {
-                let userQr: string | undefined;
-                let userName: string | undefined;
-                let userSurname: string | undefined;
-                try {
-                    const raw = sessionStorage.getItem('userData');
-                    if (raw) {
-                        const u = JSON.parse(raw) as {qrCode?: string; name?: string; surname?: string};
-                        userQr = u.qrCode;
-                        userName = u.name;
-                        userSurname = u.surname;
-                    }
-                } catch {
-                    /* ignore */
-                }
-
-                let stationId = '';
-                try {
-                    const cfg = await new Promise<WorkstationMachineConfigTO>((resolve, reject) => {
-                        Server.getWorkstationMachine(
-                            (response: {data: WorkstationMachineConfigTO}) => resolve(response.data),
-                            reject
-                        );
-                    });
-                    stationId = cfg?.machineName?.trim() || '';
-                } catch {
-                    stationId = '';
-                }
-
-                const created = await Server.openProductionWorkSession({
-                    workOrderId: woId,
-                    operatorQrCode: userQr,
-                    operatorName: userName,
-                    operatorSurname: userSurname,
-                    stationId: stationId || undefined,
-                });
+                const steps = await Server.getProductionWorkOrderQualityInfoSteps(woId);
                 if (cancelled) return;
-                setSession(created);
-                const prototypes = created.measuringFeaturePrototypes ?? [];
-                setRowsInitial(buildAssessmentsFromPrototypes(prototypes));
-                setRowsControl(buildAssessmentsFromPrototypes(prototypes));
-                if (created.id != null) {
-                    sessionStorage.setItem(STORAGE_SESSION, String(created.id));
+                if (!steps || steps.length === 0) {
+                    setOpenError(t('qualityInfoStepsRequired'));
+                    workOrderSelectorLockCbRef.current?.(false);
+                    return;
                 }
-                setInitialModalOpen(true);
+                const sorted = [...steps].sort(
+                    (a, b) => (a.stepNumber ?? 0) - (b.stepNumber ?? 0),
+                );
+                setQualityInfoSteps(sorted);
+                setQualityInfoStepIndex(0);
+                setQualityInfoModalOpen(true);
             } catch (e) {
                 if (!cancelled) {
-                    const raw = extractError(e);
-                    setOpenError(raw === 'WORK_ORDER_COMPLETE' ? t('workOrderAlreadyComplete') : raw);
+                    setOpenError(extractError(e));
                     workOrderSelectorLockCbRef.current?.(false);
                 }
             } finally {
@@ -301,6 +330,85 @@ export function ProductionWorkSessionPanel({
             workOrderSelectorLockCbRef.current?.(false);
         };
     }, [workOrder.id]);
+
+    const abortQualityInfoReview = () => {
+        setQualityInfoModalOpen(false);
+        setQualityInfoSteps([]);
+        setQualityInfoStepIndex(0);
+        workOrderSelectorLockCbRef.current?.(false);
+        onClearSelection();
+    };
+
+    const completeQualityInfoAndOpenSession = async () => {
+        const woId = workOrder.id;
+        if (woId == null) return;
+        setOpeningSession(true);
+        setOpenError(null);
+        try {
+            let userQr: string | undefined;
+            let userName: string | undefined;
+            let userSurname: string | undefined;
+            try {
+                const rawUser = sessionStorage.getItem('userData');
+                if (rawUser) {
+                    const u = JSON.parse(rawUser) as {qrCode?: string; name?: string; surname?: string};
+                    userQr = u.qrCode;
+                    userName = u.name;
+                    userSurname = u.surname;
+                }
+            } catch {
+                /* ignore */
+            }
+
+            let stationId = '';
+            try {
+                const cfg = await new Promise<WorkstationMachineConfigTO>((resolve, reject) => {
+                    Server.getWorkstationMachine(
+                        (response: {data: WorkstationMachineConfigTO}) => resolve(response.data),
+                        reject
+                    );
+                });
+                stationId = cfg?.machineName?.trim() || '';
+            } catch {
+                stationId = '';
+            }
+
+            const created = await Server.openProductionWorkSession({
+                workOrderId: woId,
+                operatorQrCode: userQr,
+                operatorName: userName,
+                operatorSurname: userSurname,
+                stationId: stationId || undefined,
+            });
+            setQualityInfoModalOpen(false);
+            setQualityInfoSteps([]);
+            setQualityInfoStepIndex(0);
+            setSession(created);
+            const prototypes = created.measuringFeaturePrototypes ?? [];
+            setRowsInitial(buildAssessmentsFromPrototypes(prototypes));
+            setRowsControl(buildAssessmentsFromPrototypes(prototypes));
+            if (created.id != null) {
+                sessionStorage.setItem(STORAGE_SESSION, String(created.id));
+            }
+            setInitialModalOpen(true);
+        } catch (e) {
+            const raw = extractError(e);
+            if (raw === 'WORK_ORDER_COMPLETE') {
+                setOpenError(t('workOrderAlreadyComplete'));
+            } else if (
+                raw === 'QUALITY_INFO_STEPS_REQUIRED' ||
+                raw === 'PRODUCT_NOT_FOUND_FOR_WORK_ORDER'
+            ) {
+                setOpenError(t('qualityInfoStepsRequired'));
+            } else {
+                setOpenError(raw);
+            }
+            setQualityInfoModalOpen(false);
+            workOrderSelectorLockCbRef.current?.(false);
+        } finally {
+            setOpeningSession(false);
+        }
+    };
 
     useEffect(() => {
         return () => {
@@ -622,6 +730,79 @@ export function ProductionWorkSessionPanel({
                     </Stack>
                 </Box>
             )}
+
+            <Dialog open={qualityInfoModalOpen} fullWidth maxWidth="md" disableEscapeKeyDown onClose={() => {}}>
+                <DialogTitle>{t('qualityInfoReviewTitle')}</DialogTitle>
+                <DialogContent>
+                    {qualityInfoSteps.length > 0 && (
+                        <Stack spacing={2} sx={{mt: 1}}>
+                            <Typography variant="body2" color="text.secondary">
+                                {t('qualityInfoStepOf', {
+                                    current: qualityInfoStepIndex + 1,
+                                    total: qualityInfoSteps.length,
+                                })}
+                            </Typography>
+                            {(() => {
+                                const step = qualityInfoSteps[qualityInfoStepIndex];
+                                const src = qualityStepImageSrc(step?.imageDataBase64);
+                                return (
+                                    <>
+                                        {src ? (
+                                            <Box
+                                                component="img"
+                                                src={src}
+                                                alt=""
+                                                sx={{
+                                                    width: '100%',
+                                                    maxHeight: 360,
+                                                    objectFit: 'contain',
+                                                }}
+                                            />
+                                        ) : (
+                                            <Typography variant="body2" color="text.secondary">
+                                                {t('qualityInfoNoImage')}
+                                            </Typography>
+                                        )}
+                                        <Typography variant="body1" sx={{whiteSpace: 'pre-wrap'}}>
+                                            {step?.stepDescription?.trim() ? step.stepDescription : '—'}
+                                        </Typography>
+                                    </>
+                                );
+                            })()}
+                        </Stack>
+                    )}
+                </DialogContent>
+                <DialogActions sx={{flexWrap: 'wrap', gap: 1}}>
+                    <Button onClick={() => void abortQualityInfoReview()} color="inherit" disabled={openingSession}>
+                        {t('workSessionAbortSession')}
+                    </Button>
+                    <Box sx={{flexGrow: 1}} />
+                    {qualityInfoStepIndex > 0 && (
+                        <Button onClick={() => setQualityInfoStepIndex((i) => i - 1)} disabled={openingSession}>
+                            {t('previous')}
+                        </Button>
+                    )}
+                    {qualityInfoStepIndex < qualityInfoSteps.length - 1 && (
+                        <Button
+                            variant="contained"
+                            onClick={() => setQualityInfoStepIndex((i) => i + 1)}
+                            disabled={openingSession}
+                        >
+                            {t('next')}
+                        </Button>
+                    )}
+                    {qualityInfoStepIndex === qualityInfoSteps.length - 1 && qualityInfoSteps.length > 0 && (
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={() => void completeQualityInfoAndOpenSession()}
+                            disabled={openingSession}
+                        >
+                            {t('startProduction')}
+                        </Button>
+                    )}
+                </DialogActions>
+            </Dialog>
 
             <Dialog open={initialModalOpen} fullWidth maxWidth="md" disableEscapeKeyDown>
                 <DialogTitle>{t('workSessionMandatoryFirstControl')}</DialogTitle>

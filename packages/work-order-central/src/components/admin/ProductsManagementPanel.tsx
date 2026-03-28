@@ -231,14 +231,15 @@ export function ProductsManagementPanel() {
         const desc = protoDescription.trim();
         if (!catalogueId || !desc) return;
 
+        const isAttributive = protoCheckType === 'ATTRIBUTIVE';
         const toAdd: MeasuringFeaturePrototypeTO = {
             id: undefined,
             catalogueId,
             description: desc,
             absoluteMeasure: protoAbsoluteMeasure,
-            refValue: protoRefValue === '' ? undefined : protoRefValue,
-            minTolerance: protoMinTolerance === '' ? undefined : protoMinTolerance,
-            maxTolerance: protoMaxTolerance === '' ? undefined : protoMaxTolerance,
+            refValue: isAttributive || protoRefValue === '' ? undefined : protoRefValue,
+            minTolerance: isAttributive || protoMinTolerance === '' ? undefined : protoMinTolerance,
+            maxTolerance: isAttributive || protoMaxTolerance === '' ? undefined : protoMaxTolerance,
             classType: protoClassType || undefined,
             frequency: protoFrequency.trim() || undefined,
             checkType: protoCheckType || undefined,
@@ -487,7 +488,15 @@ export function ProductsManagementPanel() {
                                     select
                                     label={t('measuringType')}
                                     value={protoCheckType}
-                                    onChange={(e) => setProtoCheckType(e.target.value as any)}
+                                    onChange={(e) => {
+                                        const v = e.target.value as 'ATTRIBUTIVE' | 'MEASURED' | '';
+                                        setProtoCheckType(v);
+                                        if (v === 'ATTRIBUTIVE') {
+                                            setProtoRefValue('');
+                                            setProtoMinTolerance('');
+                                            setProtoMaxTolerance('');
+                                        }
+                                    }}
                                     size="small"
                                     sx={{ minWidth: 200 }}
                                 >
@@ -520,7 +529,7 @@ export function ProductsManagementPanel() {
                                 />
                             </Box>
 
-                            {/* Row 3: ref value, min tolerance, max tolerance */}
+                            {/* Row 3: ref value, min tolerance, max tolerance (not used for ATTRIBUTIVE) */}
                             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                 <TextField
                                     label={t('refValue')}
@@ -533,6 +542,7 @@ export function ProductsManagementPanel() {
                                     }
                                     size="small"
                                     sx={{ minWidth: 180 }}
+                                    disabled={protoCheckType === 'ATTRIBUTIVE'}
                                 />
                                 <TextField
                                     label={t('toleranceMin')}
@@ -545,6 +555,7 @@ export function ProductsManagementPanel() {
                                     }
                                     size="small"
                                     sx={{ minWidth: 180 }}
+                                    disabled={protoCheckType === 'ATTRIBUTIVE'}
                                 />
                                 <TextField
                                     label={t('toleranceMax')}
@@ -557,6 +568,7 @@ export function ProductsManagementPanel() {
                                     }
                                     size="small"
                                     sx={{ minWidth: 180 }}
+                                    disabled={protoCheckType === 'ATTRIBUTIVE'}
                                 />
                             </Box>
 

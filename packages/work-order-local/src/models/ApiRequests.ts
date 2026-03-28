@@ -105,6 +105,13 @@ export interface WorkstationMachineConfigTO {
 }
 
 /** Local → central (proxied) work session. */
+export interface QualityInfoStepTO {
+    id?: number;
+    stepNumber?: number;
+    stepDescription?: string;
+    imageDataBase64?: string;
+}
+
 export interface WorkSessionOpenRequestTO {
     workOrderId?: number;
     operatorQrCode?: string;

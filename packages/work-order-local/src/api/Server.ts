@@ -1,5 +1,6 @@
 import type {
     ApplicationUserTO,
+    QualityInfoStepTO,
     StationConfigDTO,
     WorkstationMachineConfigTO,
     WorkSessionControlProductCreateTO,
@@ -110,6 +111,13 @@ export class Server {
                 console.log(error);
                 onError && onError(error);
             });
+    }
+
+    static async getProductionWorkOrderQualityInfoSteps(workOrderId: number): Promise<QualityInfoStepTO[]> {
+        const r = await axios.get<QualityInfoStepTO[]>(
+            `${getServerUrl()}/production/work-orders/${workOrderId}/quality-info-steps`,
+        );
+        return Array.isArray(r.data) ? r.data : [];
     }
 
     static async openProductionWorkSession(body: WorkSessionOpenRequestTO): Promise<WorkSessionResponseTO> {
