@@ -18,15 +18,27 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import LinkIcon from '@mui/icons-material/Link';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
+import EditIcon from '@mui/icons-material/Edit';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Divider from '@mui/material/Divider';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
-import type { ProductTO, MachineTO, MeasuringFeaturePrototypeTO } from 'sf-common/src/models/ApiRequests';
+import type {
+    ProductTO,
+    MachineTO,
+    MeasuringFeaturePrototypeTO,
+    QualityInfoStepTO,
+} from 'sf-common/src/models/ApiRequests';
 import { Server, ConfirmationModal } from 'sf-common';
 
 type LocalProduct = ProductTO;
+
+function withSequentialStepNumbers(steps: QualityInfoStepTO[]): QualityInfoStepTO[] {
+    return steps.map((s, i) => ({ ...s, stepNumber: i + 1 }));
+}
 
 export function ProductsManagementPanel() {
     const { t } = useTranslation();
@@ -57,6 +69,13 @@ export function ProductsManagementPanel() {
     const [protoCheckType, setProtoCheckType] = useState<'ATTRIBUTIVE' | 'MEASURED' | ''>('');
     const [protoToolType, setProtoToolType] = useState('');
     const [protoMeasuringTool, setProtoMeasuringTool] = useState('');
+
+    const [qualityInfoSteps, setQualityInfoSteps] = useState<QualityInfoStepTO[]>([]);
+    const [qiStepDescription, setQiStepDescription] = useState('');
+    /** Set when user picks/clears image; `undefined` means “keep existing” while editing. */
+    const [qiImageBase64, setQiImageBase64] = useState<string | undefined>(undefined);
+    const [editingQualityStepIndex, setEditingQualityStepIndex] = useState<number | null>(null);
+    const [qiImageInputKey, setQiImageInputKey] = useState(0);
 
     useEffect(() => {
         loadProducts();
@@ -106,6 +125,12 @@ export function ProductsManagementPanel() {
         setProtoCheckType('');
         setProtoToolType('');
         setProtoMeasuringTool('');
+
+        setQualityInfoSteps([]);
+        setQiStepDescription('');
+        setQiImageBase64(undefined);
+        setEditingQualityStepIndex(null);
+        setQiImageInputKey((k) => k + 1);
     };
 
     const openFormModal = () => {
@@ -130,6 +155,75 @@ export function ProductsManagementPanel() {
         setProtoCheckType('');
         setProtoToolType('');
         setProtoMeasuringTool('');
+    };
+
+    const resetQualityStepInputs = () => {
+        setQiStepDescription('');
+        setQiImageBase64(undefined);
+        setEditingQualityStepIndex(null);
+        setQiImageInputKey((k) => k + 1);
+    };
+
+    const addOrUpdateQualityInfoStep = () => {
+        const desc = qiStepDescription.trim();
+        const hasImage = qiImageBase64 !== undefined && qiImageBase64.length > 0;
+        if (!desc && !hasImage) return;
+
+        const prev =
+            editingQualityStepIndex !== null ? qualityInfoSteps[editingQualityStepIndex] : undefined;
+        const step: QualityInfoStepTO = {
+            id: prev?.id,
+            stepDescription: desc || undefined,
+        };
+        if (qiImageBase64 !== undefined) {
+            step.imageDataBase64 = qiImageBase64;
+        } else if (prev?.imageDataBase64) {
+            step.imageDataBase64 = prev.imageDataBase64;
+        }
+
+        if (editingQualityStepIndex !== null) {
+            setQualityInfoSteps((list) => {
+                const next = list.map((s, i) => (i === editingQualityStepIndex ? step : s));
+                return withSequentialStepNumbers(next);
+            });
+        } else {
+            setQualityInfoSteps((list) => withSequentialStepNumbers([...list, step]));
+        }
+        resetQualityStepInputs();
+    };
+
+    const removeQualityInfoStep = (index: number) => {
+        setQualityInfoSteps((list) => withSequentialStepNumbers(list.filter((_, i) => i !== index)));
+        if (editingQualityStepIndex === index) resetQualityStepInputs();
+        else if (editingQualityStepIndex !== null && editingQualityStepIndex > index) {
+            setEditingQualityStepIndex(editingQualityStepIndex - 1);
+        }
+    };
+
+    const moveQualityInfoStep = (index: number, direction: 'up' | 'down') => {
+        const delta = direction === 'up' ? -1 : 1;
+        const newIndex = index + delta;
+        if (newIndex < 0 || newIndex >= qualityInfoSteps.length) return;
+        setQualityInfoSteps((list) => {
+            const next = [...list];
+            [next[index], next[newIndex]] = [next[newIndex], next[index]];
+            return withSequentialStepNumbers(next);
+        });
+        setEditingQualityStepIndex((cur) => {
+            if (cur === null) return null;
+            if (cur === index) return newIndex;
+            if (cur === newIndex) return index;
+            return cur;
+        });
+    };
+
+    const beginEditQualityInfoStep = (index: number) => {
+        const s = qualityInfoSteps[index];
+        if (!s) return;
+        setEditingQualityStepIndex(index);
+        setQiStepDescription(s.stepDescription ?? '');
+        setQiImageBase64(undefined);
+        setQiImageInputKey((k) => k + 1);
     };
 
     const addMeasuringFeaturePrototype = () => {
@@ -168,7 +262,23 @@ export function ProductsManagementPanel() {
         setSelectedMachineIds(product.machineIds ?? []);
         setMeasuringFeaturePrototypes(product.measuringFeaturePrototypes ?? []);
         resetPrototypeInputs();
+        const loadedQi = (product.qualityInfoSteps ?? [])
+            .slice()
+            .sort((a, b) => (a.stepNumber ?? 1e9) - (b.stepNumber ?? 1e9));
+        setQualityInfoSteps(withSequentialStepNumbers(loadedQi));
+        resetQualityStepInputs();
         setFormModalOpen(true);
+    };
+
+    const handleQiImageFile = (fileList: FileList | null) => {
+        const file = fileList?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+            const r = reader.result;
+            if (typeof r === 'string') setQiImageBase64(r);
+        };
+        reader.readAsDataURL(file);
     };
 
     const handleSubmit = () => {
@@ -179,6 +289,7 @@ export function ProductsManagementPanel() {
             reference: reference.trim(),
             machineIds: selectedMachineIds.length > 0 ? selectedMachineIds : undefined,
             measuringFeaturePrototypes,
+            qualityInfoSteps,
         };
         const onSuccess = () => {
             loadProducts();
@@ -335,6 +446,9 @@ export function ProductsManagementPanel() {
                         />
 
                         <Divider variant="middle" sx={{ my: 2, borderWidth: 2, borderColor: 'text.secondary' }} />
+                        <Typography component="h3" variant="h3" sx={{ mt: 0, mb: 1, fontSize: '1.25rem' }}>
+                            {t('measuringFeaturePrototypes')}
+                        </Typography>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
                             {/* Row 1: catalogueID, class, frequency */}
                             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'nowrap' }}>
@@ -470,11 +584,7 @@ export function ProductsManagementPanel() {
                             </Box>
                         </Box>
 
-                        <Typography variant="subtitle1" sx={{ mt: 1 }}>
-                            {measuringFeaturePrototypes.length > 0 ? t('measuringFeaturePrototypes') : ''}
-                        </Typography>
-
-                        <Table size="small">
+                        <Table size="small" sx={{ mt: 1 }}>
                             <TableHead>
                                 <TableRow>
                                     <TableCell>{t('catalogueId')}</TableCell>
@@ -520,6 +630,184 @@ export function ProductsManagementPanel() {
                                 ) : (
                                     <TableRow>
                                         <TableCell colSpan={6}>
+                                            <Typography variant="body2" color="text.secondary">
+                                                {t('none')}
+                                            </Typography>
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+
+                        <Divider variant="middle" sx={{ my: 2, borderWidth: 2, borderColor: 'text.secondary' }} />
+                        <Typography component="h3" variant="h3" sx={{ mt: 0, mb: 1, fontSize: '1.25rem' }}>
+                            {t('qualityInfoSteps')}
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+                                <Button variant="outlined" component="label" size="small">
+                                    {t('qualityStepImage')}
+                                    <input
+                                        key={qiImageInputKey}
+                                        hidden
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                            handleQiImageFile(e.target.files);
+                                            e.target.value = '';
+                                        }}
+                                    />
+                                </Button>
+                                {(Boolean(qiImageBase64 && qiImageBase64.length > 0) ||
+                                    (editingQualityStepIndex !== null &&
+                                        Boolean(qualityInfoSteps[editingQualityStepIndex]?.imageDataBase64))) && (
+                                    <Button size="small" onClick={() => setQiImageBase64('')}>
+                                        {t('clearImage')}
+                                    </Button>
+                                )}
+                            </Box>
+                            {(qiImageBase64 && qiImageBase64.length > 0) ||
+                            (editingQualityStepIndex !== null &&
+                                qiImageBase64 === undefined &&
+                                qualityInfoSteps[editingQualityStepIndex]?.imageDataBase64) ? (
+                                <Box
+                                    component="img"
+                                    alt=""
+                                    src={
+                                        qiImageBase64 && qiImageBase64.length > 0
+                                            ? qiImageBase64
+                                            : qualityInfoSteps[editingQualityStepIndex!]?.imageDataBase64?.startsWith(
+                                                    'data:',
+                                                )
+                                              ? qualityInfoSteps[editingQualityStepIndex!]!.imageDataBase64!
+                                              : `data:image/png;base64,${qualityInfoSteps[editingQualityStepIndex!]!.imageDataBase64}`
+                                    }
+                                    sx={{ maxHeight: 120, maxWidth: '100%', objectFit: 'contain' }}
+                                />
+                            ) : null}
+                            <TextField
+                                label={t('description')}
+                                value={qiStepDescription}
+                                onChange={(e) => setQiStepDescription(e.target.value)}
+                                size="small"
+                                fullWidth
+                                multiline
+                                minRows={2}
+                            />
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                <Button
+                                    variant="outlined"
+                                    color="primary"
+                                    startIcon={<AddIcon />}
+                                    onClick={addOrUpdateQualityInfoStep}
+                                    disabled={
+                                        !qiStepDescription.trim() &&
+                                        !(qiImageBase64 !== undefined && qiImageBase64.length > 0) &&
+                                        !(
+                                            editingQualityStepIndex !== null &&
+                                            Boolean(
+                                                qualityInfoSteps[editingQualityStepIndex]?.stepDescription?.trim() ||
+                                                    qualityInfoSteps[editingQualityStepIndex]?.imageDataBase64,
+                                            )
+                                        )
+                                    }
+                                >
+                                    {editingQualityStepIndex !== null
+                                        ? t('updateQualityInfoStep')
+                                        : t('addQualityInfoStep')}
+                                </Button>
+                                {editingQualityStepIndex !== null && (
+                                    <Button variant="text" onClick={resetQualityStepInputs}>
+                                        {t('cancel')}
+                                    </Button>
+                                )}
+                            </Box>
+                        </Box>
+
+                        <Table size="small" sx={{ mt: 1 }}>
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell align="center" sx={{ width: 48 }}>
+                                        {t('reorderSteps')}
+                                    </TableCell>
+                                    <TableCell>{t('stepNumber')}</TableCell>
+                                    <TableCell>{t('description')}</TableCell>
+                                    <TableCell>{t('qualityStepImage')}</TableCell>
+                                    <TableCell align="right">{t('actions')}</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {qualityInfoSteps.length > 0 ? (
+                                    qualityInfoSteps.map((s, idx) => (
+                                        <TableRow key={`${s.id ?? 'new'}-qi-${idx}`}>
+                                            <TableCell padding="checkbox" sx={{ verticalAlign: 'middle' }}>
+                                                <Box
+                                                    sx={{
+                                                        display: 'flex',
+                                                        flexDirection: 'column',
+                                                        alignItems: 'center',
+                                                        width: 40,
+                                                    }}
+                                                >
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => moveQualityInfoStep(idx, 'up')}
+                                                        disabled={idx === 0}
+                                                        title={t('moveUp')}
+                                                        aria-label={t('moveUp')}
+                                                    >
+                                                        <KeyboardArrowUpIcon fontSize="small" />
+                                                    </IconButton>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => moveQualityInfoStep(idx, 'down')}
+                                                        disabled={idx === qualityInfoSteps.length - 1}
+                                                        title={t('moveDown')}
+                                                        aria-label={t('moveDown')}
+                                                    >
+                                                        <KeyboardArrowDownIcon fontSize="small" />
+                                                    </IconButton>
+                                                </Box>
+                                            </TableCell>
+                                            <TableCell>{s.stepNumber ?? idx + 1}</TableCell>
+                                            <TableCell>{s.stepDescription ?? '—'}</TableCell>
+                                            <TableCell>
+                                                {s.imageDataBase64 ? (
+                                                    <Box
+                                                        component="img"
+                                                        alt=""
+                                                        src={
+                                                            s.imageDataBase64.startsWith('data:')
+                                                                ? s.imageDataBase64
+                                                                : `data:image/png;base64,${s.imageDataBase64}`
+                                                        }
+                                                        sx={{ maxHeight: 48, maxWidth: 80, objectFit: 'contain' }}
+                                                    />
+                                                ) : (
+                                                    '—'
+                                                )}
+                                            </TableCell>
+                                            <TableCell align="right">
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => beginEditQualityInfoStep(idx)}
+                                                    title={t('edit')}
+                                                >
+                                                    <EditIcon fontSize="small" />
+                                                </IconButton>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => removeQualityInfoStep(idx)}
+                                                    title={t('remove')}
+                                                >
+                                                    <DeleteIcon fontSize="small" />
+                                                </IconButton>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={5}>
                                             <Typography variant="body2" color="text.secondary">
                                                 {t('none')}
                                             </Typography>

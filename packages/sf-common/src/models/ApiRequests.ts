@@ -15,6 +15,14 @@ export interface SessionTO {
     productReferenceID?: string
 }
 
+export interface QualityInfoStepTO {
+    id?: number,
+    stepNumber?: number,
+    stepDescription?: string,
+    /** Raw Base64 or data URL; omit or empty to clear image */
+    imageDataBase64?: string,
+}
+
 export interface ProductTO {
     id?: number,
     name?: string,
@@ -23,6 +31,7 @@ export interface ProductTO {
     reference?: string,
     machineIds?: number[],
     measuringFeaturePrototypes?: MeasuringFeaturePrototypeTO[],
+    qualityInfoSteps?: QualityInfoStepTO[],
 }
 
 export interface MachineBookingTO {
