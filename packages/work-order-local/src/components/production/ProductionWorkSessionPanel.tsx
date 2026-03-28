@@ -692,6 +692,21 @@ export function ProductionWorkSessionPanel({
         }
     };
 
+    const handleRecordSetup = async () => {
+        if (sessionId == null) return;
+        setSubmitting(true);
+        setActionError(null);
+        try {
+            const updated = await Server.postProductionSetupProduct(sessionId);
+            setSession(updated);
+            setToolOpen(false);
+        } catch (e) {
+            setActionError(extractError(e));
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
     const handleSaveGood = async () => {
         if (sessionId == null) return;
         const n = Number(goodDelta.trim());
@@ -1024,7 +1039,7 @@ export function ProductionWorkSessionPanel({
                 </DialogActions>
             </Dialog>
 
-            <Dialog open={toolOpen} onClose={() => setToolOpen(false)} fullWidth maxWidth="sm">
+            <Dialog open={toolOpen} onClose={() => !submitting && setToolOpen(false)} fullWidth maxWidth="sm">
                 <DialogTitle>{t('workSessionToolChange')}</DialogTitle>
                 <DialogContent>
                     <Typography sx={{mt: 1}} color="text.secondary">
@@ -1032,8 +1047,11 @@ export function ProductionWorkSessionPanel({
                     </Typography>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setToolOpen(false)} variant="contained">
-                        {t('close')}
+                    <Button onClick={() => setToolOpen(false)} disabled={submitting}>
+                        {t('cancel')}
+                    </Button>
+                    <Button onClick={() => void handleRecordSetup()} variant="contained" disabled={submitting}>
+                        {t('workSessionRecordSetup')}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -1090,22 +1108,55 @@ function SessionSummary({workOrder, session}: {workOrder: ProductionWorkOrderTO;
         required != null && required > 0 && producedWo > required ? producedWo - required : 0;
     return (
         <Box sx={{p: 1.5, bgcolor: 'action.hover', borderRadius: 1}}>
-            {required != null && (
-                <Typography variant="body2">
-                    {t('productionWorkOrderRequiredQuantity')}: {required}
-                </Typography>
-            )}
-            <Typography variant="body2">
-                {t('productionWorkOrderProducedGood')}: {producedWo}
-            </Typography>
-            <Typography variant="body2">
-                {t('productionWorkSessionGoodRecorded')}: {sessionGood}
-            </Typography>
-            {session.productReferenceID && (
-                <Typography variant="body2" sx={{mt: 0.5}}>
-                    {t('productReferenceID')}: {session.productReferenceID}
-                </Typography>
-            )}
+            <Stack
+                direction={{xs: 'column', sm: 'row'}}
+                spacing={2}
+                alignItems={{xs: 'stretch', sm: 'flex-start'}}
+                sx={{width: '100%'}}
+            >
+                <Box sx={{flex: '1 1 0', minWidth: 0}}>
+                    {required != null && (
+                        <Typography variant="body2">
+                            {t('productionWorkOrderRequiredQuantity')}: {required}
+                        </Typography>
+                    )}
+                    <Typography variant="body2">
+                        {t('productionWorkOrderProducedGood')}: {producedWo}
+                    </Typography>
+                    <Typography variant="body2">
+                        {t('productionWorkSessionGoodRecorded')}: {sessionGood}
+                    </Typography>
+                    {session.productReferenceID && (
+                        <Typography variant="body2" sx={{mt: 0.5}}>
+                            {t('productReferenceID')}: {session.productReferenceID}
+                        </Typography>
+                    )}
+                </Box>
+                <Stack
+                    spacing={0.75}
+                    sx={{
+                        flex: {sm: '0 0 auto'},
+                        minWidth: {sm: 200},
+                        pl: {sm: 2},
+                        ml: {sm: 0},
+                        borderLeft: {sm: 1},
+                        borderTop: {xs: 1, sm: 0},
+                        borderColor: 'divider',
+                        pt: {xs: 2, sm: 0},
+                        mt: {xs: 0, sm: 0},
+                    }}
+                >
+                    <Typography variant="body2">
+                        {t('productionWorkSessionControlCount')}: {session.controlProductCount ?? 0}
+                    </Typography>
+                    <Typography variant="body2">
+                        {t('productionWorkSessionFaultyCount')}: {session.faultyProductCount ?? 0}
+                    </Typography>
+                    <Typography variant="body2">
+                        {t('productionWorkSessionSetupCount')}: {session.setupProductCount ?? 0}
+                    </Typography>
+                </Stack>
+            </Stack>
             {residualOverOrder > 0 && (
                 <Alert severity="info" sx={{mt: 1.5}} variant="outlined">
                     <Typography variant="body2" component="span">

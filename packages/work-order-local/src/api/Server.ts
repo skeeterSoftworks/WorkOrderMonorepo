@@ -172,6 +172,14 @@ export class Server {
         return r.data;
     }
 
+    /** Records one setup event (e.g. tool change) for the session; response includes updated counts. */
+    static async postProductionSetupProduct(sessionId: number): Promise<WorkSessionResponseTO> {
+        const r = await axios.post<WorkSessionResponseTO>(
+            `${getServerUrl()}/production/work-sessions/${sessionId}/setup-products`
+        );
+        return r.data;
+    }
+
     static async getProductionWorkSession(sessionId: number): Promise<WorkSessionResponseTO> {
         const r = await axios.get<WorkSessionResponseTO>(`${getServerUrl()}/production/work-sessions/${sessionId}`);
         return r.data;

@@ -135,6 +135,9 @@ export interface WorkSessionResponseTO {
     sessionStart?: string;
     sessionEnd?: string;
     productCount?: number;
+    controlProductCount?: number;
+    faultyProductCount?: number;
+    setupProductCount?: number;
     productReferenceID?: string;
     operatorQrCode?: string;
     operatorName?: string;
