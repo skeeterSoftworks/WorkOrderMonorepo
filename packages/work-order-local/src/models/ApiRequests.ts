@@ -142,6 +142,8 @@ export interface WorkSessionResponseTO {
     stationId?: string;
     workOrderCompletedByTarget?: boolean;
     measuringFeaturePrototypes?: MeasuringFeaturePrototypeTO[];
+    /** Raw Base64 technical drawing for the work order product (control product modals). */
+    technicalDrawingBase64?: string;
 }
 
 export interface WorkSessionMeasuringFeatureInputTO {

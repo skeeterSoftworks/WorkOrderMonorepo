@@ -435,6 +435,8 @@
   "workSessionProcessingPanel": "Akcije u proizvodnji",
   "workSessionDeclareFaulty": "Prijavi neispravan proizvod",
   "workSessionRecordControl": "Evidentiraj kontrolni proizvod",
+  "technicalDrawing": "Tehnički crtež",
+  "technicalDrawingNone": "Nema tehničkog crteža",
   "workSessionToolChange": "Promena alata",
   "workSessionRecordGood": "Evidentiraj ispravne komade",
   "workSessionRejectCause": "Uzrok odbacivanja",

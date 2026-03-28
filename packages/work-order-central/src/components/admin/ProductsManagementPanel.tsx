@@ -77,6 +77,12 @@ export function ProductsManagementPanel() {
     const [editingQualityStepIndex, setEditingQualityStepIndex] = useState<number | null>(null);
     const [qiImageInputKey, setQiImageInputKey] = useState(0);
 
+    /** `undefined` = unchanged on save; data URL or raw base64 when user picks file; `''` = clear. */
+    const [technicalDrawingBase64, setTechnicalDrawingBase64] = useState<string | undefined>(undefined);
+    /** Server value for preview only when `technicalDrawingBase64` is `undefined`. */
+    const [technicalDrawingLoadedSrc, setTechnicalDrawingLoadedSrc] = useState<string | undefined>(undefined);
+    const [technicalDrawingInputKey, setTechnicalDrawingInputKey] = useState(0);
+
     useEffect(() => {
         loadProducts();
         loadMachines();
@@ -131,6 +137,10 @@ export function ProductsManagementPanel() {
         setQiImageBase64(undefined);
         setEditingQualityStepIndex(null);
         setQiImageInputKey((k) => k + 1);
+
+        setTechnicalDrawingBase64(undefined);
+        setTechnicalDrawingLoadedSrc(undefined);
+        setTechnicalDrawingInputKey((k) => k + 1);
     };
 
     const openFormModal = () => {
@@ -268,6 +278,12 @@ export function ProductsManagementPanel() {
             .sort((a, b) => (a.stepNumber ?? 1e9) - (b.stepNumber ?? 1e9));
         setQualityInfoSteps(withSequentialStepNumbers(loadedQi));
         resetQualityStepInputs();
+        const td = product.technicalDrawingBase64?.trim();
+        setTechnicalDrawingBase64(undefined);
+        setTechnicalDrawingLoadedSrc(
+            td ? (td.startsWith('data:') ? td : `data:image/jpeg;base64,${td}`) : undefined
+        );
+        setTechnicalDrawingInputKey((k) => k + 1);
         setFormModalOpen(true);
     };
 
@@ -282,6 +298,17 @@ export function ProductsManagementPanel() {
         reader.readAsDataURL(file);
     };
 
+    const handleTechnicalDrawingFile = (fileList: FileList | null) => {
+        const file = fileList?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+            const r = reader.result;
+            if (typeof r === 'string') setTechnicalDrawingBase64(r);
+        };
+        reader.readAsDataURL(file);
+    };
+
     const handleSubmit = () => {
         const payload: ProductTO = {
             id: selectedProductId,
@@ -292,6 +319,10 @@ export function ProductsManagementPanel() {
             measuringFeaturePrototypes,
             qualityInfoSteps,
         };
+        if (technicalDrawingBase64 !== undefined) {
+            payload.technicalDrawingBase64 =
+                technicalDrawingBase64.length > 0 ? technicalDrawingBase64 : '';
+        }
         const onSuccess = () => {
             loadProducts();
             resetForm();
@@ -445,6 +476,58 @@ export function ProductsManagementPanel() {
                             multiline
                             minRows={2}
                         />
+
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            <Typography variant="body2" color="text.secondary">
+                                {t('technicalDrawing')}
+                            </Typography>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 1 }}>
+                                <Button variant="outlined" component="label" size="small">
+                                    {t('technicalDrawingImage')}
+                                    <input
+                                        key={technicalDrawingInputKey}
+                                        type="file"
+                                        accept="image/*"
+                                        hidden
+                                        onChange={(e) => {
+                                            handleTechnicalDrawingFile(e.target.files);
+                                            e.target.value = '';
+                                        }}
+                                    />
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    color="secondary"
+                                    disabled={
+                                        technicalDrawingBase64 === undefined
+                                            ? !technicalDrawingLoadedSrc
+                                            : technicalDrawingBase64.length === 0
+                                    }
+                                    onClick={() => {
+                                        setTechnicalDrawingBase64('');
+                                        setTechnicalDrawingLoadedSrc(undefined);
+                                        setTechnicalDrawingInputKey((k) => k + 1);
+                                    }}
+                                >
+                                    {t('clearImage')}
+                                </Button>
+                            </Box>
+                            {(technicalDrawingBase64 !== undefined
+                                ? technicalDrawingBase64
+                                : technicalDrawingLoadedSrc) && (
+                                <Box
+                                    component="img"
+                                    alt=""
+                                    src={
+                                        (technicalDrawingBase64 !== undefined
+                                            ? technicalDrawingBase64
+                                            : technicalDrawingLoadedSrc) as string
+                                    }
+                                    sx={{ maxHeight: 160, maxWidth: '100%', objectFit: 'contain', borderRadius: 1 }}
+                                />
+                            )}
+                        </Box>
 
                         <Divider variant="middle" sx={{ my: 2, borderWidth: 2, borderColor: 'text.secondary' }} />
                         <Typography component="h3" variant="h3" sx={{ mt: 0, mb: 1, fontSize: '1.25rem' }}>

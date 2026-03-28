@@ -435,6 +435,8 @@
   "workSessionProcessingPanel": "Production actions",
   "workSessionDeclareFaulty": "Declare faulty product",
   "workSessionRecordControl": "Record control product",
+  "technicalDrawing": "Technical drawing",
+  "technicalDrawingNone": "No technical drawing",
   "workSessionToolChange": "Tool change",
   "workSessionRecordGood": "Record good products",
   "workSessionRejectCause": "Reject cause",

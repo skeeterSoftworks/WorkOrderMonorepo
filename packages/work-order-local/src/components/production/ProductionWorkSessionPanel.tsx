@@ -1,4 +1,4 @@
-import {type Dispatch, type SetStateAction, useEffect, useRef, useState} from 'react';
+import {type Dispatch, type ReactNode, type SetStateAction, useEffect, useRef, useState} from 'react';
 import axios from 'axios';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -7,6 +7,7 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
+import Backdrop from '@mui/material/Backdrop';
 import TextField from '@mui/material/TextField';
 import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
@@ -38,6 +39,145 @@ function digitsOnly(v: string): string {
 function qualityStepImageSrc(b64: string | undefined): string | undefined {
     if (!b64?.trim()) return undefined;
     return b64.startsWith('data:') ? b64 : `data:image/png;base64,${b64}`;
+}
+
+function technicalDrawingImageSrc(b64: string | undefined): string | undefined {
+    if (!b64?.trim()) return undefined;
+    return b64.startsWith('data:') ? b64 : `data:image/jpeg;base64,${b64}`;
+}
+
+const controlProductDialogPaperSx = {
+    width: 'min(1200px, 96vw)',
+    maxWidth: '96vw',
+    maxHeight: 'min(92vh, 920px)',
+    minHeight: 'min(78vh, 680px)',
+} as const;
+
+function TechnicalDrawingColumn({base64}: {base64?: string}) {
+    const {t} = useTranslation();
+    const [zoomed, setZoomed] = useState(false);
+    const src = technicalDrawingImageSrc(base64);
+    return (
+        <>
+            <Box
+                sx={{
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    p: 1,
+                    height: '100%',
+                    minHeight: {xs: 120, md: 280},
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    bgcolor: 'action.hover',
+                }}
+            >
+                <Typography variant="caption" color="text.secondary" sx={{alignSelf: 'flex-start', mb: 0.5}}>
+                    {t('technicalDrawing')}
+                </Typography>
+                {src ? (
+                    <Box
+                        component="img"
+                        src={src}
+                        alt=""
+                        onClick={() => setZoomed(true)}
+                        sx={{
+                            width: '100%',
+                            flex: 1,
+                            minHeight: {xs: 160, md: 200},
+                            maxHeight: {xs: 280, md: 'min(58vh, 560px)'},
+                            objectFit: 'contain',
+                            cursor: 'zoom-in',
+                            borderRadius: 0.5,
+                        }}
+                    />
+                ) : (
+                    <Typography variant="body2" color="text.secondary" sx={{py: 2, textAlign: 'center'}}>
+                        {t('technicalDrawingNone')}
+                    </Typography>
+                )}
+            </Box>
+            {src ? (
+                <Backdrop
+                    open={zoomed}
+                    onClick={() => setZoomed(false)}
+                    sx={(theme) => ({
+                        zIndex: theme.zIndex.modal + 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    })}
+                >
+                    <Box
+                        component="img"
+                        src={src}
+                        alt=""
+                        onClick={() => setZoomed(false)}
+                        sx={{
+                            maxHeight: '100vh',
+                            maxWidth: '100vw',
+                            width: 'auto',
+                            height: 'auto',
+                            objectFit: 'contain',
+                            cursor: 'zoom-out',
+                            p: 1,
+                            boxSizing: 'border-box',
+                        }}
+                    />
+                </Backdrop>
+            ) : null}
+        </>
+    );
+}
+
+function ControlProductModalBody({
+    hint,
+    prototypes,
+    assessments,
+    onAssessmentChange,
+    technicalDrawingBase64,
+}: {
+    hint?: ReactNode;
+    prototypes: MeasuringFeaturePrototypeTO[];
+    assessments: WorkSessionMeasuringFeatureInputTO[];
+    onAssessmentChange: (
+        index: number,
+        field: keyof WorkSessionMeasuringFeatureInputTO,
+        value: string | boolean
+    ) => void;
+    technicalDrawingBase64?: string;
+}) {
+    return (
+        <Box
+            sx={{
+                display: 'flex',
+                flexDirection: {xs: 'column', md: 'row'},
+                gap: 2,
+                alignItems: 'flex-start',
+                minHeight: {md: 'min(68vh, 600px)'},
+            }}
+        >
+            <Box sx={{flex: {md: '1 1 75%'}, minWidth: 0, width: {xs: '100%', md: '75%'}}}>
+                {hint}
+                <MeasuringFeaturesForm
+                    prototypes={prototypes}
+                    assessments={assessments}
+                    onAssessmentChange={onAssessmentChange}
+                />
+            </Box>
+            <Box
+                sx={{
+                    flex: {md: '0 0 25%'},
+                    width: {xs: '100%', md: '25%'},
+                    maxWidth: {xs: '100%', md: '25%'},
+                    alignSelf: 'stretch',
+                }}
+            >
+                <TechnicalDrawingColumn base64={technicalDrawingBase64} />
+            </Box>
+        </Box>
+    );
 }
 
 function buildAssessmentsFromPrototypes(prototypes: MeasuringFeaturePrototypeTO[]): WorkSessionMeasuringFeatureInputTO[] {
@@ -258,7 +398,6 @@ export function ProductionWorkSessionPanel({
     const [faultyComment, setFaultyComment] = useState('');
 
     const [goodDelta, setGoodDelta] = useState('1');
-    const [goodRef, setGoodRef] = useState('');
 
     const [submitting, setSubmitting] = useState(false);
     const [actionError, setActionError] = useState<string | null>(null);
@@ -565,12 +704,10 @@ export function ProductionWorkSessionPanel({
         try {
             const updated = await Server.postProductionGoodDelta(sessionId, {
                 delta: n,
-                productReferenceID: goodRef.trim() || undefined,
             });
             setSession(updated);
             setGoodOpen(false);
             setGoodDelta('1');
-            setGoodRef('');
             if (updated.workOrderCompletedByTarget) {
                 setProductionTargetReachedOpen(true);
             }
@@ -804,18 +941,27 @@ export function ProductionWorkSessionPanel({
                 </DialogActions>
             </Dialog>
 
-            <Dialog open={initialModalOpen} fullWidth maxWidth="md" disableEscapeKeyDown>
+            <Dialog
+                open={initialModalOpen}
+                fullWidth
+                maxWidth={false}
+                disableEscapeKeyDown
+                PaperProps={{sx: controlProductDialogPaperSx}}
+            >
                 <DialogTitle>{t('workSessionMandatoryFirstControl')}</DialogTitle>
-                <DialogContent>
-                    <Typography variant="body2" color="text.secondary" sx={{mb: 1}}>
-                        {t('workSessionMandatoryFirstControlHint')}
-                    </Typography>
-                    <MeasuringFeaturesForm
+                <DialogContent dividers sx={{overflow: 'auto'}}>
+                    <ControlProductModalBody
+                        hint={
+                            <Typography variant="body2" color="text.secondary" sx={{mb: 1}}>
+                                {t('workSessionMandatoryFirstControlHint')}
+                            </Typography>
+                        }
                         prototypes={session?.measuringFeaturePrototypes ?? []}
                         assessments={rowsInitial}
                         onAssessmentChange={(i, field, value) =>
                             updateAssessment(setRowsInitial, i, field, value)
                         }
+                        technicalDrawingBase64={session?.technicalDrawingBase64}
                     />
                 </DialogContent>
                 <DialogActions>
@@ -852,15 +998,22 @@ export function ProductionWorkSessionPanel({
                 </DialogActions>
             </Dialog>
 
-            <Dialog open={controlOpen} onClose={() => setControlOpen(false)} fullWidth maxWidth="md">
+            <Dialog
+                open={controlOpen}
+                onClose={() => setControlOpen(false)}
+                fullWidth
+                maxWidth={false}
+                PaperProps={{sx: controlProductDialogPaperSx}}
+            >
                 <DialogTitle>{t('workSessionRecordControl')}</DialogTitle>
-                <DialogContent>
-                    <MeasuringFeaturesForm
+                <DialogContent dividers sx={{overflow: 'auto'}}>
+                    <ControlProductModalBody
                         prototypes={session?.measuringFeaturePrototypes ?? []}
                         assessments={rowsControl}
                         onAssessmentChange={(i, field, value) =>
                             updateAssessment(setRowsControl, i, field, value)
                         }
+                        technicalDrawingBase64={session?.technicalDrawingBase64}
                     />
                 </DialogContent>
                 <DialogActions>
@@ -911,12 +1064,6 @@ export function ProductionWorkSessionPanel({
                             onChange={(e) => setGoodDelta(e.target.value)}
                             fullWidth
                             required
-                        />
-                        <TextField
-                            label={t('productReferenceID')}
-                            value={goodRef}
-                            onChange={(e) => setGoodRef(e.target.value)}
-                            fullWidth
                         />
                         <Typography variant="caption" color="text.secondary">
                             {t('workSessionGoodFlushHint')}

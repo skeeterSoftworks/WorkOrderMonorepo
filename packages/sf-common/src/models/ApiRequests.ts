@@ -32,6 +32,8 @@ export interface ProductTO {
     machineIds?: number[],
     measuringFeaturePrototypes?: MeasuringFeaturePrototypeTO[],
     qualityInfoSteps?: QualityInfoStepTO[],
+    /** Raw Base64 or data URL; omit while editing to keep existing; empty string clears */
+    technicalDrawingBase64?: string,
 }
 
 export interface MachineBookingTO {
