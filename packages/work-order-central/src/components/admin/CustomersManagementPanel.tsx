@@ -16,6 +16,11 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CustomerTO } from 'sf-common/src/models/ApiRequests';
 import { Server, ConfirmationModal } from 'sf-common';
+import {
+    TableActionsRow,
+    tableActionsTableCellSx,
+    tableActionIconButtonSx,
+} from '../shared/tableActions';
 
 export function CustomersManagementPanel() {
     const { t } = useTranslation();
@@ -149,7 +154,9 @@ export function CustomersManagementPanel() {
                                 <TableCell>{t('companyName')}</TableCell>
                                 <TableCell>{t('addressData')}</TableCell>
                                 <TableCell>{t('description')}</TableCell>
-                                <TableCell align="right">{t('actions')}</TableCell>
+                                <TableCell align="right" sx={tableActionsTableCellSx}>
+                                    {t('actions')}
+                                </TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -158,20 +165,23 @@ export function CustomersManagementPanel() {
                                     <TableCell>{customer.companyName}</TableCell>
                                     <TableCell>{customer.addressData}</TableCell>
                                     <TableCell>{customer.description}</TableCell>
-                                    <TableCell align="right">
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => handleEditClick(customer)}
-                                            sx={{ mr: 1 }}
-                                        >
-                                            <LinkIcon fontSize="small" />
-                                        </IconButton>
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => handleDeleteClick(customer)}
-                                        >
-                                            <DeleteIcon fontSize="small" />
-                                        </IconButton>
+                                    <TableCell align="right" sx={tableActionsTableCellSx}>
+                                        <TableActionsRow>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleEditClick(customer)}
+                                                sx={tableActionIconButtonSx.edit}
+                                            >
+                                                <LinkIcon fontSize="small" />
+                                            </IconButton>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleDeleteClick(customer)}
+                                                sx={tableActionIconButtonSx.delete}
+                                            >
+                                                <DeleteIcon fontSize="small" />
+                                            </IconButton>
+                                        </TableActionsRow>
                                     </TableCell>
                                 </TableRow>
                             ))}

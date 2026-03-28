@@ -17,6 +17,11 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ApplicationUserTO } from 'sf-common/src/models/ApiRequests';
 import { Server, ConfirmationModal } from 'sf-common';
+import {
+    TableActionsRow,
+    tableActionsTableCellSx,
+    tableActionIconButtonSx,
+} from '../shared/tableActions';
 
 export function UsersManagementPanel() {
     const { t } = useTranslation();
@@ -197,7 +202,9 @@ export function UsersManagementPanel() {
                                 <TableCell>{t('qrCode')}</TableCell>
                                 <TableCell>{t('role')}</TableCell>
                                 <TableCell>{t('createdDate')}</TableCell>
-                                <TableCell align="right">{t('actions')}</TableCell>
+                                <TableCell align="right" sx={tableActionsTableCellSx}>
+                                    {t('actions')}
+                                </TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -210,20 +217,23 @@ export function UsersManagementPanel() {
                                     <TableCell>
                                         {formatCreatedDate(user.createdDate as any)}
                                     </TableCell>
-                                    <TableCell align="right">
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => handleEditClick(user)}
-                                            sx={{ mr: 1 }}
-                                        >
-                                            <LinkIcon fontSize="small" />
-                                        </IconButton>
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => handleDeleteClick(user)}
-                                        >
-                                            <DeleteIcon fontSize="small" />
-                                        </IconButton>
+                                    <TableCell align="right" sx={tableActionsTableCellSx}>
+                                        <TableActionsRow>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleEditClick(user)}
+                                                sx={tableActionIconButtonSx.edit}
+                                            >
+                                                <LinkIcon fontSize="small" />
+                                            </IconButton>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleDeleteClick(user)}
+                                                sx={tableActionIconButtonSx.delete}
+                                            >
+                                                <DeleteIcon fontSize="small" />
+                                            </IconButton>
+                                        </TableActionsRow>
                                     </TableCell>
                                 </TableRow>
                             ))}

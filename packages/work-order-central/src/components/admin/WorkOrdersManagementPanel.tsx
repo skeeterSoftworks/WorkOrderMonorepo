@@ -29,6 +29,12 @@ import {useTranslation} from 'react-i18next';
 import type {WorkOrderTO, PurchaseOrderTO, ProductOrderTO, MachineTO, MachineBookingTO} from 'sf-common/src/models/ApiRequests';
 import type {TFunction} from 'i18next';
 import {Server, ConfirmationModal} from 'sf-common';
+import {
+    TableActionsRow,
+    tableActionsTableCellSx,
+    tableActionIconButtonSx,
+    tableActionIconButtonOtherSx,
+} from '../shared/tableActions';
 
 /** Normalize PO delivery date for HTML date input (yyyy-MM-dd). */
 function purchaseOrderDeliveryToDueDateInput(
@@ -544,7 +550,9 @@ export function WorkOrdersManagementPanel() {
                                 <TableCell>{t('startDate')}</TableCell>
                                 <TableCell>{t('endDate')}</TableCell>
                                 <TableCell>{t('comment')}</TableCell>
-                                <TableCell align="right">{t('actions')}</TableCell>
+                                <TableCell align="right" sx={tableActionsTableCellSx}>
+                                    {t('actions')}
+                                </TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -595,53 +603,56 @@ export function WorkOrdersManagementPanel() {
                                     <TableCell>{formatDate(wo.startDate)}</TableCell>
                                     <TableCell>{formatDate(wo.endDate)}</TableCell>
                                     <TableCell>{wo.comment}</TableCell>
-                                    <TableCell align="right">
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => openDetailsModal(wo)}
-                                            sx={{mr: 1}}
-                                            title={t('viewWorkOrderDetails')}
-                                        >
-                                            <InfoOutlinedIcon fontSize="small"/>
-                                        </IconButton>
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => handleEditClick(wo)}
-                                            sx={{mr: 1}}
-                                            disabled={isWorkOrderComplete(wo)}
-                                            title={
-                                                isWorkOrderComplete(wo)
-                                                    ? t('workOrderCompleteActionDisabled')
-                                                    : t('editWorkOrder')
-                                            }
-                                        >
-                                            <LinkIcon fontSize="small"/>
-                                        </IconButton>
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => openScheduleModal(wo)}
-                                            sx={{mr: 1}}
-                                            disabled={isWorkOrderComplete(wo)}
-                                            title={
-                                                isWorkOrderComplete(wo)
-                                                    ? t('workOrderCompleteActionDisabled')
-                                                    : t('scheduleOnMachine')
-                                            }
-                                        >
-                                            <AddIcon fontSize="small"/>
-                                        </IconButton>
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => handleDeleteClick(wo)}
-                                            disabled={isWorkOrderComplete(wo)}
-                                            title={
-                                                isWorkOrderComplete(wo)
-                                                    ? t('workOrderCompleteActionDisabled')
-                                                    : t('deleteWorkOrder')
-                                            }
-                                        >
-                                            <DeleteIcon fontSize="small"/>
-                                        </IconButton>
+                                    <TableCell align="right" sx={tableActionsTableCellSx}>
+                                        <TableActionsRow>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => openDetailsModal(wo)}
+                                                sx={tableActionIconButtonSx.view}
+                                                title={t('viewWorkOrderDetails')}
+                                            >
+                                                <InfoOutlinedIcon fontSize="small" />
+                                            </IconButton>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleEditClick(wo)}
+                                                sx={tableActionIconButtonSx.edit}
+                                                disabled={isWorkOrderComplete(wo)}
+                                                title={
+                                                    isWorkOrderComplete(wo)
+                                                        ? t('workOrderCompleteActionDisabled')
+                                                        : t('editWorkOrder')
+                                                }
+                                            >
+                                                <LinkIcon fontSize="small" />
+                                            </IconButton>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => openScheduleModal(wo)}
+                                                sx={tableActionIconButtonOtherSx}
+                                                disabled={isWorkOrderComplete(wo)}
+                                                title={
+                                                    isWorkOrderComplete(wo)
+                                                        ? t('workOrderCompleteActionDisabled')
+                                                        : t('scheduleOnMachine')
+                                                }
+                                            >
+                                                <AddIcon fontSize="small" />
+                                            </IconButton>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleDeleteClick(wo)}
+                                                sx={tableActionIconButtonSx.delete}
+                                                disabled={isWorkOrderComplete(wo)}
+                                                title={
+                                                    isWorkOrderComplete(wo)
+                                                        ? t('workOrderCompleteActionDisabled')
+                                                        : t('deleteWorkOrder')
+                                                }
+                                            >
+                                                <DeleteIcon fontSize="small" />
+                                            </IconButton>
+                                        </TableActionsRow>
                                     </TableCell>
                                 </TableRow>
                             ))}

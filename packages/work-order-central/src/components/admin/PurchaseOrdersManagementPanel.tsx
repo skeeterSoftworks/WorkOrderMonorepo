@@ -31,6 +31,11 @@ import {
     parsePurchaseOrderFile,
     type ParsedPurchaseOrder,
 } from '../../util/purchaseOrderExcel';
+import {
+    TableActionsRow,
+    tableActionsTableCellSx,
+    tableActionIconButtonSx,
+} from '../shared/tableActions';
 
 type LocalPurchaseOrder = PurchaseOrderTO;
 
@@ -481,7 +486,9 @@ export function PurchaseOrdersManagementPanel() {
                                 <TableCell>{t('deliveryTerms')}</TableCell>
                                 <TableCell>{t('shippingAddress')}</TableCell>
                                 <TableCell>{t('comment')}</TableCell>
-                                <TableCell align="right">{t('actions')}</TableCell>
+                                <TableCell align="right" sx={tableActionsTableCellSx}>
+                                    {t('actions')}
+                                </TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -495,31 +502,33 @@ export function PurchaseOrdersManagementPanel() {
                                     <TableCell>{order.deliveryTerms}</TableCell>
                                     <TableCell>{order.shippingAddress}</TableCell>
                                     <TableCell>{order.comment}</TableCell>
-                                    <TableCell align="right">
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => handleViewDetails(order)}
-                                            sx={{ mr: 1 }}
-                                            title={t('viewPurchaseOrderDetails')}
-                                        >
-                                            <VisibilityIcon fontSize="small" />
-                                        </IconButton>
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => handleEditClick(order)}
-                                            sx={{ mr: 1 }}
-                                            title={t('editPurchaseOrder')}
-                                        >
-                                            <LinkIcon fontSize="small" />
-                                        </IconButton>
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => handleDeleteClick(order)}
-                                            title={t('deletePurchaseOrder')}
-
-                                        >
-                                            <DeleteIcon fontSize="small" />
-                                        </IconButton>
+                                    <TableCell align="right" sx={tableActionsTableCellSx}>
+                                        <TableActionsRow>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleViewDetails(order)}
+                                                sx={tableActionIconButtonSx.view}
+                                                title={t('viewPurchaseOrderDetails')}
+                                            >
+                                                <VisibilityIcon fontSize="small" />
+                                            </IconButton>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleEditClick(order)}
+                                                sx={tableActionIconButtonSx.edit}
+                                                title={t('editPurchaseOrder')}
+                                            >
+                                                <LinkIcon fontSize="small" />
+                                            </IconButton>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleDeleteClick(order)}
+                                                sx={tableActionIconButtonSx.delete}
+                                                title={t('deletePurchaseOrder')}
+                                            >
+                                                <DeleteIcon fontSize="small" />
+                                            </IconButton>
+                                        </TableActionsRow>
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -606,7 +615,10 @@ export function PurchaseOrdersManagementPanel() {
                             {t('catalogueIdProductHint')}
                         </Typography>
                         {productOrderRows.map((row, index) => (
-                            <Box key={index} sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                            <Box
+                                key={index}
+                                sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'nowrap' }}
+                            >
                                 <TextField
                                     select
                                     label={t('product')}
@@ -649,7 +661,12 @@ export function PurchaseOrdersManagementPanel() {
                                     size="small"
                                     sx={{ width: 120 }}
                                 />
-                                <IconButton size="small" onClick={() => removeProductOrderRow(index)} aria-label={t('remove')}>
+                                <IconButton
+                                    size="small"
+                                    onClick={() => removeProductOrderRow(index)}
+                                    aria-label={t('remove')}
+                                    sx={tableActionIconButtonSx.delete}
+                                >
                                     <DeleteIcon fontSize="small" />
                                 </IconButton>
                             </Box>

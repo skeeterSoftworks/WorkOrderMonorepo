@@ -33,6 +33,11 @@ import type {
     QualityInfoStepTO,
 } from 'sf-common/src/models/ApiRequests';
 import { Server, ConfirmationModal } from 'sf-common';
+import {
+    TableActionsRow,
+    tableActionsTableCellSx,
+    tableActionIconButtonSx,
+} from '../shared/tableActions';
 
 type LocalProduct = ProductTO;
 
@@ -380,7 +385,9 @@ export function ProductsManagementPanel() {
                                 <TableCell>{t('catalogueId')}</TableCell>
                                 <TableCell>{t('description')}</TableCell>
                                 <TableCell>{t('machine')}</TableCell>
-                                <TableCell align="right">{t('actions')}</TableCell>
+                                <TableCell align="right" sx={tableActionsTableCellSx}>
+                                    {t('actions')}
+                                </TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -390,18 +397,24 @@ export function ProductsManagementPanel() {
                                     <TableCell>{product.reference ?? '—'}</TableCell>
                                     <TableCell>{product.description}</TableCell>
                                     <TableCell>{getMachineNames(product.machineIds)}</TableCell>
-                                    <TableCell align="right">
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => handleEditClick(product)}
-                                            sx={{ mr: 1 }}
-                                            title={t('editProduct')}
-                                        >
-                                            <LinkIcon fontSize="small" />
-                                        </IconButton>
-                                        <IconButton size="small" onClick={() => handleDeleteClick(product)}>
-                                            <DeleteIcon fontSize="small" />
-                                        </IconButton>
+                                    <TableCell align="right" sx={tableActionsTableCellSx}>
+                                        <TableActionsRow>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleEditClick(product)}
+                                                sx={tableActionIconButtonSx.edit}
+                                                title={t('editProduct')}
+                                            >
+                                                <LinkIcon fontSize="small" />
+                                            </IconButton>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleDeleteClick(product)}
+                                                sx={tableActionIconButtonSx.delete}
+                                            >
+                                                <DeleteIcon fontSize="small" />
+                                            </IconButton>
+                                        </TableActionsRow>
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -687,7 +700,9 @@ export function ProductsManagementPanel() {
                                     <TableCell>{t('class')}</TableCell>
                                     <TableCell>{t('measuringType')}</TableCell>
                                     <TableCell>{t('absoluteMeasure')}</TableCell>
-                                    <TableCell align="right">{t('actions')}</TableCell>
+                                    <TableCell align="right" sx={tableActionsTableCellSx}>
+                                        {t('actions')}
+                                    </TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -711,14 +726,17 @@ export function ProductsManagementPanel() {
                                                       ? t('absolute')
                                                       : t('relative')}
                                             </TableCell>
-                                            <TableCell align="right">
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => removeMeasuringFeaturePrototype(idx)}
-                                                    title={t('remove')}
-                                                >
-                                                    <DeleteIcon fontSize="small" />
-                                                </IconButton>
+                                            <TableCell align="right" sx={tableActionsTableCellSx}>
+                                                <TableActionsRow>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => removeMeasuringFeaturePrototype(idx)}
+                                                        sx={tableActionIconButtonSx.delete}
+                                                        title={t('remove')}
+                                                    >
+                                                        <DeleteIcon fontSize="small" />
+                                                    </IconButton>
+                                                </TableActionsRow>
                                             </TableCell>
                                         </TableRow>
                                     ))
@@ -828,7 +846,9 @@ export function ProductsManagementPanel() {
                                     <TableCell>{t('stepNumber')}</TableCell>
                                     <TableCell>{t('description')}</TableCell>
                                     <TableCell>{t('qualityStepImage')}</TableCell>
-                                    <TableCell align="right">{t('actions')}</TableCell>
+                                    <TableCell align="right" sx={tableActionsTableCellSx}>
+                                        {t('actions')}
+                                    </TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -882,21 +902,25 @@ export function ProductsManagementPanel() {
                                                     '—'
                                                 )}
                                             </TableCell>
-                                            <TableCell align="right">
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => beginEditQualityInfoStep(idx)}
-                                                    title={t('edit')}
-                                                >
-                                                    <EditIcon fontSize="small" />
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => removeQualityInfoStep(idx)}
-                                                    title={t('remove')}
-                                                >
-                                                    <DeleteIcon fontSize="small" />
-                                                </IconButton>
+                                            <TableCell align="right" sx={tableActionsTableCellSx}>
+                                                <TableActionsRow>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => beginEditQualityInfoStep(idx)}
+                                                        sx={tableActionIconButtonSx.edit}
+                                                        title={t('edit')}
+                                                    >
+                                                        <EditIcon fontSize="small" />
+                                                    </IconButton>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => removeQualityInfoStep(idx)}
+                                                        sx={tableActionIconButtonSx.delete}
+                                                        title={t('remove')}
+                                                    >
+                                                        <DeleteIcon fontSize="small" />
+                                                    </IconButton>
+                                                </TableActionsRow>
                                             </TableCell>
                                         </TableRow>
                                     ))

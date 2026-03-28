@@ -17,6 +17,11 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { MachineTO, ToolTO } from 'sf-common/src/models/ApiRequests';
 import { Server, ConfirmationModal } from 'sf-common';
+import {
+    TableActionsRow,
+    tableActionsTableCellSx,
+    tableActionIconButtonSx,
+} from '../shared/tableActions';
 
 function toNum(v: string): number | undefined {
     if (v === '' || v == null) return undefined;
@@ -165,10 +170,15 @@ export function MachinesManagementPanel() {
 
                     <Typography variant="subtitle2" sx={{ mt: 1 }}>{t('tools')}</Typography>
                     {tools.map((tool, index) => (
-                        <Box key={index} sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                        <Box key={index} sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', flexWrap: 'nowrap' }}>
                             <TextField label={t('toolName')} value={tool.toolName} onChange={(e) => updateToolRow(index, 'toolName', e.target.value)} size="small" sx={{ flex: 1, minWidth: 120 }} />
                             <TextField label={t('toolDescription')} value={tool.toolDescription} onChange={(e) => updateToolRow(index, 'toolDescription', e.target.value)} size="small" sx={{ flex: 1, minWidth: 120 }} />
-                            <IconButton size="small" onClick={() => removeToolRow(index)} aria-label={t('remove')}>
+                            <IconButton
+                                size="small"
+                                onClick={() => removeToolRow(index)}
+                                aria-label={t('remove')}
+                                sx={tableActionIconButtonSx.delete}
+                            >
                                 <DeleteIcon fontSize="small" />
                             </IconButton>
                         </Box>
@@ -195,7 +205,9 @@ export function MachinesManagementPanel() {
                                 <TableCell>{t('machineName')}</TableCell>
                                 <TableCell>{t('seriesID')}</TableCell>
                                 <TableCell align="right">{t('toolsCount')}</TableCell>
-                                <TableCell align="right">{t('actions')}</TableCell>
+                                <TableCell align="right" sx={tableActionsTableCellSx}>
+                                    {t('actions')}
+                                </TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -204,13 +216,23 @@ export function MachinesManagementPanel() {
                                     <TableCell>{machine.machineName}</TableCell>
                                     <TableCell>{machine.seriesID}</TableCell>
                                     <TableCell align="right">{machine.tools?.length ?? 0}</TableCell>
-                                    <TableCell align="right">
-                                        <IconButton size="small" onClick={() => handleEditClick(machine)} sx={{ mr: 1 }}>
-                                            <LinkIcon fontSize="small" />
-                                        </IconButton>
-                                        <IconButton size="small" onClick={() => setMachineToDelete(machine)}>
-                                            <DeleteIcon fontSize="small" />
-                                        </IconButton>
+                                    <TableCell align="right" sx={tableActionsTableCellSx}>
+                                        <TableActionsRow>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleEditClick(machine)}
+                                                sx={tableActionIconButtonSx.edit}
+                                            >
+                                                <LinkIcon fontSize="small" />
+                                            </IconButton>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => setMachineToDelete(machine)}
+                                                sx={tableActionIconButtonSx.delete}
+                                            >
+                                                <DeleteIcon fontSize="small" />
+                                            </IconButton>
+                                        </TableActionsRow>
                                     </TableCell>
                                 </TableRow>
                             ))}
