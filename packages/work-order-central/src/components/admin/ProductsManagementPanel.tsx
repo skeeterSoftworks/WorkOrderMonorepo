@@ -33,6 +33,7 @@ import type {
     QualityInfoStepTO,
 } from 'sf-common/src/models/ApiRequests';
 import { Server, ConfirmationModal } from 'sf-common';
+import { toastActionSuccess, toastServerError } from '../../util/actionToast';
 import {
     TableActionsRow,
     tableActionsTableCellSx,
@@ -332,11 +333,12 @@ export function ProductsManagementPanel() {
             loadProducts();
             resetForm();
             setFormModalOpen(false);
+            toastActionSuccess(selectedProductId ? t('toastProductUpdated') : t('toastProductAdded'));
         };
         if (selectedProductId) {
-            Server.editProduct(payload, onSuccess, () => {});
+            Server.editProduct(payload, onSuccess, (err: unknown) => toastServerError(err, t));
         } else {
-            Server.addProduct(payload, onSuccess, () => {});
+            Server.addProduct(payload, onSuccess, (err: unknown) => toastServerError(err, t));
         }
     };
 
@@ -357,8 +359,12 @@ export function ProductsManagementPanel() {
             () => {
                 loadProducts();
                 setProductToDelete(null);
+                toastActionSuccess(t('toastProductDeleted'));
             },
-            () => setProductToDelete(null),
+            (err: unknown) => {
+                setProductToDelete(null);
+                toastServerError(err, t);
+            },
         );
     };
 

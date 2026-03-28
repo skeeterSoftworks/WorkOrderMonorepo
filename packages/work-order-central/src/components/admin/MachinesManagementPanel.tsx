@@ -17,6 +17,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { MachineTO, ToolTO } from 'sf-common/src/models/ApiRequests';
 import { Server, ConfirmationModal } from 'sf-common';
+import { toastActionSuccess, toastServerError } from '../../util/actionToast';
 import {
     TableActionsRow,
     tableActionsTableCellSx,
@@ -132,11 +133,12 @@ export function MachinesManagementPanel() {
         const onSuccess = () => {
             loadMachines();
             resetForm();
+            toastActionSuccess(selectedMachineId ? t('toastMachineUpdated') : t('toastMachineAdded'));
         };
         if (selectedMachineId) {
-            Server.editMachine(payload, onSuccess, () => {});
+            Server.editMachine(payload, onSuccess, (err: unknown) => toastServerError(err, t));
         } else {
-            Server.addMachine(payload, onSuccess, () => {});
+            Server.addMachine(payload, onSuccess, (err: unknown) => toastServerError(err, t));
         }
     };
 
@@ -145,10 +147,18 @@ export function MachinesManagementPanel() {
             setMachineToDelete(null);
             return;
         }
-        Server.deleteMachine(Number(machineToDelete.id), () => {
-            loadMachines();
-            setMachineToDelete(null);
-        }, () => setMachineToDelete(null));
+        Server.deleteMachine(
+            Number(machineToDelete.id),
+            () => {
+                loadMachines();
+                setMachineToDelete(null);
+                toastActionSuccess(t('toastMachineDeleted'));
+            },
+            (err: unknown) => {
+                setMachineToDelete(null);
+                toastServerError(err, t);
+            },
+        );
     };
 
     return (

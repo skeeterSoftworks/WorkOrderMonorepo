@@ -21,6 +21,7 @@ import {
     tableActionsTableCellSx,
     tableActionIconButtonSx,
 } from '../shared/tableActions';
+import { toastActionSuccess, toastServerError } from '../../util/actionToast';
 
 export function CustomersManagementPanel() {
     const { t } = useTranslation();
@@ -75,11 +76,12 @@ export function CustomersManagementPanel() {
         const onSuccess = () => {
             loadCustomers();
             resetForm();
+            toastActionSuccess(selectedCustomerId ? t('toastCustomerUpdated') : t('toastCustomerAdded'));
         };
         if (selectedCustomerId) {
-            Server.editCustomer(payload, onSuccess, () => {});
+            Server.editCustomer(payload, onSuccess, (err: unknown) => toastServerError(err, t));
         } else {
-            Server.addCustomer(payload, onSuccess, () => {});
+            Server.addCustomer(payload, onSuccess, (err: unknown) => toastServerError(err, t));
         }
     };
 
@@ -92,12 +94,18 @@ export function CustomersManagementPanel() {
             setCustomerToDelete(null);
             return;
         }
-        Server.deleteCustomer(Number(customerToDelete.id), () => {
-            loadCustomers();
-            setCustomerToDelete(null);
-        }, () => {
-            setCustomerToDelete(null);
-        });
+        Server.deleteCustomer(
+            Number(customerToDelete.id),
+            () => {
+                loadCustomers();
+                setCustomerToDelete(null);
+                toastActionSuccess(t('toastCustomerDeleted'));
+            },
+            (err: unknown) => {
+                setCustomerToDelete(null);
+                toastServerError(err, t);
+            },
+        );
     };
 
     return (

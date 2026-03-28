@@ -22,6 +22,7 @@ import {
     tableActionsTableCellSx,
     tableActionIconButtonSx,
 } from '../shared/tableActions';
+import { toastActionSuccess, toastServerError } from '../../util/actionToast';
 
 export function UsersManagementPanel() {
     const { t } = useTranslation();
@@ -105,12 +106,13 @@ export function UsersManagementPanel() {
         const onSuccess = () => {
             loadUsers();
             resetForm();
+            toastActionSuccess(selectedUserId ? t('toastUserUpdated') : t('toastUserAdded'));
         };
 
         if (selectedUserId) {
-            Server.editUser(payload, onSuccess, () => {});
+            Server.editUser(payload, onSuccess, (err: unknown) => toastServerError(err, t));
         } else {
-            Server.addUser(payload, onSuccess, () => {});
+            Server.addUser(payload, onSuccess, (err: unknown) => toastServerError(err, t));
         }
     };
 
@@ -129,10 +131,12 @@ export function UsersManagementPanel() {
             () => {
                 loadUsers();
                 setUserToDelete(null);
+                toastActionSuccess(t('toastUserDeleted'));
             },
-            () => {
+            (err: unknown) => {
                 setUserToDelete(null);
-            }
+                toastServerError(err, t);
+            },
         );
     };
 

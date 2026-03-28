@@ -4,6 +4,7 @@ import {Provider} from "react-redux";
 import {store} from "./store.ts";
 import {ErrorModal, WebsocketListener} from "sf-common";
 import {BrowserRouter, Route, Routes} from "react-router-dom";
+import {Toaster} from "react-hot-toast";
 import {HOC} from "./containers/HOC.tsx";
 import {Home} from "./components/home/Home.tsx";
 import {MockQr} from "./containers/MockQr.tsx";
@@ -24,6 +25,7 @@ const SERVER_URL = (import.meta as any).env?.VITE_SERVER_URL || ((globalThis as 
 root.render(
     <StrictMode>
         <Provider store={store}>
+            <Toaster position="top-center" />
             <WebsocketListener onMessage={() => {
             }} socketUrl={SERVER_URL}/>
             <ErrorModal/>

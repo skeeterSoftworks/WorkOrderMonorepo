@@ -26,6 +26,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { PurchaseOrderTO, ProductOrderTO, CustomerTO, ProductTO } from 'sf-common/src/models/ApiRequests';
 import { Server, ConfirmationModal } from 'sf-common';
+import { toastActionError, toastActionSuccess, toastServerError } from '../../util/actionToast';
 import {
     downloadPurchaseOrderTemplate,
     parsePurchaseOrderFile,
@@ -209,13 +210,14 @@ export function PurchaseOrdersManagementPanel() {
             loadProducts();
             resetForm();
             setFormModalOpen(false);
+            toastActionSuccess(selectedOrderId ? t('toastPurchaseOrderUpdated') : t('toastPurchaseOrderAdded'));
         };
 
         const savePurchaseOrder = () => {
             if (selectedOrderId) {
-                Server.editPurchaseOrder(payload, onSuccess, () => {});
+                Server.editPurchaseOrder(payload, onSuccess, (err: unknown) => toastServerError(err, t));
             } else {
-                Server.addPurchaseOrder(payload, onSuccess, () => {});
+                Server.addPurchaseOrder(payload, onSuccess, (err: unknown) => toastServerError(err, t));
             }
         };
 
@@ -240,6 +242,8 @@ export function PurchaseOrdersManagementPanel() {
                 loadProducts();
                 if (errors === 0) {
                     savePurchaseOrder();
+                } else {
+                    toastActionError(t('toastProductSyncFailed'));
                 }
             }
         };
@@ -281,15 +285,20 @@ export function PurchaseOrdersManagementPanel() {
             () => {
                 loadOrders();
                 setOrderToDelete(null);
+                setDeleteError(null);
+                toastActionSuccess(t('toastPurchaseOrderDeleted'));
             },
             (err: any) => {
                 const body = err?.response?.data;
-                const msg = body === 'PURCHASE_ORDER_HAS_WORK_ORDER'
-                    ? t('purchaseOrderHasWorkOrderCannotDelete')
-                    : (typeof body === 'string' ? body : t('msg_errorDeletingPurchaseOrder'));
-                setDeleteError(msg);
+                const msg =
+                    body === 'PURCHASE_ORDER_HAS_WORK_ORDER'
+                        ? t('purchaseOrderHasWorkOrderCannotDelete')
+                        : typeof body === 'string'
+                          ? body
+                          : t('msg_errorDeletingPurchaseOrder');
                 setOrderToDelete(null);
-            }
+                toastActionError(msg);
+            },
         );
     };
 

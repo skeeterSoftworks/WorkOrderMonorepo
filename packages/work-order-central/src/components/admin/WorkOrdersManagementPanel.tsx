@@ -36,6 +36,7 @@ import {
     tableActionsTableCellSx,
     tableActionIconButtonSx
 } from '../shared/tableActions';
+import { toastActionSuccess, toastServerError } from '../../util/actionToast';
 
 /** Normalize PO delivery date for HTML date input (yyyy-MM-dd). */
 function purchaseOrderDeliveryToDueDateInput(
@@ -358,14 +359,13 @@ export function WorkOrdersManagementPanel() {
             loadWorkOrders();
             resetForm();
             setFormModalOpen(false);
+            toastActionSuccess(selectedId ? t('toastWorkOrderUpdated') : t('toastWorkOrderAdded'));
         };
 
         if (selectedId) {
-            Server.editWorkOrder(payload, onSuccess, () => {
-            });
+            Server.editWorkOrder(payload, onSuccess, (err: unknown) => toastServerError(err, t));
         } else {
-            Server.addWorkOrder(payload, onSuccess, () => {
-            });
+            Server.addWorkOrder(payload, onSuccess, (err: unknown) => toastServerError(err, t));
         }
     };
 
@@ -459,12 +459,14 @@ export function WorkOrdersManagementPanel() {
         Server.addMachineBooking(
             booking,
             () => {
+                toastActionSuccess(t('toastWorkOrderScheduled'));
                 closeScheduleModal();
             },
             (err: any) => {
                 const body = err?.response?.data;
                 setScheduleError(typeof body === 'string' ? body : t('errorSchedulingMachine'));
-            }
+                toastServerError(err, t);
+            },
         );
     };
 
@@ -478,8 +480,12 @@ export function WorkOrdersManagementPanel() {
             () => {
                 loadWorkOrders();
                 setOrderToDelete(null);
+                toastActionSuccess(t('toastWorkOrderDeleted'));
             },
-            () => setOrderToDelete(null),
+            (err: unknown) => {
+                setOrderToDelete(null);
+                toastServerError(err, t);
+            },
         );
     };
 
