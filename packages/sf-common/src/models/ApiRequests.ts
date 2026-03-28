@@ -266,6 +266,15 @@ export interface SessionFetchParams extends FetchParams {
     sessionStartTo?: string
 }
 
+/** Response from POST /admin/sample-data/generate */
+export interface SampleDataGenerationResultTO {
+    machinesInserted: number,
+    toolsInserted: number,
+    productsInserted: number,
+    customersInserted: number,
+    usersInserted: number,
+}
+
 
 
 

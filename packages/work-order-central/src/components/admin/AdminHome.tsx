@@ -12,6 +12,7 @@ import { UsersManagementPanel } from './UsersManagementPanel';
 import { ProductsManagementPanel } from './ProductsManagementPanel';
 import { CustomersManagementPanel } from './CustomersManagementPanel';
 import { MachinesManagementPanel } from './MachinesManagementPanel';
+import { MiscManagementPanel } from './MiscManagementPanel';
 
 // @ts-ignore
 enum AdminTabs {
@@ -19,6 +20,7 @@ enum AdminTabs {
     PRODUCTS = 1,
     CUSTOMERS = 2,
     MACHINES = 3,
+    MISC = 4,
 }
 
 export function AdminHome() {
@@ -48,6 +50,7 @@ export function AdminHome() {
                     <Tab label={t('products')} value={AdminTabs.PRODUCTS} />
                     <Tab label={t('customers')} value={AdminTabs.CUSTOMERS} />
                     <Tab label={t('machines')} value={AdminTabs.MACHINES} />
+                    <Tab label={t('misc')} value={AdminTabs.MISC} />
                 </Tabs>
             </Box>
 
@@ -55,6 +58,7 @@ export function AdminHome() {
             {activeTab === AdminTabs.PRODUCTS && <ProductsManagementPanel />}
             {activeTab === AdminTabs.CUSTOMERS && <CustomersManagementPanel />}
             {activeTab === AdminTabs.MACHINES && <MachinesManagementPanel />}
+            {activeTab === AdminTabs.MISC && <MiscManagementPanel />}
         </Container>
     );
 }

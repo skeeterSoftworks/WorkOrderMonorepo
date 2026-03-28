@@ -7,6 +7,7 @@ import type {
     MachineTO,
     WorkOrderTO,
     MachineBookingTO,
+    SampleDataGenerationResultTO,
 } from "../models/ApiRequests";
 import axios from "axios";
 import { getServerUrl } from "../util/EnvUtils";
@@ -342,6 +343,19 @@ export class Server {
             .catch(error => {
                 console.error(error)
                 onError(error)
+            });
+    }
+
+    static generateSampleData(
+        onSuccess: (result: SampleDataGenerationResultTO) => void,
+        onError: (error: unknown) => void,
+    ) {
+        axios
+            .post<SampleDataGenerationResultTO>(`${getServerUrl()}/admin/sample-data/generate`)
+            .then((response) => onSuccess(response.data))
+            .catch((error) => {
+                console.error(error);
+                onError(error);
             });
     }
 }

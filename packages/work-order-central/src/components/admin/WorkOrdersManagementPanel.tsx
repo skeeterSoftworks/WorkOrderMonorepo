@@ -20,6 +20,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import LinearProgress from '@mui/material/LinearProgress';
 import LinkIcon from '@mui/icons-material/Link';
 import DeleteIcon from '@mui/icons-material/Delete';
+import EngineeringIcon from '@mui/icons-material/Engineering';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
@@ -32,8 +33,7 @@ import {Server, ConfirmationModal} from 'sf-common';
 import {
     TableActionsRow,
     tableActionsTableCellSx,
-    tableActionIconButtonSx,
-    tableActionIconButtonOtherSx,
+    tableActionIconButtonSx
 } from '../shared/tableActions';
 
 /** Normalize PO delivery date for HTML date input (yyyy-MM-dd). */
@@ -629,7 +629,7 @@ export function WorkOrdersManagementPanel() {
                                             <IconButton
                                                 size="small"
                                                 onClick={() => openScheduleModal(wo)}
-                                                sx={tableActionIconButtonOtherSx}
+                                                sx={{color: "orange"}}
                                                 disabled={isWorkOrderComplete(wo)}
                                                 title={
                                                     isWorkOrderComplete(wo)
@@ -637,7 +637,7 @@ export function WorkOrdersManagementPanel() {
                                                         : t('scheduleOnMachine')
                                                 }
                                             >
-                                                <AddIcon fontSize="small" />
+                                                <EngineeringIcon fontSize="small" />
                                             </IconButton>
                                             <IconButton
                                                 size="small"
