@@ -112,6 +112,15 @@ export interface QualityInfoStepTO {
     imageDataBase64?: string;
 }
 
+/** Central product for the workstation-bound machine (quality steps editor). */
+export interface BoundMachineProductTO {
+    id?: number;
+    name?: string;
+    reference?: string;
+    description?: string;
+    qualityInfoSteps?: QualityInfoStepTO[];
+}
+
 export interface WorkSessionOpenRequestTO {
     workOrderId?: number;
     operatorQrCode?: string;

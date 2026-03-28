@@ -1,5 +1,6 @@
 import type {
     ApplicationUserTO,
+    BoundMachineProductTO,
     QualityInfoStepTO,
     StationConfigDTO,
     WorkstationMachineConfigTO,
@@ -118,6 +119,22 @@ export class Server {
             `${getServerUrl()}/production/work-orders/${workOrderId}/quality-info-steps`,
         );
         return Array.isArray(r.data) ? r.data : [];
+    }
+
+    static async getBoundMachineProducts(): Promise<BoundMachineProductTO[]> {
+        const r = await axios.get<BoundMachineProductTO[]>(`${getServerUrl()}/production/bound-machine/products`);
+        return Array.isArray(r.data) ? r.data : [];
+    }
+
+    static async putBoundMachineProductQualityInfoSteps(
+        productId: number,
+        steps: QualityInfoStepTO[],
+    ): Promise<BoundMachineProductTO> {
+        const r = await axios.put<BoundMachineProductTO>(
+            `${getServerUrl()}/production/bound-machine/products/${productId}/quality-info-steps`,
+            steps,
+        );
+        return r.data;
     }
 
     static async openProductionWorkSession(body: WorkSessionOpenRequestTO): Promise<WorkSessionResponseTO> {

@@ -161,8 +161,8 @@ export function Home() {
                             </Button>
                         </Grid>
                         <Grid item xs="auto" sx={{textAlign: 'center'}}>
-                            <Button href="/information-management" variant="contained" sx={homeButtonStyle}>
-                                {t('informationManagement')}
+                            <Button href="/quality-info-steps" variant="contained" sx={homeButtonStyle}>
+                                {t('qualityInfoStepsPage')}
                             </Button>
                         </Grid>
                     </Grid>
