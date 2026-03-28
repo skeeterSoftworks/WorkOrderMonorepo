@@ -10,8 +10,14 @@ import DialogActions from '@mui/material/DialogActions';
 import Backdrop from '@mui/material/Backdrop';
 import TextField from '@mui/material/TextField';
 import Stack from '@mui/material/Stack';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemText from '@mui/material/ListItemText';
+import IconButton from '@mui/material/IconButton';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CloseIcon from '@mui/icons-material/Close';
 import Checkbox from '@mui/material/Checkbox';
 import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
@@ -27,10 +33,18 @@ import type {
     WorkSessionMeasuringFeatureInputTO,
     WorkSessionResponseTO,
     WorkstationMachineConfigTO,
+    WorkStationPreconditionItem,
 } from '../../models/ApiRequests.ts';
 import {isWorkOrderClosedForProduction} from './workOrderProductionHelpers.ts';
 
 const STORAGE_SESSION = 'activeWorkSessionId';
+
+function preconditionText(item: WorkStationPreconditionItem, lang: 'sr' | 'en'): string {
+    if (lang === 'sr') {
+        return (item.sr || item.en || '').trim();
+    }
+    return (item.en || item.sr || '').trim();
+}
 
 function digitsOnly(v: string): string {
     return v.replace(/[^0-9]/g, '');
@@ -195,6 +209,19 @@ function buildAssessmentsFromPrototypes(prototypes: MeasuringFeaturePrototypeTO[
             assessedValue: undefined,
             assessedValueGood: false,
         };
+    });
+}
+
+/** True when every MEASURED feature has a non-empty digit assessed value (same rule as saving a control product). */
+function areControlAssessmentsComplete(
+    prototypes: MeasuringFeaturePrototypeTO[],
+    rows: WorkSessionMeasuringFeatureInputTO[],
+): boolean {
+    if (prototypes.length === 0 || rows.length === 0) return false;
+    return !prototypes.some((p, idx) => {
+        if (p.checkType !== 'MEASURED') return false;
+        const v = rows[idx]?.assessedValue ?? '';
+        return digitsOnly(v).trim().length === 0;
     });
 }
 
@@ -376,7 +403,8 @@ export function ProductionWorkSessionPanel({
     onWorkOrdersRefresh,
     onWorkOrderSelectorLockedChange,
 }: ProductionWorkSessionPanelProps) {
-    const {t} = useTranslation();
+    const {t, i18n} = useTranslation();
+    const lang: 'sr' | 'en' = i18n.language?.toLowerCase().startsWith('sr') ? 'sr' : 'en';
 
     const [openingSession, setOpeningSession] = useState(true);
     const [openError, setOpenError] = useState<string | null>(null);
@@ -407,6 +435,11 @@ export function ProductionWorkSessionPanel({
     const [qualityInfoSteps, setQualityInfoSteps] = useState<QualityInfoStepTO[]>([]);
     const [qualityInfoStepIndex, setQualityInfoStepIndex] = useState(0);
 
+    const [workStationPreconditionsOpen, setWorkStationPreconditionsOpen] = useState(false);
+    const [preconditionItems, setPreconditionItems] = useState<WorkStationPreconditionItem[]>([]);
+    const [loadingPreconditions, setLoadingPreconditions] = useState(false);
+    const [preconditionsFetchErrorKey, setPreconditionsFetchErrorKey] = useState<string | null>(null);
+
     const sessionIdRef = useRef<number | null>(null);
     const workOrderSelectorLockCbRef = useRef(onWorkOrderSelectorLockedChange);
     workOrderSelectorLockCbRef.current = onWorkOrderSelectorLockedChange;
@@ -414,6 +447,48 @@ export function ProductionWorkSessionPanel({
     useEffect(() => {
         sessionIdRef.current = session?.id ?? null;
     }, [session?.id]);
+
+    useEffect(() => {
+        if (!workStationPreconditionsOpen) {
+            setPreconditionItems([]);
+            setPreconditionsFetchErrorKey(null);
+            setLoadingPreconditions(false);
+            return;
+        }
+
+        setLoadingPreconditions(true);
+        setPreconditionsFetchErrorKey(null);
+        setPreconditionItems([]);
+
+        Server.fetchStationConfigWithPreconditions(
+            (resp: {data?: {woPreconditionsJSON?: string}}) => {
+                try {
+                    const raw = resp?.data?.woPreconditionsJSON;
+                    if (raw == null || raw === '') {
+                        setPreconditionItems([]);
+                        setLoadingPreconditions(false);
+                        return;
+                    }
+                    const arr: WorkStationPreconditionItem[] =
+                        typeof raw === 'string' ? JSON.parse(raw) : raw;
+                    if (!Array.isArray(arr)) {
+                        setPreconditionsFetchErrorKey('preconditionsParseError');
+                        setPreconditionItems([]);
+                    } else {
+                        setPreconditionItems(arr);
+                    }
+                } catch {
+                    setPreconditionsFetchErrorKey('preconditionsParseError');
+                    setPreconditionItems([]);
+                }
+                setLoadingPreconditions(false);
+            },
+            () => {
+                setLoadingPreconditions(false);
+                setPreconditionsFetchErrorKey('preconditionsLoadError');
+            },
+        );
+    }, [workStationPreconditionsOpen]);
 
     useEffect(() => {
         const woId = workOrder.id;
@@ -561,6 +636,14 @@ export function ProductionWorkSessionPanel({
 
     const sessionId = session?.id;
     const sessionIsClosed = Boolean(session?.sessionEnd);
+    const recordControlAssessmentsComplete = areControlAssessmentsComplete(
+        session?.measuringFeaturePrototypes ?? [],
+        rowsControl,
+    );
+    const initialControlAssessmentsComplete = areControlAssessmentsComplete(
+        session?.measuringFeaturePrototypes ?? [],
+        rowsInitial,
+    );
 
     const acknowledgeProductionTargetReached = async () => {
         setProductionTargetReachedOpen(false);
@@ -601,12 +684,7 @@ export function ProductionWorkSessionPanel({
             return;
         }
 
-        const measuredMissing = prototypes.some((p, idx) => {
-            if (p.checkType !== 'MEASURED') return false;
-            const v = rowsInitial[idx]?.assessedValue ?? '';
-            return digitsOnly(v).trim().length === 0;
-        });
-        if (measuredMissing) {
+        if (!areControlAssessmentsComplete(prototypes, rowsInitial)) {
             setActionError(t('allFieldsRequired'));
             return;
         }
@@ -639,12 +717,7 @@ export function ProductionWorkSessionPanel({
             return;
         }
 
-        const measuredMissing = prototypes.some((p, idx) => {
-            if (p.checkType !== 'MEASURED') return false;
-            const v = rowsControl[idx]?.assessedValue ?? '';
-            return digitsOnly(v).trim().length === 0;
-        });
-        if (measuredMissing) {
+        if (!areControlAssessmentsComplete(prototypes, rowsControl)) {
             setActionError(t('allFieldsRequired'));
             return;
         }
@@ -769,19 +842,35 @@ export function ProductionWorkSessionPanel({
 
     return (
         <Box sx={{mt: 2}}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{mb: 1}}>
+            <Stack spacing={1} sx={{mb: 1}}>
                 {sessionId != null && !sessionIsClosed && (
-                    <Button
-                        size="small"
-                        variant="outlined"
-                        color="primary"
-                        onClick={() => void endAndClearSelection()}
-                        disabled={submitting}
-                        sx={{flexShrink: 0, borderWidth: 2}}
-                    >
-                        {t('workSessionEnd')}
-                    </Button>
+                    <Stack direction="row" justifyContent="flex-start" alignItems="center">
+                        <Button
+                            size="small"
+                            variant="contained"
+                            color="primary"
+                            onClick={() => setWorkStationPreconditionsOpen(true)}
+                            disabled={submitting}
+                            sx={{flexShrink: 0}}
+                        >
+                            {t('workSessionShowPreconditions')}
+                        </Button>
+                    </Stack>
                 )}
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    {sessionId != null && !sessionIsClosed && (
+                        <Button
+                            size="small"
+                            variant="outlined"
+                            color="primary"
+                            onClick={() => void endAndClearSelection()}
+                            disabled={submitting}
+                            sx={{flexShrink: 0, borderWidth: 2}}
+                        >
+                            {t('workSessionEnd')}
+                        </Button>
+                    )}
+                </Stack>
             </Stack>
 
             {openingSession && (
@@ -883,6 +972,60 @@ export function ProductionWorkSessionPanel({
                 </Box>
             )}
 
+            <Dialog
+                open={workStationPreconditionsOpen}
+                onClose={() => setWorkStationPreconditionsOpen(false)}
+                fullWidth
+                maxWidth="sm"
+            >
+                <DialogTitle sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', pr: 1}}>
+                    {t('workStationPreconditionsTitle')}
+                    <IconButton
+                        aria-label={t('close')}
+                        onClick={() => setWorkStationPreconditionsOpen(false)}
+                        size="small"
+                    >
+                        <CloseIcon />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent dividers>
+                    {loadingPreconditions && (
+                        <Box sx={{display: 'flex', justifyContent: 'center', py: 3}}>
+                            <CircularProgress size={36} />
+                        </Box>
+                    )}
+                    {!loadingPreconditions && preconditionsFetchErrorKey && (
+                        <Typography color="error" variant="body2">
+                            {t(preconditionsFetchErrorKey)}
+                        </Typography>
+                    )}
+                    {!loadingPreconditions && !preconditionsFetchErrorKey && (
+                        <List dense disablePadding>
+                            {preconditionItems.map((item, index) => {
+                                const text = preconditionText(item, lang);
+                                if (!text) return null;
+                                return (
+                                    <ListItem
+                                        key={index}
+                                        secondaryAction={
+                                            <CheckCircleIcon color="success" fontSize="small" aria-hidden />
+                                        }
+                                        sx={{'& .MuiListItemSecondaryAction-root': {right: 8}}}
+                                    >
+                                        <ListItemText primary={text} primaryTypographyProps={{variant: 'body2'}} />
+                                    </ListItem>
+                                );
+                            })}
+                        </List>
+                    )}
+                </DialogContent>
+                <DialogActions sx={{px: 3, pb: 2}}>
+                    <Button variant="outlined" color="primary" onClick={() => setWorkStationPreconditionsOpen(false)}>
+                        {t('close')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
             <Dialog open={qualityInfoModalOpen} fullWidth maxWidth="md" disableEscapeKeyDown onClose={() => {}}>
                 <DialogTitle>{t('qualityInfoReviewTitle')}</DialogTitle>
                 <DialogContent>
@@ -983,7 +1126,11 @@ export function ProductionWorkSessionPanel({
                     <Button onClick={() => void abortInitialSession()} color="inherit" disabled={submitting}>
                         {t('workSessionAbortSession')}
                     </Button>
-                    <Button onClick={() => void handleSaveInitialControl()} variant="contained" disabled={submitting}>
+                    <Button
+                        onClick={() => void handleSaveInitialControl()}
+                        variant="contained"
+                        disabled={submitting || !initialControlAssessmentsComplete}
+                    >
                         {t('save')}
                     </Button>
                 </DialogActions>
@@ -1015,7 +1162,17 @@ export function ProductionWorkSessionPanel({
 
             <Dialog
                 open={controlOpen}
-                onClose={() => setControlOpen(false)}
+                onClose={(_, reason) => {
+                    if (!recordControlAssessmentsComplete) {
+                        if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
+                            setActionError(t('allFieldsRequired'));
+                        }
+                        return;
+                    }
+                    setControlOpen(false);
+                    setActionError(null);
+                }}
+                disableEscapeKeyDown={!recordControlAssessmentsComplete}
                 fullWidth
                 maxWidth={false}
                 PaperProps={{sx: controlProductDialogPaperSx}}
@@ -1032,8 +1189,22 @@ export function ProductionWorkSessionPanel({
                     />
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setControlOpen(false)}>{t('cancel')}</Button>
-                    <Button onClick={() => void handleSaveOnDemandControl()} variant="contained" disabled={submitting}>
+                    <Button
+                        variant="outlined"
+                        color="inherit"
+                        onClick={() => {
+                            setControlOpen(false);
+                            setActionError(null);
+                        }}
+                        disabled={submitting || !recordControlAssessmentsComplete}
+                    >
+                        {t('cancel')}
+                    </Button>
+                    <Button
+                        onClick={() => void handleSaveOnDemandControl()}
+                        variant="contained"
+                        disabled={submitting || !recordControlAssessmentsComplete}
+                    >
                         {t('save')}
                     </Button>
                 </DialogActions>

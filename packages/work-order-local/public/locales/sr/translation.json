@@ -471,6 +471,7 @@
   "productReferenceID": "Referenca proizvoda",
   "backToProduction": "Nazad na proizvodnju",
   "workStationPreconditionsTitle": "Preduslovi radnog mesta",
+  "workSessionShowPreconditions": "Prikaži preduslove radnog mesta",
   "startProduction": "Započni proizvodnju",
   "qualityInfoStepsRequired": "Za ovaj proizvod nisu definisane informacijw kvaliteta. Podesite ih u Work Order Central pre početka proizvodnje.",
   "qualityInfoReviewTitle": "Informacije o kvalitetu",

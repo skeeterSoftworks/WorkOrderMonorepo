@@ -471,6 +471,7 @@
   "productReferenceID": "Product reference ID",
   "backToProduction": "Back to production",
   "workStationPreconditionsTitle": "Work station preconditions",
+  "workSessionShowPreconditions": "Show work station preconditions",
   "startProduction": "Start production",
   "qualityInfoStepsRequired": "This product has no quality info steps. Configure them on Work Order Central before starting production.",
   "qualityInfoReviewTitle": "Quality information",
