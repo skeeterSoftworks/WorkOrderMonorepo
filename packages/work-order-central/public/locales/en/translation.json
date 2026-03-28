@@ -1,4 +1,7 @@
 {
+  "addPurchaseOrder": "Add purchase order",
+  "addProductOrder": "Add product order",
+  "usersList": "Users list",
   "addMachine": "Add machine",
   "addTool": "Add tool",
   "toolsCount": "Tools count",
@@ -357,6 +360,7 @@
   "workOrderStateComplete": "Complete",
   "workOrderCompleteActionDisabled": "This work order is complete; it cannot be edited, scheduled, or deleted.",
   "createNewWorkOrder": "Create new work order",
+  "workOrderMachineAssignmentNote": "Every work order must be assigned to a machine (use “Schedule on machine” in the row actions) before production can begin on the shop floor.",
   "editWorkOrder": "Edit work order",
   "confirmDeleteWorkOrder": "Confirm work order deletion",
   "purchaseOrder": "Purchase order",

@@ -18,6 +18,7 @@ import Divider from '@mui/material/Divider';
 import Stack from '@mui/material/Stack';
 import CircularProgress from '@mui/material/CircularProgress';
 import LinearProgress from '@mui/material/LinearProgress';
+import Alert from '@mui/material/Alert';
 import LinkIcon from '@mui/icons-material/Link';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EngineeringIcon from '@mui/icons-material/Engineering';
@@ -537,6 +538,10 @@ export function WorkOrdersManagementPanel() {
                     {t('createNewWorkOrder')}
                 </Button>
             </Box>
+
+            <Alert severity="info" variant="outlined" sx={{mb: 2}}>
+                {t('workOrderMachineAssignmentNote')}
+            </Alert>
 
             <Paper sx={{p: 2}}>
                 <TableContainer>

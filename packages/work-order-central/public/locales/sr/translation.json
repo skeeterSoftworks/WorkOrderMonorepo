@@ -1,4 +1,7 @@
 {
+  "addPurchaseOrder": "Dodaj narudžbenicu",
+  "addProductOrder": "Dodaj stavku narudžbenice",
+  "usersList": "Lista korisnika",
   "addMachine": "Dodaj mašinu",
   "addTool": "Dodaj alat",
   "toolsCount": "Broj alata",
@@ -357,6 +360,7 @@
   "workOrderStateComplete": "Završen",
   "workOrderCompleteActionDisabled": "Radni nalog je završen; nije moguće ga menjati, zakazivati ili obrisati.",
   "createNewWorkOrder": "Kreiraj novi radni nalog",
+  "workOrderMachineAssignmentNote": "Svaki radni nalog mora biti dodeljen odgovarajućoj mašini (narandžasta ikonica „Zakaži na mašini“) da bi proizvodnja počela.",
   "editWorkOrder": "Izmeni radni nalog",
   "confirmDeleteWorkOrder": "Potvrdite brisanje radnog naloga",
   "purchaseOrder": "Narudžbenica",
