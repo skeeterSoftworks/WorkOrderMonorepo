@@ -891,18 +891,18 @@ export function ProductsManagementPanel() {
                                     inputProps={{ inputMode: 'decimal' }}
                                 />
                                 <TextField
-                                    label={t('diameterMaxPosTolerance')}
-                                    value={setupDMaxPos}
-                                    onChange={(e) => setSetupDMaxPos(filterDecimalNumericInput(e.target.value))}
+                                    label={t('diameterMaxNegTolerance')}
+                                    value={setupDMaxNeg}
+                                    onChange={(e) => setSetupDMaxNeg(filterDecimalNumericInput(e.target.value))}
                                     size="small"
                                     sx={{ minWidth: 160 }}
                                     disabled={setupAttrDiameter}
                                     inputProps={{ inputMode: 'decimal' }}
                                 />
                                 <TextField
-                                    label={t('diameterMaxNegTolerance')}
-                                    value={setupDMaxNeg}
-                                    onChange={(e) => setSetupDMaxNeg(filterDecimalNumericInput(e.target.value))}
+                                    label={t('diameterMaxPosTolerance')}
+                                    value={setupDMaxPos}
+                                    onChange={(e) => setSetupDMaxPos(filterDecimalNumericInput(e.target.value))}
                                     size="small"
                                     sx={{ minWidth: 160 }}
                                     disabled={setupAttrDiameter}
@@ -923,18 +923,18 @@ export function ProductsManagementPanel() {
                                     inputProps={{ inputMode: 'decimal' }}
                                 />
                                 <TextField
-                                    label={t('heightMaxPosTolerance')}
-                                    value={setupHMaxPos}
-                                    onChange={(e) => setSetupHMaxPos(filterDecimalNumericInput(e.target.value))}
+                                    label={t('heightMaxNegTolerance')}
+                                    value={setupHMaxNeg}
+                                    onChange={(e) => setSetupHMaxNeg(filterDecimalNumericInput(e.target.value))}
                                     size="small"
                                     sx={{ minWidth: 160 }}
                                     disabled={setupAttrHeight}
                                     inputProps={{ inputMode: 'decimal' }}
                                 />
                                 <TextField
-                                    label={t('heightMaxNegTolerance')}
-                                    value={setupHMaxNeg}
-                                    onChange={(e) => setSetupHMaxNeg(filterDecimalNumericInput(e.target.value))}
+                                    label={t('heightMaxPosTolerance')}
+                                    value={setupHMaxPos}
+                                    onChange={(e) => setSetupHMaxPos(filterDecimalNumericInput(e.target.value))}
                                     size="small"
                                     sx={{ minWidth: 160 }}
                                     disabled={setupAttrHeight}

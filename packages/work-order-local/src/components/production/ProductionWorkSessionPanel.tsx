@@ -17,7 +17,9 @@ import IconButton from '@mui/material/IconButton';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CancelIcon from '@mui/icons-material/Cancel';
 import CloseIcon from '@mui/icons-material/Close';
+import Tooltip from '@mui/material/Tooltip';
 import Checkbox from '@mui/material/Checkbox';
 import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
@@ -52,6 +54,28 @@ function preconditionText(item: WorkStationPreconditionItem, lang: 'sr' | 'en'):
 function assessedMeasuredValueForApi(raw: string | undefined): string | undefined {
     const n = parseDecimalNumericInputToNumber(raw ?? '');
     return n === undefined ? undefined : String(n);
+}
+
+/** Parsed measured value vs prototype absolute [minTolerance, maxTolerance]; no icon if bounds missing or input incomplete. */
+function measuredValueToleranceHint(
+    assessedRaw: string,
+    minTol: number | undefined | null,
+    maxTol: number | undefined | null,
+): 'in' | 'out' | 'none' {
+    const parsed = parseDecimalNumericInputToNumber(assessedRaw);
+    if (parsed === undefined) {
+        return 'none';
+    }
+    if (minTol == null || maxTol == null) {
+        return 'none';
+    }
+    if (!Number.isFinite(minTol) || !Number.isFinite(maxTol) || minTol > maxTol) {
+        return 'none';
+    }
+    if (parsed >= minTol && parsed <= maxTol) {
+        return 'in';
+    }
+    return 'out';
 }
 
 function formatSetupProtoNumber(n: number | undefined | null): string {
@@ -266,6 +290,9 @@ function MeasuringFeaturesForm({
                 const isAttributive = checkType === 'ATTRIBUTIVE';
                 const assessedValue = typeof assessment?.assessedValue === 'string' ? assessment.assessedValue : '';
                 const assessedValueGood = Boolean(assessment?.assessedValueGood);
+                const rangeHint = isMeasured
+                    ? measuredValueToleranceHint(assessedValue, proto.minTolerance, proto.maxTolerance)
+                    : 'none';
 
                 return (
                     <Box
@@ -314,21 +341,42 @@ function MeasuringFeaturesForm({
                                         <Typography variant="body2">
                                             {t('toleranceMax')}: {proto.maxTolerance ?? '—'}
                                         </Typography>
-                                        <TextField
-                                            label={t('assessedValue')}
-                                            value={assessedValue}
-                                            onChange={(e) =>
-                                                onAssessmentChange(
-                                                    index,
-                                                    'assessedValue',
-                                                    filterDecimalNumericInput(e.target.value),
-                                                )
-                                            }
-                                            size="small"
-                                            fullWidth
-                                            inputProps={{inputMode: 'decimal'}}
-                                            sx={{mt: 1}}
-                                        />
+                                        <Stack direction="row" spacing={0.75} alignItems="center" sx={{mt: 1}}>
+                                            <TextField
+                                                label={t('assessedValue')}
+                                                value={assessedValue}
+                                                onChange={(e) =>
+                                                    onAssessmentChange(
+                                                        index,
+                                                        'assessedValue',
+                                                        filterDecimalNumericInput(e.target.value),
+                                                    )
+                                                }
+                                                size="small"
+                                                fullWidth
+                                                inputProps={{inputMode: 'decimal'}}
+                                                sx={{flex: 1, minWidth: 0}}
+                                            />
+                                            {rangeHint === 'in' ? (
+                                                <Tooltip title={t('measuredValueInTolerance')}>
+                                                    <CheckCircleIcon
+                                                        color="success"
+                                                        fontSize="medium"
+                                                        sx={{flexShrink: 0}}
+                                                        aria-label={t('measuredValueInTolerance')}
+                                                    />
+                                                </Tooltip>
+                                            ) : rangeHint === 'out' ? (
+                                                <Tooltip title={t('measuredValueOutOfTolerance')}>
+                                                    <CancelIcon
+                                                        color="error"
+                                                        fontSize="medium"
+                                                        sx={{flexShrink: 0}}
+                                                        aria-label={t('measuredValueOutOfTolerance')}
+                                                    />
+                                                </Tooltip>
+                                            ) : null}
+                                        </Stack>
                                     </>
                                 ) : isAttributive ? (
                                     <FormControl sx={{mt: 0.5}} component="fieldset" variant="standard">
@@ -923,6 +971,24 @@ export function ProductionWorkSessionPanel({
         await endAndClearSelection();
     };
 
+    const setupMeasuredHeightRangeHint =
+        setupModalProto != null && !setupModalProto.attributiveHeightMeasurement
+            ? measuredValueToleranceHint(
+                  setupHeightMeasured,
+                  setupModalProto.heightMaxNegTolerance,
+                  setupModalProto.heightMaxPosTolerance,
+              )
+            : 'none';
+
+    const setupMeasuredDiameterRangeHint =
+        setupModalProto != null && !setupModalProto.attributiveDiameterMeasurement
+            ? measuredValueToleranceHint(
+                  setupDiamMeasured,
+                  setupModalProto.diameterMaxNegTolerance,
+                  setupModalProto.diameterMaxPosTolerance,
+              )
+            : 'none';
+
     return (
         <Box sx={{mt: 2}}>
             <Stack spacing={1} sx={{mb: 1}}>
@@ -1354,23 +1420,47 @@ export function ProductionWorkSessionPanel({
                                                 {t('refHeight')}: {formatSetupProtoNumber(setupModalProto.heightRefValue)}
                                             </Typography>
                                             <Typography variant="body2">
-                                                {t('heightMaxPosTolerance')}:{' '}
-                                                {formatSetupProtoNumber(setupModalProto.heightMaxPosTolerance)}
-                                            </Typography>
-                                            <Typography variant="body2">
                                                 {t('heightMaxNegTolerance')}:{' '}
                                                 {formatSetupProtoNumber(setupModalProto.heightMaxNegTolerance)}
                                             </Typography>
-                                            <TextField
-                                                label={t('workSessionSetupMeasuredValue')}
-                                                value={setupHeightMeasured}
-                                                onChange={(e) =>
-                                                    setSetupHeightMeasured(filterDecimalNumericInput(e.target.value))
-                                                }
-                                                size="small"
-                                                fullWidth
-                                                inputProps={{inputMode: 'decimal'}}
-                                            />
+                                            <Typography variant="body2">
+                                                {t('heightMaxPosTolerance')}:{' '}
+                                                {formatSetupProtoNumber(setupModalProto.heightMaxPosTolerance)}
+                                            </Typography>
+                                            <Stack direction="row" spacing={0.75} alignItems="center">
+                                                <TextField
+                                                    label={t('workSessionSetupMeasuredValue')}
+                                                    value={setupHeightMeasured}
+                                                    onChange={(e) =>
+                                                        setSetupHeightMeasured(
+                                                            filterDecimalNumericInput(e.target.value),
+                                                        )
+                                                    }
+                                                    size="small"
+                                                    fullWidth
+                                                    inputProps={{inputMode: 'decimal'}}
+                                                    sx={{flex: 1, minWidth: 0}}
+                                                />
+                                                {setupMeasuredHeightRangeHint === 'in' ? (
+                                                    <Tooltip title={t('measuredValueInTolerance')}>
+                                                        <CheckCircleIcon
+                                                            color="success"
+                                                            fontSize="medium"
+                                                            sx={{flexShrink: 0}}
+                                                            aria-label={t('measuredValueInTolerance')}
+                                                        />
+                                                    </Tooltip>
+                                                ) : setupMeasuredHeightRangeHint === 'out' ? (
+                                                    <Tooltip title={t('measuredValueOutOfTolerance')}>
+                                                        <CancelIcon
+                                                            color="error"
+                                                            fontSize="medium"
+                                                            sx={{flexShrink: 0}}
+                                                            aria-label={t('measuredValueOutOfTolerance')}
+                                                        />
+                                                    </Tooltip>
+                                                ) : null}
+                                            </Stack>
                                         </Stack>
                                     )}
                                 </Box>
@@ -1403,23 +1493,45 @@ export function ProductionWorkSessionPanel({
                                                 {t('refDiameter')}: {formatSetupProtoNumber(setupModalProto.diameterRefValue)}
                                             </Typography>
                                             <Typography variant="body2">
-                                                {t('diameterMaxPosTolerance')}:{' '}
-                                                {formatSetupProtoNumber(setupModalProto.diameterMaxPosTolerance)}
-                                            </Typography>
-                                            <Typography variant="body2">
                                                 {t('diameterMaxNegTolerance')}:{' '}
                                                 {formatSetupProtoNumber(setupModalProto.diameterMaxNegTolerance)}
                                             </Typography>
-                                            <TextField
-                                                label={t('workSessionSetupMeasuredValue')}
-                                                value={setupDiamMeasured}
-                                                onChange={(e) =>
-                                                    setSetupDiamMeasured(filterDecimalNumericInput(e.target.value))
-                                                }
-                                                size="small"
-                                                fullWidth
-                                                inputProps={{inputMode: 'decimal'}}
-                                            />
+                                            <Typography variant="body2">
+                                                {t('diameterMaxPosTolerance')}:{' '}
+                                                {formatSetupProtoNumber(setupModalProto.diameterMaxPosTolerance)}
+                                            </Typography>
+                                            <Stack direction="row" spacing={0.75} alignItems="center">
+                                                <TextField
+                                                    label={t('workSessionSetupMeasuredValue')}
+                                                    value={setupDiamMeasured}
+                                                    onChange={(e) =>
+                                                        setSetupDiamMeasured(filterDecimalNumericInput(e.target.value))
+                                                    }
+                                                    size="small"
+                                                    fullWidth
+                                                    inputProps={{inputMode: 'decimal'}}
+                                                    sx={{flex: 1, minWidth: 0}}
+                                                />
+                                                {setupMeasuredDiameterRangeHint === 'in' ? (
+                                                    <Tooltip title={t('measuredValueInTolerance')}>
+                                                        <CheckCircleIcon
+                                                            color="success"
+                                                            fontSize="medium"
+                                                            sx={{flexShrink: 0}}
+                                                            aria-label={t('measuredValueInTolerance')}
+                                                        />
+                                                    </Tooltip>
+                                                ) : setupMeasuredDiameterRangeHint === 'out' ? (
+                                                    <Tooltip title={t('measuredValueOutOfTolerance')}>
+                                                        <CancelIcon
+                                                            color="error"
+                                                            fontSize="medium"
+                                                            sx={{flexShrink: 0}}
+                                                            aria-label={t('measuredValueOutOfTolerance')}
+                                                        />
+                                                    </Tooltip>
+                                                ) : null}
+                                            </Stack>
                                         </Stack>
                                     )}
                                 </Box>
