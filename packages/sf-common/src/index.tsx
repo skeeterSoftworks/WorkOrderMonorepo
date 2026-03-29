@@ -25,6 +25,14 @@ accordionLabel, paddedLabel, justifyCenter, justifyRight, justifyLeft, spaceEven
 export {Server} from "./api/Server"
 export {Products} from "./api/Products"
 
-export {createTableData, b64toBlob, getDigitNormalized, replaceCommaWithNewLine} from "./util/DataUtils"
+export {
+    createTableData,
+    b64toBlob,
+    getDigitNormalized,
+    replaceCommaWithNewLine,
+    filterDecimalNumericInput,
+    normalizeDecimalCommaToPoint,
+    parseDecimalNumericInputToNumber,
+} from "./util/DataUtils"
 
 export {SOCKET_URL, measuringFeaturesTableHeaders, mfClassTypes} from "./constants/Constants"

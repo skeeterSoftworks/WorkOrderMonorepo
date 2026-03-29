@@ -38,6 +38,7 @@ import type {
     WorkStationPreconditionItem,
 } from '../../models/ApiRequests.ts';
 import {isWorkOrderClosedForProduction} from './workOrderProductionHelpers.ts';
+import {filterDecimalNumericInput, parseDecimalNumericInputToNumber} from '../../util/decimalNumericInput.ts';
 
 const STORAGE_SESSION = 'activeWorkSessionId';
 
@@ -48,8 +49,9 @@ function preconditionText(item: WorkStationPreconditionItem, lang: 'sr' | 'en'):
     return (item.en || item.sr || '').trim();
 }
 
-function digitsOnly(v: string): string {
-    return v.replace(/[^0-9]/g, '');
+function assessedMeasuredValueForApi(raw: string | undefined): string | undefined {
+    const n = parseDecimalNumericInputToNumber(raw ?? '');
+    return n === undefined ? undefined : String(n);
 }
 
 function formatSetupProtoNumber(n: number | undefined | null): string {
@@ -228,7 +230,7 @@ function areControlAssessmentsComplete(
     return !prototypes.some((p, idx) => {
         if (p.checkType !== 'MEASURED') return false;
         const v = rows[idx]?.assessedValue ?? '';
-        return digitsOnly(v).trim().length === 0;
+        return parseDecimalNumericInputToNumber(v) === undefined;
     });
 }
 
@@ -316,11 +318,15 @@ function MeasuringFeaturesForm({
                                             label={t('assessedValue')}
                                             value={assessedValue}
                                             onChange={(e) =>
-                                                onAssessmentChange(index, 'assessedValue', digitsOnly(e.target.value))
+                                                onAssessmentChange(
+                                                    index,
+                                                    'assessedValue',
+                                                    filterDecimalNumericInput(e.target.value),
+                                                )
                                             }
                                             size="small"
                                             fullWidth
-                                            inputProps={{inputMode: 'numeric', pattern: '[0-9]*'}}
+                                            inputProps={{inputMode: 'decimal'}}
                                             sx={{mt: 1}}
                                         />
                                     </>
@@ -739,7 +745,7 @@ export function ProductionWorkSessionPanel({
 
         const features: WorkSessionMeasuringFeatureInputTO[] = rowsInitial.map((a) => ({
             catalogueId: a.catalogueId ?? undefined,
-            assessedValue: a.assessedValue?.trim() ? digitsOnly(a.assessedValue) : undefined,
+            assessedValue: assessedMeasuredValueForApi(a.assessedValue),
             assessedValueGood: Boolean(a.assessedValueGood),
         }));
 
@@ -772,7 +778,7 @@ export function ProductionWorkSessionPanel({
 
         const features: WorkSessionMeasuringFeatureInputTO[] = rowsControl.map((a) => ({
             catalogueId: a.catalogueId ?? undefined,
-            assessedValue: a.assessedValue?.trim() ? digitsOnly(a.assessedValue) : undefined,
+            assessedValue: assessedMeasuredValueForApi(a.assessedValue),
             assessedValueGood: Boolean(a.assessedValueGood),
         }));
 
@@ -821,22 +827,22 @@ export function ProductionWorkSessionPanel({
             if (proto.attributiveHeightMeasurement) {
                 body.measuredHeightOk = setupHeightOkNok === 'ok';
             } else {
-                const hv = digitsOnly(setupHeightMeasured).trim();
-                if (!hv) {
+                const hv = parseDecimalNumericInputToNumber(setupHeightMeasured);
+                if (hv === undefined) {
                     setActionError(t('workSessionSetupHeightRequired'));
                     return;
                 }
-                body.measuredHeight = hv;
+                body.measuredHeight = String(hv);
             }
             if (proto.attributiveDiameterMeasurement) {
                 body.measuredDiameterOk = setupDiamOkNok === 'ok';
             } else {
-                const dv = digitsOnly(setupDiamMeasured).trim();
-                if (!dv) {
+                const dv = parseDecimalNumericInputToNumber(setupDiamMeasured);
+                if (dv === undefined) {
                     setActionError(t('workSessionSetupDiameterRequired'));
                     return;
                 }
-                body.measuredDiameter = dv;
+                body.measuredDiameter = String(dv);
             }
         }
         const hasPayload =
@@ -1358,10 +1364,12 @@ export function ProductionWorkSessionPanel({
                                             <TextField
                                                 label={t('workSessionSetupMeasuredValue')}
                                                 value={setupHeightMeasured}
-                                                onChange={(e) => setSetupHeightMeasured(digitsOnly(e.target.value))}
+                                                onChange={(e) =>
+                                                    setSetupHeightMeasured(filterDecimalNumericInput(e.target.value))
+                                                }
                                                 size="small"
                                                 fullWidth
-                                                inputProps={{inputMode: 'numeric'}}
+                                                inputProps={{inputMode: 'decimal'}}
                                             />
                                         </Stack>
                                     )}
@@ -1405,10 +1413,12 @@ export function ProductionWorkSessionPanel({
                                             <TextField
                                                 label={t('workSessionSetupMeasuredValue')}
                                                 value={setupDiamMeasured}
-                                                onChange={(e) => setSetupDiamMeasured(digitsOnly(e.target.value))}
+                                                onChange={(e) =>
+                                                    setSetupDiamMeasured(filterDecimalNumericInput(e.target.value))
+                                                }
                                                 size="small"
                                                 fullWidth
-                                                inputProps={{inputMode: 'numeric'}}
+                                                inputProps={{inputMode: 'decimal'}}
                                             />
                                         </Stack>
                                     )}

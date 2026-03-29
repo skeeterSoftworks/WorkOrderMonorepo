@@ -34,6 +34,7 @@ import type {
     SetupDataPrototypeTO,
 } from 'sf-common/src/models/ApiRequests';
 import { Server, ConfirmationModal } from 'sf-common';
+import { filterDecimalNumericInput, parseDecimalNumericInputToNumber } from 'sf-common/src/util/DataUtils';
 import { toastActionSuccess, toastServerError } from '../../util/actionToast';
 import {
     TableActionsRow,
@@ -42,11 +43,6 @@ import {
 } from '../shared/tableActions';
 
 type LocalProduct = ProductTO;
-
-function numFieldOrUndefined(v: number | ''): number | undefined {
-    if (v === '') return undefined;
-    return v;
-}
 
 function withSequentialStepNumbers(steps: QualityInfoStepTO[]): QualityInfoStepTO[] {
     return steps.map((s, i) => ({ ...s, stepNumber: i + 1 }));
@@ -73,9 +69,9 @@ export function ProductsManagementPanel() {
     const [protoCatalogueId, setProtoCatalogueId] = useState('');
     const [protoDescription, setProtoDescription] = useState('');
     const [protoAbsoluteMeasure, setProtoAbsoluteMeasure] = useState(false);
-    const [protoRefValue, setProtoRefValue] = useState<number | ''>('');
-    const [protoMinTolerance, setProtoMinTolerance] = useState<number | ''>('');
-    const [protoMaxTolerance, setProtoMaxTolerance] = useState<number | ''>('');
+    const [protoRefValue, setProtoRefValue] = useState('');
+    const [protoMinTolerance, setProtoMinTolerance] = useState('');
+    const [protoMaxTolerance, setProtoMaxTolerance] = useState('');
     const [protoClassType, setProtoClassType] = useState<string>('');
     const [protoFrequency, setProtoFrequency] = useState('');
     const [protoCheckType, setProtoCheckType] = useState<'ATTRIBUTIVE' | 'MEASURED' | ''>('');
@@ -84,12 +80,12 @@ export function ProductsManagementPanel() {
 
     const [setupOpId, setSetupOpId] = useState('');
     const [setupToolId, setSetupToolId] = useState('');
-    const [setupDRef, setSetupDRef] = useState<number | ''>('');
-    const [setupDMaxPos, setSetupDMaxPos] = useState<number | ''>('');
-    const [setupDMaxNeg, setSetupDMaxNeg] = useState<number | ''>('');
-    const [setupHRef, setSetupHRef] = useState<number | ''>('');
-    const [setupHMaxPos, setSetupHMaxPos] = useState<number | ''>('');
-    const [setupHMaxNeg, setSetupHMaxNeg] = useState<number | ''>('');
+    const [setupDRef, setSetupDRef] = useState('');
+    const [setupDMaxPos, setSetupDMaxPos] = useState('');
+    const [setupDMaxNeg, setSetupDMaxNeg] = useState('');
+    const [setupHRef, setSetupHRef] = useState('');
+    const [setupHMaxPos, setSetupHMaxPos] = useState('');
+    const [setupHMaxNeg, setSetupHMaxNeg] = useState('');
     const [setupAttrHeight, setSetupAttrHeight] = useState(false);
     const [setupAttrDiameter, setSetupAttrDiameter] = useState(false);
 
@@ -285,9 +281,15 @@ export function ProductsManagementPanel() {
             catalogueId,
             description: desc,
             absoluteMeasure: protoAbsoluteMeasure,
-            refValue: isAttributive || protoRefValue === '' ? undefined : protoRefValue,
-            minTolerance: isAttributive || protoMinTolerance === '' ? undefined : protoMinTolerance,
-            maxTolerance: isAttributive || protoMaxTolerance === '' ? undefined : protoMaxTolerance,
+            refValue: isAttributive || !protoRefValue.trim()
+                ? undefined
+                : parseDecimalNumericInputToNumber(protoRefValue),
+            minTolerance: isAttributive || !protoMinTolerance.trim()
+                ? undefined
+                : parseDecimalNumericInputToNumber(protoMinTolerance),
+            maxTolerance: isAttributive || !protoMaxTolerance.trim()
+                ? undefined
+                : parseDecimalNumericInputToNumber(protoMaxTolerance),
             classType: protoClassType || undefined,
             frequency: protoFrequency.trim() || undefined,
             checkType: protoCheckType || undefined,
@@ -307,12 +309,12 @@ export function ProductsManagementPanel() {
         const op = setupOpId.trim();
         const tool = setupToolId.trim();
         const hasNumeric =
-            setupDRef !== '' ||
-            setupDMaxPos !== '' ||
-            setupDMaxNeg !== '' ||
-            setupHRef !== '' ||
-            setupHMaxPos !== '' ||
-            setupHMaxNeg !== '';
+            setupDRef.trim() !== '' ||
+            setupDMaxPos.trim() !== '' ||
+            setupDMaxNeg.trim() !== '' ||
+            setupHRef.trim() !== '' ||
+            setupHMaxPos.trim() !== '' ||
+            setupHMaxNeg.trim() !== '';
         const hasAttr = setupAttrHeight || setupAttrDiameter;
         if (!op && !tool && !hasNumeric && !hasAttr) {
             return undefined;
@@ -322,12 +324,12 @@ export function ProductsManagementPanel() {
             toolID: tool || undefined,
             attributiveHeightMeasurement: setupAttrHeight,
             attributiveDiameterMeasurement: setupAttrDiameter,
-            diameterRefValue: setupAttrDiameter ? undefined : numFieldOrUndefined(setupDRef),
-            diameterMaxPosTolerance: setupAttrDiameter ? undefined : numFieldOrUndefined(setupDMaxPos),
-            diameterMaxNegTolerance: setupAttrDiameter ? undefined : numFieldOrUndefined(setupDMaxNeg),
-            heightRefValue: setupAttrHeight ? undefined : numFieldOrUndefined(setupHRef),
-            heightMaxPosTolerance: setupAttrHeight ? undefined : numFieldOrUndefined(setupHMaxPos),
-            heightMaxNegTolerance: setupAttrHeight ? undefined : numFieldOrUndefined(setupHMaxNeg),
+            diameterRefValue: setupAttrDiameter ? undefined : parseDecimalNumericInputToNumber(setupDRef),
+            diameterMaxPosTolerance: setupAttrDiameter ? undefined : parseDecimalNumericInputToNumber(setupDMaxPos),
+            diameterMaxNegTolerance: setupAttrDiameter ? undefined : parseDecimalNumericInputToNumber(setupDMaxNeg),
+            heightRefValue: setupAttrHeight ? undefined : parseDecimalNumericInputToNumber(setupHRef),
+            heightMaxPosTolerance: setupAttrHeight ? undefined : parseDecimalNumericInputToNumber(setupHMaxPos),
+            heightMaxNegTolerance: setupAttrHeight ? undefined : parseDecimalNumericInputToNumber(setupHMaxNeg),
         };
     };
 
@@ -344,12 +346,12 @@ export function ProductsManagementPanel() {
         setSetupToolId(sd?.toolID ?? '');
         setSetupAttrHeight(Boolean(sd?.attributiveHeightMeasurement));
         setSetupAttrDiameter(Boolean(sd?.attributiveDiameterMeasurement));
-        setSetupDRef(sd?.diameterRefValue ?? '');
-        setSetupDMaxPos(sd?.diameterMaxPosTolerance ?? '');
-        setSetupDMaxNeg(sd?.diameterMaxNegTolerance ?? '');
-        setSetupHRef(sd?.heightRefValue ?? '');
-        setSetupHMaxPos(sd?.heightMaxPosTolerance ?? '');
-        setSetupHMaxNeg(sd?.heightMaxNegTolerance ?? '');
+        setSetupDRef(sd?.diameterRefValue != null ? String(sd.diameterRefValue) : '');
+        setSetupDMaxPos(sd?.diameterMaxPosTolerance != null ? String(sd.diameterMaxPosTolerance) : '');
+        setSetupDMaxNeg(sd?.diameterMaxNegTolerance != null ? String(sd.diameterMaxNegTolerance) : '');
+        setSetupHRef(sd?.heightRefValue != null ? String(sd.heightRefValue) : '');
+        setSetupHMaxPos(sd?.heightMaxPosTolerance != null ? String(sd.heightMaxPosTolerance) : '');
+        setSetupHMaxNeg(sd?.heightMaxNegTolerance != null ? String(sd.heightMaxNegTolerance) : '');
         const loadedQi = (product.qualityInfoSteps ?? [])
             .slice()
             .sort((a, b) => (a.stepNumber ?? 1e9) - (b.stepNumber ?? 1e9));
@@ -707,42 +709,30 @@ export function ProductsManagementPanel() {
                             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                 <TextField
                                     label={t('refValue')}
-                                    type="number"
                                     value={protoRefValue}
-                                    onChange={(e) =>
-                                        setProtoRefValue(
-                                            e.target.value === '' ? '' : Number(e.target.value)
-                                        )
-                                    }
+                                    onChange={(e) => setProtoRefValue(filterDecimalNumericInput(e.target.value))}
                                     size="small"
                                     sx={{ minWidth: 180 }}
                                     disabled={protoCheckType === 'ATTRIBUTIVE'}
+                                    inputProps={{ inputMode: 'decimal' }}
                                 />
                                 <TextField
                                     label={t('toleranceMin')}
-                                    type="number"
                                     value={protoMinTolerance}
-                                    onChange={(e) =>
-                                        setProtoMinTolerance(
-                                            e.target.value === '' ? '' : Number(e.target.value)
-                                        )
-                                    }
+                                    onChange={(e) => setProtoMinTolerance(filterDecimalNumericInput(e.target.value))}
                                     size="small"
                                     sx={{ minWidth: 180 }}
                                     disabled={protoCheckType === 'ATTRIBUTIVE'}
+                                    inputProps={{ inputMode: 'decimal' }}
                                 />
                                 <TextField
                                     label={t('toleranceMax')}
-                                    type="number"
                                     value={protoMaxTolerance}
-                                    onChange={(e) =>
-                                        setProtoMaxTolerance(
-                                            e.target.value === '' ? '' : Number(e.target.value)
-                                        )
-                                    }
+                                    onChange={(e) => setProtoMaxTolerance(filterDecimalNumericInput(e.target.value))}
                                     size="small"
                                     sx={{ minWidth: 180 }}
                                     disabled={protoCheckType === 'ATTRIBUTIVE'}
+                                    inputProps={{ inputMode: 'decimal' }}
                                 />
                             </Box>
 
@@ -893,39 +883,30 @@ export function ProductsManagementPanel() {
                             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                 <TextField
                                     label={t('refDiameter')}
-                                    type="number"
                                     value={setupDRef}
-                                    onChange={(e) =>
-                                        setSetupDRef(e.target.value === '' ? '' : Number(e.target.value))
-                                    }
+                                    onChange={(e) => setSetupDRef(filterDecimalNumericInput(e.target.value))}
                                     size="small"
                                     sx={{ minWidth: 160 }}
                                     disabled={setupAttrDiameter}
-                                    inputProps={{ step: 'any' }}
+                                    inputProps={{ inputMode: 'decimal' }}
                                 />
                                 <TextField
                                     label={t('diameterMaxPosTolerance')}
-                                    type="number"
                                     value={setupDMaxPos}
-                                    onChange={(e) =>
-                                        setSetupDMaxPos(e.target.value === '' ? '' : Number(e.target.value))
-                                    }
+                                    onChange={(e) => setSetupDMaxPos(filterDecimalNumericInput(e.target.value))}
                                     size="small"
                                     sx={{ minWidth: 160 }}
                                     disabled={setupAttrDiameter}
-                                    inputProps={{ step: 'any' }}
+                                    inputProps={{ inputMode: 'decimal' }}
                                 />
                                 <TextField
                                     label={t('diameterMaxNegTolerance')}
-                                    type="number"
                                     value={setupDMaxNeg}
-                                    onChange={(e) =>
-                                        setSetupDMaxNeg(e.target.value === '' ? '' : Number(e.target.value))
-                                    }
+                                    onChange={(e) => setSetupDMaxNeg(filterDecimalNumericInput(e.target.value))}
                                     size="small"
                                     sx={{ minWidth: 160 }}
                                     disabled={setupAttrDiameter}
-                                    inputProps={{ step: 'any' }}
+                                    inputProps={{ inputMode: 'decimal' }}
                                 />
                             </Box>
                             <Typography variant="caption" color="text.secondary">
@@ -934,39 +915,30 @@ export function ProductsManagementPanel() {
                             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                 <TextField
                                     label={t('refHeight')}
-                                    type="number"
                                     value={setupHRef}
-                                    onChange={(e) =>
-                                        setSetupHRef(e.target.value === '' ? '' : Number(e.target.value))
-                                    }
+                                    onChange={(e) => setSetupHRef(filterDecimalNumericInput(e.target.value))}
                                     size="small"
                                     sx={{ minWidth: 160 }}
                                     disabled={setupAttrHeight}
-                                    inputProps={{ step: 'any' }}
+                                    inputProps={{ inputMode: 'decimal' }}
                                 />
                                 <TextField
                                     label={t('heightMaxPosTolerance')}
-                                    type="number"
                                     value={setupHMaxPos}
-                                    onChange={(e) =>
-                                        setSetupHMaxPos(e.target.value === '' ? '' : Number(e.target.value))
-                                    }
+                                    onChange={(e) => setSetupHMaxPos(filterDecimalNumericInput(e.target.value))}
                                     size="small"
                                     sx={{ minWidth: 160 }}
                                     disabled={setupAttrHeight}
-                                    inputProps={{ step: 'any' }}
+                                    inputProps={{ inputMode: 'decimal' }}
                                 />
                                 <TextField
                                     label={t('heightMaxNegTolerance')}
-                                    type="number"
                                     value={setupHMaxNeg}
-                                    onChange={(e) =>
-                                        setSetupHMaxNeg(e.target.value === '' ? '' : Number(e.target.value))
-                                    }
+                                    onChange={(e) => setSetupHMaxNeg(filterDecimalNumericInput(e.target.value))}
                                     size="small"
                                     sx={{ minWidth: 160 }}
                                     disabled={setupAttrHeight}
-                                    inputProps={{ step: 'any' }}
+                                    inputProps={{ inputMode: 'decimal' }}
                                 />
                             </Box>
                         </Box>
