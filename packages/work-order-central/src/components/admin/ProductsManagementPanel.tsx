@@ -31,6 +31,7 @@ import type {
     MachineTO,
     MeasuringFeaturePrototypeTO,
     QualityInfoStepTO,
+    SetupDataPrototypeTO,
 } from 'sf-common/src/models/ApiRequests';
 import { Server, ConfirmationModal } from 'sf-common';
 import { toastActionSuccess, toastServerError } from '../../util/actionToast';
@@ -41,6 +42,11 @@ import {
 } from '../shared/tableActions';
 
 type LocalProduct = ProductTO;
+
+function numFieldOrUndefined(v: number | ''): number | undefined {
+    if (v === '') return undefined;
+    return v;
+}
 
 function withSequentialStepNumbers(steps: QualityInfoStepTO[]): QualityInfoStepTO[] {
     return steps.map((s, i) => ({ ...s, stepNumber: i + 1 }));
@@ -75,6 +81,17 @@ export function ProductsManagementPanel() {
     const [protoCheckType, setProtoCheckType] = useState<'ATTRIBUTIVE' | 'MEASURED' | ''>('');
     const [protoToolType, setProtoToolType] = useState('');
     const [protoMeasuringTool, setProtoMeasuringTool] = useState('');
+
+    const [setupOpId, setSetupOpId] = useState('');
+    const [setupToolId, setSetupToolId] = useState('');
+    const [setupDRef, setSetupDRef] = useState<number | ''>('');
+    const [setupDMaxPos, setSetupDMaxPos] = useState<number | ''>('');
+    const [setupDMaxNeg, setSetupDMaxNeg] = useState<number | ''>('');
+    const [setupHRef, setSetupHRef] = useState<number | ''>('');
+    const [setupHMaxPos, setSetupHMaxPos] = useState<number | ''>('');
+    const [setupHMaxNeg, setSetupHMaxNeg] = useState<number | ''>('');
+    const [setupAttrHeight, setSetupAttrHeight] = useState(false);
+    const [setupAttrDiameter, setSetupAttrDiameter] = useState(false);
 
     const [qualityInfoSteps, setQualityInfoSteps] = useState<QualityInfoStepTO[]>([]);
     const [qiStepDescription, setQiStepDescription] = useState('');
@@ -118,6 +135,19 @@ export function ProductsManagementPanel() {
         );
     };
 
+    const resetSetupInputs = () => {
+        setSetupOpId('');
+        setSetupToolId('');
+        setSetupDRef('');
+        setSetupDMaxPos('');
+        setSetupDMaxNeg('');
+        setSetupHRef('');
+        setSetupHMaxPos('');
+        setSetupHMaxNeg('');
+        setSetupAttrHeight(false);
+        setSetupAttrDiameter(false);
+    };
+
     const resetForm = () => {
         setSelectedProductId(undefined);
         setName('');
@@ -137,6 +167,8 @@ export function ProductsManagementPanel() {
         setProtoCheckType('');
         setProtoToolType('');
         setProtoMeasuringTool('');
+
+        resetSetupInputs();
 
         setQualityInfoSteps([]);
         setQiStepDescription('');
@@ -271,6 +303,34 @@ export function ProductsManagementPanel() {
         setMeasuringFeaturePrototypes((prev) => prev.filter((_, i) => i !== index));
     };
 
+    const buildSetupDataPrototypePayload = (): SetupDataPrototypeTO | undefined => {
+        const op = setupOpId.trim();
+        const tool = setupToolId.trim();
+        const hasNumeric =
+            setupDRef !== '' ||
+            setupDMaxPos !== '' ||
+            setupDMaxNeg !== '' ||
+            setupHRef !== '' ||
+            setupHMaxPos !== '' ||
+            setupHMaxNeg !== '';
+        const hasAttr = setupAttrHeight || setupAttrDiameter;
+        if (!op && !tool && !hasNumeric && !hasAttr) {
+            return undefined;
+        }
+        return {
+            operationID: op || undefined,
+            toolID: tool || undefined,
+            attributiveHeightMeasurement: setupAttrHeight,
+            attributiveDiameterMeasurement: setupAttrDiameter,
+            diameterRefValue: setupAttrDiameter ? undefined : numFieldOrUndefined(setupDRef),
+            diameterMaxPosTolerance: setupAttrDiameter ? undefined : numFieldOrUndefined(setupDMaxPos),
+            diameterMaxNegTolerance: setupAttrDiameter ? undefined : numFieldOrUndefined(setupDMaxNeg),
+            heightRefValue: setupAttrHeight ? undefined : numFieldOrUndefined(setupHRef),
+            heightMaxPosTolerance: setupAttrHeight ? undefined : numFieldOrUndefined(setupHMaxPos),
+            heightMaxNegTolerance: setupAttrHeight ? undefined : numFieldOrUndefined(setupHMaxNeg),
+        };
+    };
+
     const handleEditClick = (product: LocalProduct) => {
         setSelectedProductId(product.id as number | undefined);
         setName(product.name || '');
@@ -279,6 +339,17 @@ export function ProductsManagementPanel() {
         setSelectedMachineIds(product.machineIds ?? []);
         setMeasuringFeaturePrototypes(product.measuringFeaturePrototypes ?? []);
         resetPrototypeInputs();
+        const sd = product.setupDataPrototype;
+        setSetupOpId(sd?.operationID ?? '');
+        setSetupToolId(sd?.toolID ?? '');
+        setSetupAttrHeight(Boolean(sd?.attributiveHeightMeasurement));
+        setSetupAttrDiameter(Boolean(sd?.attributiveDiameterMeasurement));
+        setSetupDRef(sd?.diameterRefValue ?? '');
+        setSetupDMaxPos(sd?.diameterMaxPosTolerance ?? '');
+        setSetupDMaxNeg(sd?.diameterMaxNegTolerance ?? '');
+        setSetupHRef(sd?.heightRefValue ?? '');
+        setSetupHMaxPos(sd?.heightMaxPosTolerance ?? '');
+        setSetupHMaxNeg(sd?.heightMaxNegTolerance ?? '');
         const loadedQi = (product.qualityInfoSteps ?? [])
             .slice()
             .sort((a, b) => (a.stepNumber ?? 1e9) - (b.stepNumber ?? 1e9));
@@ -322,6 +393,7 @@ export function ProductsManagementPanel() {
             description,
             reference: reference.trim(),
             machineIds: selectedMachineIds.length > 0 ? selectedMachineIds : undefined,
+            setupDataPrototype: buildSetupDataPrototypePayload(),
             measuringFeaturePrototypes,
             qualityInfoSteps,
         };
@@ -757,6 +829,147 @@ export function ProductsManagementPanel() {
                                 )}
                             </TableBody>
                         </Table>
+
+                        <Divider variant="middle" sx={{ my: 2, borderWidth: 2, borderColor: 'text.secondary' }} />
+                        <Typography component="h3" variant="h3" sx={{ mt: 0, mb: 1, fontSize: '1.25rem' }}>
+                            {t('setupData')}
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                <TextField
+                                    label={t('operation')}
+                                    value={setupOpId}
+                                    onChange={(e) => setSetupOpId(e.target.value)}
+                                    size="small"
+                                    sx={{ minWidth: 140, flex: 1 }}
+                                />
+                                <TextField
+                                    label={t('toolId')}
+                                    value={setupToolId}
+                                    onChange={(e) => setSetupToolId(e.target.value)}
+                                    size="small"
+                                    sx={{ minWidth: 140, flex: 1 }}
+                                />
+                            </Box>
+                            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox
+                                            checked={setupAttrDiameter}
+                                            onChange={(e) => {
+                                                const c = e.target.checked;
+                                                setSetupAttrDiameter(c);
+                                                if (c) {
+                                                    setSetupDRef('');
+                                                    setSetupDMaxPos('');
+                                                    setSetupDMaxNeg('');
+                                                }
+                                            }}
+                                        />
+                                    }
+                                    label={t('attributiveDiameterMeasurement')}
+                                />
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox
+                                            checked={setupAttrHeight}
+                                            onChange={(e) => {
+                                                const c = e.target.checked;
+                                                setSetupAttrHeight(c);
+                                                if (c) {
+                                                    setSetupHRef('');
+                                                    setSetupHMaxPos('');
+                                                    setSetupHMaxNeg('');
+                                                }
+                                            }}
+                                        />
+                                    }
+                                    label={t('attributiveHeightMeasurement')}
+                                />
+                            </Box>
+                            <Typography variant="caption" color="text.secondary">
+                                {t('diameterMeasurement')}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                <TextField
+                                    label={t('refDiameter')}
+                                    type="number"
+                                    value={setupDRef}
+                                    onChange={(e) =>
+                                        setSetupDRef(e.target.value === '' ? '' : Number(e.target.value))
+                                    }
+                                    size="small"
+                                    sx={{ minWidth: 160 }}
+                                    disabled={setupAttrDiameter}
+                                    inputProps={{ step: 'any' }}
+                                />
+                                <TextField
+                                    label={t('diameterMaxPosTolerance')}
+                                    type="number"
+                                    value={setupDMaxPos}
+                                    onChange={(e) =>
+                                        setSetupDMaxPos(e.target.value === '' ? '' : Number(e.target.value))
+                                    }
+                                    size="small"
+                                    sx={{ minWidth: 160 }}
+                                    disabled={setupAttrDiameter}
+                                    inputProps={{ step: 'any' }}
+                                />
+                                <TextField
+                                    label={t('diameterMaxNegTolerance')}
+                                    type="number"
+                                    value={setupDMaxNeg}
+                                    onChange={(e) =>
+                                        setSetupDMaxNeg(e.target.value === '' ? '' : Number(e.target.value))
+                                    }
+                                    size="small"
+                                    sx={{ minWidth: 160 }}
+                                    disabled={setupAttrDiameter}
+                                    inputProps={{ step: 'any' }}
+                                />
+                            </Box>
+                            <Typography variant="caption" color="text.secondary">
+                                {t('heightMeasurement')}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                <TextField
+                                    label={t('refHeight')}
+                                    type="number"
+                                    value={setupHRef}
+                                    onChange={(e) =>
+                                        setSetupHRef(e.target.value === '' ? '' : Number(e.target.value))
+                                    }
+                                    size="small"
+                                    sx={{ minWidth: 160 }}
+                                    disabled={setupAttrHeight}
+                                    inputProps={{ step: 'any' }}
+                                />
+                                <TextField
+                                    label={t('heightMaxPosTolerance')}
+                                    type="number"
+                                    value={setupHMaxPos}
+                                    onChange={(e) =>
+                                        setSetupHMaxPos(e.target.value === '' ? '' : Number(e.target.value))
+                                    }
+                                    size="small"
+                                    sx={{ minWidth: 160 }}
+                                    disabled={setupAttrHeight}
+                                    inputProps={{ step: 'any' }}
+                                />
+                                <TextField
+                                    label={t('heightMaxNegTolerance')}
+                                    type="number"
+                                    value={setupHMaxNeg}
+                                    onChange={(e) =>
+                                        setSetupHMaxNeg(e.target.value === '' ? '' : Number(e.target.value))
+                                    }
+                                    size="small"
+                                    sx={{ minWidth: 160 }}
+                                    disabled={setupAttrHeight}
+                                    inputProps={{ step: 'any' }}
+                                />
+                            </Box>
+                        </Box>
 
                         <Divider variant="middle" sx={{ my: 2, borderWidth: 2, borderColor: 'text.secondary' }} />
                         <Typography component="h3" variant="h3" sx={{ mt: 0, mb: 1, fontSize: '1.25rem' }}>

@@ -30,6 +30,8 @@ export interface ProductTO {
     /** Catalogue / reference ID for the product */
     reference?: string,
     machineIds?: number[],
+    /** Single embedded setup template for the product (central). */
+    setupDataPrototype?: SetupDataPrototypeTO,
     measuringFeaturePrototypes?: MeasuringFeaturePrototypeTO[],
     qualityInfoSteps?: QualityInfoStepTO[],
     /** Raw Base64 or data URL; omit while editing to keep existing; empty string clears */
@@ -88,6 +90,20 @@ export interface MeasuringFeaturePrototypeTO {
     checkType?: "ATTRIBUTIVE" | "MEASURED" | string,
     toolType?: string,
     measuringTool?: string,
+}
+
+/** Setup tooling / measurement prototype rows embedded on a product (central). */
+export interface SetupDataPrototypeTO {
+    operationID?: string,
+    toolID?: string,
+    diameterRefValue?: number,
+    diameterMaxPosTolerance?: number,
+    diameterMaxNegTolerance?: number,
+    heightRefValue?: number,
+    heightMaxPosTolerance?: number,
+    heightMaxNegTolerance?: number,
+    attributiveHeightMeasurement?: boolean,
+    attributiveDiameterMeasurement?: boolean,
 }
 
 export interface QRData {
