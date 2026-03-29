@@ -30,8 +30,10 @@ import type {
     MeasuringFeaturePrototypeTO,
     ProductionWorkOrderTO,
     QualityInfoStepTO,
+    SetupDataPrototypeTO,
     WorkSessionMeasuringFeatureInputTO,
     WorkSessionResponseTO,
+    WorkSessionSetupProductCreateTO,
     WorkstationMachineConfigTO,
     WorkStationPreconditionItem,
 } from '../../models/ApiRequests.ts';
@@ -48,6 +50,11 @@ function preconditionText(item: WorkStationPreconditionItem, lang: 'sr' | 'en'):
 
 function digitsOnly(v: string): string {
     return v.replace(/[^0-9]/g, '');
+}
+
+function formatSetupProtoNumber(n: number | undefined | null): string {
+    if (n == null || Number.isNaN(Number(n))) return '—';
+    return String(n);
 }
 
 function qualityStepImageSrc(b64: string | undefined): string | undefined {
@@ -416,6 +423,12 @@ export function ProductionWorkSessionPanel({
     const [faultyOpen, setFaultyOpen] = useState(false);
     const [controlOpen, setControlOpen] = useState(false);
     const [toolOpen, setToolOpen] = useState(false);
+    const [setupModalProto, setSetupModalProto] = useState<SetupDataPrototypeTO | null>(null);
+    const [setupModalLoading, setSetupModalLoading] = useState(false);
+    const [setupHeightMeasured, setSetupHeightMeasured] = useState('');
+    const [setupHeightOkNok, setSetupHeightOkNok] = useState<'ok' | 'nok'>('ok');
+    const [setupDiamMeasured, setSetupDiamMeasured] = useState('');
+    const [setupDiamOkNok, setSetupDiamOkNok] = useState<'ok' | 'nok'>('ok');
     const [goodOpen, setGoodOpen] = useState(false);
 
     const [rowsInitial, setRowsInitial] = useState<WorkSessionMeasuringFeatureInputTO[]>([]);
@@ -489,6 +502,41 @@ export function ProductionWorkSessionPanel({
             },
         );
     }, [workStationPreconditionsOpen]);
+
+    useEffect(() => {
+        if (!toolOpen) {
+            setSetupModalProto(null);
+            setSetupModalLoading(false);
+            return;
+        }
+        setSetupHeightMeasured('');
+        setSetupDiamMeasured('');
+        setSetupHeightOkNok('ok');
+        setSetupDiamOkNok('ok');
+        const ref = workOrder.productReference?.trim();
+        if (!ref) {
+            setSetupModalProto(null);
+            return;
+        }
+        let cancelled = false;
+        setSetupModalLoading(true);
+        setSetupModalProto(null);
+        void Server.getBoundMachineProducts()
+            .then((products) => {
+                if (cancelled) return;
+                const match = products.find((p) => (p.reference ?? '').trim() === ref);
+                setSetupModalProto(match?.setupDataPrototype ?? null);
+            })
+            .catch(() => {
+                if (!cancelled) setSetupModalProto(null);
+            })
+            .finally(() => {
+                if (!cancelled) setSetupModalLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [toolOpen, workOrder.productReference]);
 
     useEffect(() => {
         const woId = workOrder.id;
@@ -767,10 +815,39 @@ export function ProductionWorkSessionPanel({
 
     const handleRecordSetup = async () => {
         if (sessionId == null) return;
+        const proto = setupModalProto;
+        const body: WorkSessionSetupProductCreateTO = {};
+        if (proto) {
+            if (proto.attributiveHeightMeasurement) {
+                body.measuredHeightOk = setupHeightOkNok === 'ok';
+            } else {
+                const hv = digitsOnly(setupHeightMeasured).trim();
+                if (!hv) {
+                    setActionError(t('workSessionSetupHeightRequired'));
+                    return;
+                }
+                body.measuredHeight = hv;
+            }
+            if (proto.attributiveDiameterMeasurement) {
+                body.measuredDiameterOk = setupDiamOkNok === 'ok';
+            } else {
+                const dv = digitsOnly(setupDiamMeasured).trim();
+                if (!dv) {
+                    setActionError(t('workSessionSetupDiameterRequired'));
+                    return;
+                }
+                body.measuredDiameter = dv;
+            }
+        }
+        const hasPayload =
+            body.measuredHeight != null ||
+            body.measuredHeightOk != null ||
+            body.measuredDiameter != null ||
+            body.measuredDiameterOk != null;
         setSubmitting(true);
         setActionError(null);
         try {
-            const updated = await Server.postProductionSetupProduct(sessionId);
+            const updated = await Server.postProductionSetupProduct(sessionId, hasPayload ? body : null);
             setSession(updated);
             setToolOpen(false);
         } catch (e) {
@@ -1210,18 +1287,145 @@ export function ProductionWorkSessionPanel({
                 </DialogActions>
             </Dialog>
 
-            <Dialog open={toolOpen} onClose={() => !submitting && setToolOpen(false)} fullWidth maxWidth="sm">
+            <Dialog
+                open={toolOpen}
+                onClose={() => !submitting && setToolOpen(false)}
+                fullWidth
+                maxWidth="md"
+                scroll="paper"
+            >
                 <DialogTitle>{t('workSessionToolChange')}</DialogTitle>
-                <DialogContent>
-                    <Typography sx={{mt: 1}} color="text.secondary">
-                        {t('workSessionToolChangeTbd')}
-                    </Typography>
+                <DialogContent dividers sx={{overflow: 'auto'}}>
+                    {setupModalLoading ? (
+                        <Stack direction="row" alignItems="center" spacing={1.5} sx={{py: 2}}>
+                            <CircularProgress size={22} />
+                            <Typography variant="body2" color="text.secondary">
+                                {t('workSessionSetupLoading')}
+                            </Typography>
+                        </Stack>
+                    ) : (
+                        <Stack spacing={2} sx={{mt: 0.5}}>
+                            <Typography variant="body2" color="text.secondary">
+                                {t('workSessionSetupFormHint')}
+                            </Typography>
+                            <Stack direction={{xs: 'column', md: 'row'}} spacing={2} alignItems="flex-start">
+                                <Box sx={{flex: 1, minWidth: {md: 160}}}>
+                                    <Typography variant="subtitle2" gutterBottom color="text.secondary">
+                                        {t('operation')}
+                                    </Typography>
+                                    <Typography variant="body2">{setupModalProto?.operationID?.trim() || '—'}</Typography>
+                                    <Typography variant="subtitle2" gutterBottom color="text.secondary" sx={{mt: 1.5}}>
+                                        {t('workSessionSetupToolId')}
+                                    </Typography>
+                                    <Typography variant="body2">{setupModalProto?.toolID?.trim() || '—'}</Typography>
+                                </Box>
+
+                                <Box sx={{flex: 1, minWidth: 0, width: '100%'}}>
+                                    <Typography variant="subtitle2" gutterBottom>
+                                        {t('heightMeasurement')}
+                                    </Typography>
+                                    {!setupModalProto ? (
+                                        <Typography variant="body2" color="text.secondary">
+                                            {t('workSessionSetupNoPrototype')}
+                                        </Typography>
+                                    ) : setupModalProto.attributiveHeightMeasurement ? (
+                                        <FormControl component="fieldset" variant="standard" sx={{mt: 0.5}}>
+                                            <FormLabel component="legend">{t('okNokChoice')}</FormLabel>
+                                            <RadioGroup
+                                                row
+                                                value={setupHeightOkNok}
+                                                onChange={(e) =>
+                                                    setSetupHeightOkNok(e.target.value === 'ok' ? 'ok' : 'nok')
+                                                }
+                                            >
+                                                <FormControlLabel value="ok" control={<Radio size="small" />} label={t('ok')} />
+                                                <FormControlLabel value="nok" control={<Radio size="small" />} label={t('nok')} />
+                                            </RadioGroup>
+                                        </FormControl>
+                                    ) : (
+                                        <Stack spacing={1} sx={{mt: 0.5}}>
+                                            <Typography variant="body2">
+                                                {t('refHeight')}: {formatSetupProtoNumber(setupModalProto.heightRefValue)}
+                                            </Typography>
+                                            <Typography variant="body2">
+                                                {t('heightMaxPosTolerance')}:{' '}
+                                                {formatSetupProtoNumber(setupModalProto.heightMaxPosTolerance)}
+                                            </Typography>
+                                            <Typography variant="body2">
+                                                {t('heightMaxNegTolerance')}:{' '}
+                                                {formatSetupProtoNumber(setupModalProto.heightMaxNegTolerance)}
+                                            </Typography>
+                                            <TextField
+                                                label={t('workSessionSetupMeasuredValue')}
+                                                value={setupHeightMeasured}
+                                                onChange={(e) => setSetupHeightMeasured(digitsOnly(e.target.value))}
+                                                size="small"
+                                                fullWidth
+                                                inputProps={{inputMode: 'numeric'}}
+                                            />
+                                        </Stack>
+                                    )}
+                                </Box>
+
+                                <Box sx={{flex: 1, minWidth: 0, width: '100%'}}>
+                                    <Typography variant="subtitle2" gutterBottom>
+                                        {t('diameterMeasurement')}
+                                    </Typography>
+                                    {!setupModalProto ? (
+                                        <Typography variant="body2" color="text.secondary">
+                                            {t('workSessionSetupNoPrototype')}
+                                        </Typography>
+                                    ) : setupModalProto.attributiveDiameterMeasurement ? (
+                                        <FormControl component="fieldset" variant="standard" sx={{mt: 0.5}}>
+                                            <FormLabel component="legend">{t('okNokChoice')}</FormLabel>
+                                            <RadioGroup
+                                                row
+                                                value={setupDiamOkNok}
+                                                onChange={(e) =>
+                                                    setSetupDiamOkNok(e.target.value === 'ok' ? 'ok' : 'nok')
+                                                }
+                                            >
+                                                <FormControlLabel value="ok" control={<Radio size="small" />} label={t('ok')} />
+                                                <FormControlLabel value="nok" control={<Radio size="small" />} label={t('nok')} />
+                                            </RadioGroup>
+                                        </FormControl>
+                                    ) : (
+                                        <Stack spacing={1} sx={{mt: 0.5}}>
+                                            <Typography variant="body2">
+                                                {t('refDiameter')}: {formatSetupProtoNumber(setupModalProto.diameterRefValue)}
+                                            </Typography>
+                                            <Typography variant="body2">
+                                                {t('diameterMaxPosTolerance')}:{' '}
+                                                {formatSetupProtoNumber(setupModalProto.diameterMaxPosTolerance)}
+                                            </Typography>
+                                            <Typography variant="body2">
+                                                {t('diameterMaxNegTolerance')}:{' '}
+                                                {formatSetupProtoNumber(setupModalProto.diameterMaxNegTolerance)}
+                                            </Typography>
+                                            <TextField
+                                                label={t('workSessionSetupMeasuredValue')}
+                                                value={setupDiamMeasured}
+                                                onChange={(e) => setSetupDiamMeasured(digitsOnly(e.target.value))}
+                                                size="small"
+                                                fullWidth
+                                                inputProps={{inputMode: 'numeric'}}
+                                            />
+                                        </Stack>
+                                    )}
+                                </Box>
+                            </Stack>
+                        </Stack>
+                    )}
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setToolOpen(false)} disabled={submitting}>
                         {t('cancel')}
                     </Button>
-                    <Button onClick={() => void handleRecordSetup()} variant="contained" disabled={submitting}>
+                    <Button
+                        onClick={() => void handleRecordSetup()}
+                        variant="contained"
+                        disabled={submitting || setupModalLoading}
+                    >
                         {t('workSessionRecordSetup')}
                     </Button>
                 </DialogActions>

@@ -620,9 +620,6 @@ export function PurchaseOrdersManagementPanel() {
                         />
 
                         <Typography variant="subtitle2" sx={{ mt: 1 }}>{t('productOrders')}</Typography>
-                        <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
-                            {t('catalogueIdProductHint')}
-                        </Typography>
                         {productOrderRows.map((row, index) => (
                             <Box
                                 key={index}

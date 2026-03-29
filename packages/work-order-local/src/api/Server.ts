@@ -9,6 +9,7 @@ import type {
     WorkSessionGoodDeltaTO,
     WorkSessionOpenRequestTO,
     WorkSessionResponseTO,
+    WorkSessionSetupProductCreateTO,
 } from "../models/ApiRequests";
 import axios from "axios";
 import {getServerUrl} from "../util/EnvUtils";
@@ -172,10 +173,14 @@ export class Server {
         return r.data;
     }
 
-    /** Records one setup event (e.g. tool change) for the session; response includes updated counts. */
-    static async postProductionSetupProduct(sessionId: number): Promise<WorkSessionResponseTO> {
+    /** Records one setup event (e.g. tool change) for the session; optional measurements forwarded to central. */
+    static async postProductionSetupProduct(
+        sessionId: number,
+        body?: WorkSessionSetupProductCreateTO | null,
+    ): Promise<WorkSessionResponseTO> {
         const r = await axios.post<WorkSessionResponseTO>(
-            `${getServerUrl()}/production/work-sessions/${sessionId}/setup-products`
+            `${getServerUrl()}/production/work-sessions/${sessionId}/setup-products`,
+            body ?? undefined,
         );
         return r.data;
     }

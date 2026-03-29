@@ -112,12 +112,45 @@ export interface QualityInfoStepTO {
     imageDataBase64?: string;
 }
 
+/** Embedded on central product; mirrored from workstation-bound product list. */
+export interface SetupDataPrototypeTO {
+    operationID?: string;
+    toolID?: string;
+    diameterRefValue?: number;
+    diameterMaxPosTolerance?: number;
+    diameterMaxNegTolerance?: number;
+    heightRefValue?: number;
+    heightMaxPosTolerance?: number;
+    heightMaxNegTolerance?: number;
+    attributiveHeightMeasurement?: boolean;
+    attributiveDiameterMeasurement?: boolean;
+}
+
+/** Optional payload when recording setup on a work session. */
+export interface WorkSessionSetupProductCreateTO {
+    measuredHeight?: string;
+    measuredHeightOk?: boolean;
+    measuredDiameter?: string;
+    measuredDiameterOk?: boolean;
+}
+
+export interface SetupProductTO {
+    id?: number;
+    recordedAt?: string;
+    prototypeSnapshot?: SetupDataPrototypeTO;
+    measuredHeight?: string;
+    measuredHeightOk?: boolean;
+    measuredDiameter?: string;
+    measuredDiameterOk?: boolean;
+}
+
 /** Central product for the workstation-bound machine (quality steps editor). */
 export interface BoundMachineProductTO {
     id?: number;
     name?: string;
     reference?: string;
     description?: string;
+    setupDataPrototype?: SetupDataPrototypeTO;
     qualityInfoSteps?: QualityInfoStepTO[];
 }
 
@@ -138,6 +171,7 @@ export interface WorkSessionResponseTO {
     controlProductCount?: number;
     faultyProductCount?: number;
     setupProductCount?: number;
+    setupProducts?: SetupProductTO[];
     productReferenceID?: string;
     operatorQrCode?: string;
     operatorName?: string;
