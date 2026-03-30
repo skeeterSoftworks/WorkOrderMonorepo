@@ -127,6 +127,28 @@ function extractError(err: unknown): string {
     return String(err);
 }
 
+/** Central returns this when the session was auto-closed (e.g. order quantity reached) and a further good-delta is sent. */
+function isWorkSessionAlreadyEndedError(err: unknown): boolean {
+    return extractError(err).includes('WORK_SESSION_ALREADY_ENDED');
+}
+
+function sessionIndicatesWorkOrderCompletedTarget(updated: WorkSessionResponseTO): boolean {
+    if (updated.workOrderCompletedByTarget) {
+        return true;
+    }
+    const end = updated.sessionEnd as unknown;
+    if (end == null) {
+        return false;
+    }
+    if (typeof end === 'string') {
+        return end.trim().length > 0;
+    }
+    if (Array.isArray(end)) {
+        return end.length > 0;
+    }
+    return false;
+}
+
 export type ProductionWorkSessionPanelProps = {
     workOrder: ProductionWorkOrderTO;
     /** Called after session ended or aborted; parent should clear work order selection. */
@@ -660,7 +682,7 @@ export function ProductionWorkSessionPanel({
             setSession(updated);
             setGoodOpen(false);
             setGoodDelta('1');
-            if (updated.workOrderCompletedByTarget) {
+            if (sessionIndicatesWorkOrderCompletedTarget(updated)) {
                 setProductionTargetReachedOpen(true);
             }
             if (onWorkOrdersRefresh) {
@@ -671,7 +693,21 @@ export function ProductionWorkSessionPanel({
                 }
             }
         } catch (e) {
-            setActionError(extractError(e));
+            if (isWorkSessionAlreadyEndedError(e)) {
+                setActionError(null);
+                setGoodOpen(false);
+                setGoodDelta('1');
+                setProductionTargetReachedOpen(true);
+                if (onWorkOrdersRefresh) {
+                    try {
+                        await onWorkOrdersRefresh();
+                    } catch {
+                        /* ignore refresh errors */
+                    }
+                }
+            } else {
+                setActionError(extractError(e));
+            }
         } finally {
             setSubmitting(false);
         }
