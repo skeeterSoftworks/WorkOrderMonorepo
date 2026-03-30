@@ -13,6 +13,7 @@ import TableRow from '@mui/material/TableRow';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { MachineTO, MachineBookingTO } from 'sf-common/src/models/ApiRequests';
+import { formatEuropeanDateTime } from 'sf-common/src/util/DateUtils';
 import { Server } from 'sf-common';
 
 const MAX_CALENDAR_RANGE_DAYS_INCLUSIVE = 14;
@@ -133,7 +134,7 @@ export function ProductionPanel() {
     const formatDateTime = (value?: string): string => {
         if (!value) return '';
         const d = new Date(value);
-        return Number.isNaN(d.getTime()) ? value : d.toLocaleString();
+        return Number.isNaN(d.getTime()) ? value : formatEuropeanDateTime(d);
     };
 
     const daysInRange: string[] = (() => {

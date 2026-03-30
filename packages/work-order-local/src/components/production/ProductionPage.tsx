@@ -16,6 +16,7 @@ import {useTranslation} from 'react-i18next';
 import type {ProductionWorkOrderTO} from '../../models/ApiRequests.ts';
 import type {TFunction} from 'i18next';
 import {Server} from '../../api/Server.ts';
+import { formatEuropeanDate } from 'sf-common/src/util/DateUtils';
 import {ProductionWorkSessionPanel} from './ProductionWorkSessionPanel.tsx';
 import {isWorkOrderClosedForProduction} from './workOrderProductionHelpers.ts';
 
@@ -24,7 +25,7 @@ const SELECT_NONE = '';
 function formatDate(value: string | undefined): string {
     if (!value) return '—';
     const d = new Date(value);
-    return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString();
+    return Number.isNaN(d.getTime()) ? value : formatEuropeanDate(d);
 }
 
 function workOrderLabel(wo: ProductionWorkOrderTO, t: TFunction): string {

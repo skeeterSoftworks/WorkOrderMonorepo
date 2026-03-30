@@ -1,35 +1,54 @@
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { isValid, toDate, format, parse } from "date-fns"
-import { enUS } from "date-fns/locale";
-import React from "react";
+import { isValid, format, parse } from "date-fns";
+import { enGB } from "date-fns/locale";
+
+const DATE_DISPLAY = "dd/MM/yy";
+
+function parseFormDate(value: string): Date | null {
+    if (!value?.trim()) {
+        return null;
+    }
+    const v = value.trim();
+    const eu2 = parse(v, "dd/MM/yy", new Date(), { locale: enGB });
+    if (isValid(eu2)) {
+        return eu2;
+    }
+    const eu4 = parse(v, "dd/MM/yyyy", new Date(), { locale: enGB });
+    if (isValid(eu4)) {
+        return eu4;
+    }
+    // Legacy US strings from older clients
+    const us = parse(v, "MM/dd/yyyy", new Date());
+    if (isValid(us)) {
+        return us;
+    }
+    const iso = new Date(v);
+    return isValid(iso) ? iso : null;
+}
 
 export const CustomDatePicker = ({ name, input, input: { value, onChange } }) => {
-  let isValidDate = false;
-  let selected: Date | null = null;
+    let selected: Date | null = null;
 
-  if (value) {
-    const parsedDate = parse(value, "P", new Date(), { locale: enUS });
-    isValidDate = isValid(parsedDate);
-    selected = isValidDate ? toDate(parsedDate) : null;
-  }
-  return (
-    <DatePicker
-      placeholderText={
-        value ? format(new Date(value), "MM/dd/yyyy") : "Enter date"
-      }
-      dateFormat="MM/dd/yyyy"
-      selected={selected} // needs to be checked if it is valid date
-      disabledKeyboardNavigation
-      name={name}
-      onChange={(date) => {
-        // On Change, you should use final-form Field Input prop to change the value
-        if (isValid(date)) {
-          input.onChange(format(new Date(date), "MM/dd/yyyy"));
-        } else {
-          input.onChange(null);
-        }
-      }}
-    />
-  );
+    if (value) {
+        selected = parseFormDate(String(value));
+    }
+    return (
+        <DatePicker
+            placeholderText={
+                selected ? format(selected, DATE_DISPLAY) : "Enter date"
+            }
+            dateFormat={DATE_DISPLAY}
+            selected={selected}
+            disabledKeyboardNavigation
+            name={name}
+            onChange={(date) => {
+                if (isValid(date)) {
+                    input.onChange(format(new Date(date), DATE_DISPLAY));
+                } else {
+                    input.onChange(null);
+                }
+            }}
+        />
+    );
 };

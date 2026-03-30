@@ -16,6 +16,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ApplicationUserTO } from 'sf-common/src/models/ApiRequests';
+import { formatEuropeanDateTime } from 'sf-common/src/util/DateUtils';
 import { Server, ConfirmationModal } from 'sf-common';
 import {
     TableActionsRow,
@@ -44,13 +45,13 @@ export function UsersManagementPanel() {
         if (Array.isArray(value)) {
             const [year, month = 1, day = 1, hour = 0, minute = 0, second = 0] = value;
             const d = new Date(year, month - 1, day, hour, minute, second);
-            return Number.isNaN(d.getTime()) ? '' : d.toLocaleString();
+            return Number.isNaN(d.getTime()) ? '' : formatEuropeanDateTime(d);
         }
 
         // If backend sends ISO string
         if (typeof value === 'string') {
             const d = new Date(value);
-            return Number.isNaN(d.getTime()) ? value : d.toLocaleString();
+            return Number.isNaN(d.getTime()) ? value : formatEuropeanDateTime(d);
         }
 
         return '';

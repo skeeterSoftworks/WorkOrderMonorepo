@@ -25,6 +25,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { PurchaseOrderTO, ProductOrderTO, CustomerTO, ProductTO } from 'sf-common/src/models/ApiRequests';
+import { formatEuropeanDate, formatEuropeanDateTime } from 'sf-common/src/util/DateUtils';
 import { Server, ConfirmationModal } from 'sf-common';
 import { toastActionError, toastActionSuccess, toastServerError } from '../../util/actionToast';
 import {
@@ -372,12 +373,12 @@ export function PurchaseOrdersManagementPanel() {
         if (Array.isArray(value)) {
             const [year, month = 1, day = 1] = value;
             const d = new Date(year, month - 1, day);
-            return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString();
+            return Number.isNaN(d.getTime()) ? '' : formatEuropeanDate(d);
         }
 
         if (typeof value === 'string') {
             const d = new Date(value);
-            return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString();
+            return Number.isNaN(d.getTime()) ? value : formatEuropeanDate(d);
         }
 
         return '';
@@ -386,7 +387,7 @@ export function PurchaseOrdersManagementPanel() {
     const formatDateTime = (isoString: string | undefined): string => {
         if (!isoString || !isoString.trim()) return '';
         const d = new Date(isoString);
-        return Number.isNaN(d.getTime()) ? isoString : d.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
+        return Number.isNaN(d.getTime()) ? isoString : formatEuropeanDateTime(d);
     };
 
     const handleViewDetails = (order: LocalPurchaseOrder) => {

@@ -30,6 +30,7 @@ import {useSearchParams} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
 import type {WorkOrderTO, PurchaseOrderTO, ProductOrderTO, MachineTO, MachineBookingTO} from 'sf-common/src/models/ApiRequests';
 import type {TFunction} from 'i18next';
+import { formatEuropeanDate, formatEuropeanDateTime } from 'sf-common/src/util/DateUtils';
 import {Server, ConfirmationModal} from 'sf-common';
 import {
     TableActionsRow,
@@ -153,7 +154,7 @@ function getProductMachineIdsForSchedule(
 function formatDateTime(value: string | undefined): string {
     if (!value) return '—';
     const d = new Date(value);
-    return Number.isNaN(d.getTime()) ? value : d.toLocaleString();
+    return Number.isNaN(d.getTime()) ? value : formatEuropeanDateTime(d);
 }
 
 function bookingTypeTranslationKey(type: string | undefined): string {
@@ -492,7 +493,7 @@ export function WorkOrdersManagementPanel() {
     const formatDate = (value: string | undefined): string => {
         if (!value) return '';
         const d = new Date(value);
-        return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString();
+        return Number.isNaN(d.getTime()) ? value : formatEuropeanDate(d);
     };
 
     const closeFormModal = () => {
