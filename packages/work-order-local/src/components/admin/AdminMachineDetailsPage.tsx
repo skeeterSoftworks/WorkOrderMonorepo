@@ -28,8 +28,6 @@ export function AdminMachineDetailsPage() {
     const [loadingMachines, setLoadingMachines] = useState(true);
     const [loadingSave, setLoadingSave] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [saveOk, setSaveOk] = useState(false);
-
     useEffect(() => {
         const raw = sessionStorage.getItem('userData');
         const user: LoggedUser | null = raw ? JSON.parse(raw) : null;
@@ -91,7 +89,6 @@ export function AdminMachineDetailsPage() {
             return;
         }
         setError(null);
-        setSaveOk(false);
         setLoadingSave(true);
         const payload: WorkstationMachineConfigTO = {
             machineName: sel.machineName.trim(),
@@ -101,12 +98,10 @@ export function AdminMachineDetailsPage() {
             payload,
             () => {
                 setLoadingSave(false);
-                setSaveOk(true);
                 window.dispatchEvent(new Event('workstationMachineUpdated'));
             },
             () => {
                 setLoadingSave(false);
-                setError(t('saveWorkstationMachineError'));
             }
         );
     };
@@ -122,11 +117,6 @@ export function AdminMachineDetailsPage() {
                 </Toolbar>
             </AppBar>
 
-            {saveOk && (
-                <Alert severity="success" sx={{mb: 2}} onClose={() => setSaveOk(false)}>
-                    {t('workstationMachineSaved')}
-                </Alert>
-            )}
             {error && (
                 <Alert severity="error" sx={{mb: 2}} onClose={() => setError(null)}>
                     {error}

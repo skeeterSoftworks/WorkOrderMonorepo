@@ -451,6 +451,8 @@
   "workSessionGoodFlushHint": "Counts are sent to the server in batches on a schedule configured on the workstation server.",
   "workSessionControlFeaturesRequired": "No measuring features are defined for this product.",
   "workSessionMeasuringSample": "Sample {{index}}",
+  "endProductionWorkSessionSuccess": "Work session ended.",
+  "endProductionWorkSessionError": "Could not end work session.",
   "workSessionAbortSession": "Abort session",
   "workSessionEnd": "End session",
   "workSessionIdLabel": "Session ID",

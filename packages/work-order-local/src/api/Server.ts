@@ -1,18 +1,18 @@
 import type {
-    ApplicationUserTO,
     BoundMachineProductTO,
     QualityInfoStepTO,
-    StationConfigDTO,
-    WorkstationMachineConfigTO,
     WorkSessionControlProductCreateTO,
     WorkSessionFaultyProductCreateTO,
     WorkSessionGoodDeltaTO,
     WorkSessionOpenRequestTO,
     WorkSessionResponseTO,
     WorkSessionSetupProductCreateTO,
+    WorkstationMachineConfigTO,
 } from "../models/ApiRequests";
-import type { SelectOptionsTO } from "sf-common/src/models/ApiRequests";
+import type {SelectOptionsTO} from "sf-common/src/models/ApiRequests";
 import axios from "axios";
+import toast from "react-hot-toast";
+import i18n from "../i18n/I18n";
 import {getServerUrl} from "../util/EnvUtils";
 
 
@@ -24,36 +24,11 @@ export class Server {
             .then(response => onSuccess(response))
             .catch(
                 (error) => {
-                    onError &&  onError(error)
+                    onError && onError(error)
                     console.log(error)
                 });
 
     }
-
-    static addUser(applicationUserTO: ApplicationUserTO, onSuccess: Function, onError?: Function) {
-
-        axios.post(`${getServerUrl()}/users/add`, applicationUserTO)
-            .then(response => {
-                onSuccess(response)
-            })
-            .catch(error => {
-                console.log(error)
-                onError && onError(error)
-            });
-    }
-
-    static editUser(applicationUserTO: ApplicationUserTO, onSuccess: Function, onError?: Function) {
-
-        axios.post(`${getServerUrl()}/users/update`, applicationUserTO)
-            .then(response => {
-                onSuccess(response)
-            })
-            .catch(error => {
-                console.log(error)
-                onError && onError(error)
-            });
-    }
-
 
     static fetchStationConfig(onSuccess: Function, onError?: Function) {
 
@@ -90,9 +65,13 @@ export class Server {
 
     static saveWorkstationMachine(config: WorkstationMachineConfigTO, onSuccess: Function, onError?: Function) {
         axios.post(`${getServerUrl()}/config/workstation-machine`, config)
-            .then(response => onSuccess(response))
-            .catch(error => {
+            .then((response) => {
+                toast.success(i18n.t("workstationMachineSaved"));
+                onSuccess(response);
+            })
+            .catch((error) => {
                 console.log(error);
+                toast.error(i18n.t("saveWorkstationMachineError"));
                 onError && onError(error);
             });
     }
@@ -141,11 +120,18 @@ export class Server {
         productId: number,
         steps: QualityInfoStepTO[],
     ): Promise<BoundMachineProductTO> {
-        const r = await axios.put<BoundMachineProductTO>(
-            `${getServerUrl()}/production/bound-machine/products/${productId}/quality-info-steps`,
-            steps,
-        );
-        return r.data;
+        try {
+            const r = await axios.put<BoundMachineProductTO>(
+                `${getServerUrl()}/production/bound-machine/products/${productId}/quality-info-steps`,
+                steps,
+            );
+            toast.success(i18n.t("qualityInfoStepsSaveOk"));
+            return r.data;
+        } catch (e) {
+            console.log(e);
+            toast.error(i18n.t("qualityInfoStepsSaveError"));
+            throw e;
+        }
     }
 
     static async openProductionWorkSession(body: WorkSessionOpenRequestTO): Promise<WorkSessionResponseTO> {
@@ -153,9 +139,25 @@ export class Server {
         return r.data;
     }
 
-    static async endProductionWorkSession(sessionId: number): Promise<WorkSessionResponseTO> {
-        const r = await axios.post<WorkSessionResponseTO>(`${getServerUrl()}/production/work-sessions/${sessionId}/end`);
-        return r.data;
+    /**
+     * @param silent - If true, no success/error toasts (e.g. best-effort end on component unmount).
+     */
+    static async endProductionWorkSession(sessionId: number, silent = false): Promise<WorkSessionResponseTO> {
+        try {
+            const r = await axios.post<WorkSessionResponseTO>(
+                `${getServerUrl()}/production/work-sessions/${sessionId}/end`,
+            );
+            if (!silent) {
+                toast.success(i18n.t("endProductionWorkSessionSuccess"));
+            }
+            return r.data;
+        } catch (e) {
+            console.log(e);
+            if (!silent) {
+                toast.error(i18n.t("endProductionWorkSessionError"));
+            }
+            throw e;
+        }
     }
 
     /** Records good count and flushes to central; response body is the updated work session. */
@@ -195,30 +197,6 @@ export class Server {
         return r.data;
     }
 
-    static async getProductionWorkSession(sessionId: number): Promise<WorkSessionResponseTO> {
-        const r = await axios.get<WorkSessionResponseTO>(`${getServerUrl()}/production/work-sessions/${sessionId}`);
-        return r.data;
-    }
-
-    static updateStationConfig(stationConfigDTO: StationConfigDTO, onSuccess: Function, onError?: Function) {
-        axios.post(`${getServerUrl()}/configuration/update_station_config`, stationConfigDTO)
-            .then(response => {
-                onSuccess(response)
-            })
-            .catch(error => {
-                onError && onError(error)
-            });
-    }
-
-    static getAllUsers(onSuccess: Function, onError: Function) {
-        axios.get(`${getServerUrl()}/users/all`)
-            .then(response => onSuccess(response))
-            .catch(error => {
-                console.log(error);
-                onError(error)
-            });
-    }
-
     static getCustomQrCode(customQr: string, onSuccess: Function) {
         axios.get(`${getServerUrl()}/qrcode/generate?qrData=${customQr}`)
             .then(response => {
@@ -241,21 +219,4 @@ export class Server {
             });
     }
 
-    static getProductBySicDataMatrix(sicDataMatrix: string, onSuccess: Function, onError: Function) {
-
-        axios.get(`${getServerUrl()}/qr_messages/find_by_sic_dmc?sicDmc=${sicDataMatrix}`)
-            .then(response => {
-
-                if (response?.data?.responseStatus === "ERROR") {
-                    onError(response?.data.errorMessage)
-                } else {
-                    onSuccess(response.data.data)
-
-                }
-            })
-            .catch(error => {
-                console.error(error)
-                onError(error)
-            });
-    }
 }

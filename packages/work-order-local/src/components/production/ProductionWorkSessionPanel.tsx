@@ -795,7 +795,7 @@ export function ProductionWorkSessionPanel({
         return () => {
             const id = sessionIdRef.current;
             if (id != null) {
-                void Server.endProductionWorkSession(id).catch(() => {});
+                void Server.endProductionWorkSession(id, true).catch(() => {});
             }
             sessionStorage.removeItem(STORAGE_SESSION);
         };

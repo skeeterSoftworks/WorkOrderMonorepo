@@ -48,8 +48,6 @@ export function QualityInfoStepsPage() {
     const [qiImageInputKey, setQiImageInputKey] = useState(0);
 
     const [saving, setSaving] = useState(false);
-    const [saveError, setSaveError] = useState<string | null>(null);
-    const [saveOk, setSaveOk] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -179,8 +177,6 @@ export function QualityInfoStepsPage() {
 
     const onProductChange = (productId: number) => {
         setSelectedProductId(productId);
-        setSaveOk(false);
-        setSaveError(null);
         const p = products.find((x) => x.id === productId);
         const loaded = (p?.qualityInfoSteps ?? []).slice();
         loaded.sort((a, b) => (a.stepNumber ?? 1e9) - (b.stepNumber ?? 1e9));
@@ -191,23 +187,19 @@ export function QualityInfoStepsPage() {
     const handleSave = async () => {
         if (selectedProductId === '' || typeof selectedProductId !== 'number') return;
         setSaving(true);
-        setSaveError(null);
-        setSaveOk(false);
         try {
             const updated = await Server.putBoundMachineProductQualityInfoSteps(
                 selectedProductId,
                 qualityInfoSteps,
             );
-            setSaveOk(true);
             setProducts((prev) =>
                 prev.map((p) => (p.id === updated.id ? { ...p, qualityInfoSteps: updated.qualityInfoSteps } : p)),
             );
             const sorted = (updated.qualityInfoSteps ?? []).slice();
             sorted.sort((a, b) => (a.stepNumber ?? 0) - (b.stepNumber ?? 0));
             setQualityInfoSteps(withSequentialStepNumbers(sorted));
-        } catch (e: unknown) {
-            const msg = e && typeof e === 'object' && 'response' in e ? String((e as any).response?.data ?? '') : '';
-            setSaveError(msg || t('qualityInfoStepsSaveError'));
+        } catch {
+            /* error toast from Server */
         } finally {
             setSaving(false);
         }
@@ -255,8 +247,6 @@ export function QualityInfoStepsPage() {
                                         setSelectedProductId('');
                                         setQualityInfoSteps([]);
                                         resetQualityStepInputs();
-                                        setSaveOk(false);
-                                        setSaveError(null);
                                         return;
                                     }
                                     onProductChange(Number(v));
@@ -459,16 +449,6 @@ export function QualityInfoStepsPage() {
                                     </TableBody>
                                 </Table>
 
-                                {saveError && (
-                                    <Alert severity="error" onClose={() => setSaveError(null)}>
-                                        {saveError}
-                                    </Alert>
-                                )}
-                                {saveOk && (
-                                    <Alert severity="success" onClose={() => setSaveOk(false)}>
-                                        {t('qualityInfoStepsSaveOk')}
-                                    </Alert>
-                                )}
                                 <Button
                                     variant="contained"
                                     onClick={() => void handleSave()}

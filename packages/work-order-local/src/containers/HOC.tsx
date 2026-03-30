@@ -7,6 +7,7 @@ import {AppBarHeader} from '../components/shared/AppBarHeader';
 import "../i18n/I18n"
 import {useTranslation} from 'react-i18next';
 import {useEffect, useState} from "react";
+import {Toaster} from "react-hot-toast";
 
 
 export function HOC(props: any) {
@@ -27,6 +28,7 @@ export function HOC(props: any) {
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline />
+            <Toaster position="top-center" />
             <AppBarHeader/>
             {userData && socketConnected &&
                 <Container style={{maxWidth: "100%"}}>
