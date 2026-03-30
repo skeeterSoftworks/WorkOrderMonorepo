@@ -21,7 +21,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import DownloadIcon from '@mui/icons-material/Download';
 import VisibilityIcon from '@mui/icons-material/Visibility';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { PurchaseOrderTO, ProductOrderTO, CustomerTO, ProductTO } from 'sf-common/src/models/ApiRequests';
@@ -98,6 +98,16 @@ export function PurchaseOrdersManagementPanel() {
         );
     }, []);
 
+    const productsForSelectedCustomer = useMemo(() => {
+        if (selectedCustomerId == null) {
+            return [];
+        }
+        return products.filter((p) => (p.customerIds ?? []).includes(selectedCustomerId));
+    }, [products, selectedCustomerId]);
+
+    const noProductsLinkedForCustomer =
+        selectedCustomerId != null && productsForSelectedCustomer.length === 0;
+
     const loadCustomers = () => {
         Server.getAllCustomers(
             (response: any) => {
@@ -146,6 +156,9 @@ export function PurchaseOrdersManagementPanel() {
     };
 
     const addProductOrderRow = () => {
+        if (noProductsLinkedForCustomer) {
+            return;
+        }
         setProductOrderRows((prev) => [...prev, { quantity: '', pricePerUnit: '', catalogueReference: '' }]);
     };
 
@@ -271,6 +284,7 @@ export function PurchaseOrdersManagementPanel() {
                     description: p.description,
                     reference: (row.catalogueReference ?? '').trim(),
                     machineIds: p.machineIds,
+                    customerIds: p.customerIds,
                 },
                 onEditDone,
                 () => {
@@ -333,6 +347,21 @@ export function PurchaseOrdersManagementPanel() {
                 };
             }),
         );
+    };
+
+    const handleCustomerChange = (customerId: number | undefined) => {
+        setSelectedCustomerId(customerId);
+        setProductOrderRows((rows) => {
+            if (customerId == null) {
+                return rows.map((r) => ({ ...r, productId: undefined, catalogueReference: '' }));
+            }
+            return rows.map((row) => {
+                if (row.productId == null) return row;
+                const p = products.find((pr) => pr.id === row.productId);
+                const ok = p && (p.customerIds ?? []).includes(customerId);
+                return ok ? row : { ...row, productId: undefined, catalogueReference: '' };
+            });
+        });
     };
 
     const formatDeliveryDate = (value: any): string => {
@@ -403,24 +432,27 @@ export function PurchaseOrdersManagementPanel() {
         return found?.id;
     };
 
-    const resolveProductId = (nameOrId: string): number | undefined => {
+    const resolveProductId = (nameOrId: string, customerId: number | undefined): number | undefined => {
         const trimmed = nameOrId.trim();
         if (!trimmed) return undefined;
+        const pool =
+            customerId == null
+                ? []
+                : products.filter((p) => (p.customerIds ?? []).includes(customerId));
         const asNum = Number(trimmed);
         if (!Number.isNaN(asNum) && Number.isInteger(asNum)) {
-            const byId = products.find((p) => p.id === asNum);
+            const byId = pool.find((p) => p.id === asNum);
             if (byId) return byId.id;
         }
         const normalized = trimmed.toLowerCase();
-        const byName = products.find(
-            (p) => p.name && p.name.trim().toLowerCase() === normalized,
-        );
+        const byName = pool.find((p) => p.name && p.name.trim().toLowerCase() === normalized);
         return byName?.id;
     };
 
     const applyParsedOrder = (parsed: ParsedPurchaseOrder) => {
         setSelectedOrderId(undefined);
-        setSelectedCustomerId(resolveCustomerId(parsed.customerCompanyName));
+        const cid = resolveCustomerId(parsed.customerCompanyName);
+        setSelectedCustomerId(cid);
         setCurrency(normalizePurchaseOrderCurrency(parsed.currency));
         setDeliveryDate(parsed.deliveryDate ? parsed.deliveryDate.substring(0, 10) : '');
         setDeliveryTerms(parsed.deliveryTerms);
@@ -430,7 +462,7 @@ export function PurchaseOrdersManagementPanel() {
             parsed.productRows
                 .filter((row) => row.productNameOrId)
                 .map((row) => {
-                    const pid = resolveProductId(row.productNameOrId);
+                    const pid = resolveProductId(row.productNameOrId, cid);
                     const p = pid != null ? products.find((pr) => pr.id === pid) : undefined;
                     const cat = row.catalogueId?.trim() || p?.reference || '';
                     return {
@@ -570,7 +602,9 @@ export function PurchaseOrdersManagementPanel() {
                             select
                             label={t('customer')}
                             value={selectedCustomerId ?? ''}
-                            onChange={(e) => setSelectedCustomerId(e.target.value ? Number(e.target.value) : undefined)}
+                            onChange={(e) =>
+                                handleCustomerChange(e.target.value ? Number(e.target.value) : undefined)
+                            }
                             size="small"
                             fullWidth
                         >
@@ -644,6 +678,11 @@ export function PurchaseOrdersManagementPanel() {
                         />
 
                         <Typography variant="subtitle2" sx={{ mt: 1 }}>{t('productOrders')}</Typography>
+                        {noProductsLinkedForCustomer ? (
+                            <Typography variant="body2" color="error" sx={{ mt: 0.5 }}>
+                                {t('purchaseOrderNoProductsForCustomer')}
+                            </Typography>
+                        ) : null}
                         {productOrderRows.map((row, index) => (
                             <Box
                                 key={index}
@@ -660,13 +699,34 @@ export function PurchaseOrdersManagementPanel() {
                                         )}
                                     size="small"
                                     sx={{ minWidth: 160, flex: 1 }}
+                                    disabled={
+                                        selectedCustomerId == null ||
+                                        (noProductsLinkedForCustomer && row.productId == null)
+                                    }
+                                    helperText={
+                                        selectedCustomerId == null
+                                            ? t('purchaseOrderSelectCustomerForProducts')
+                                            : undefined
+                                    }
                                 >
                                     <MenuItem value="">{t('none')}</MenuItem>
-                                    {products.map((p) => (
-                                        <MenuItem key={p.id} value={p.id}>
-                                            {p.name}
-                                        </MenuItem>
-                                    ))}
+                                    {(() => {
+                                        const pid = row.productId;
+                                        const list = [...productsForSelectedCustomer];
+                                        if (
+                                            pid != null &&
+                                            !list.some((p) => p.id === pid) &&
+                                            products.some((p) => p.id === pid)
+                                        ) {
+                                            const orphan = products.find((p) => p.id === pid);
+                                            if (orphan) list.push(orphan);
+                                        }
+                                        return list.map((p) => (
+                                            <MenuItem key={p.id} value={p.id}>
+                                                {p.name}
+                                            </MenuItem>
+                                        ));
+                                    })()}
                                 </TextField>
                                 <TextField
                                     label={t('catalogueId')}
@@ -701,7 +761,13 @@ export function PurchaseOrdersManagementPanel() {
                                 </IconButton>
                             </Box>
                         ))}
-                        <Button startIcon={<AddIcon />} variant="outlined" size="small" onClick={addProductOrderRow}>
+                        <Button
+                            startIcon={<AddIcon />}
+                            variant="outlined"
+                            size="small"
+                            onClick={addProductOrderRow}
+                            disabled={noProductsLinkedForCustomer}
+                        >
                             {t('addProductOrder')}
                         </Button>
 

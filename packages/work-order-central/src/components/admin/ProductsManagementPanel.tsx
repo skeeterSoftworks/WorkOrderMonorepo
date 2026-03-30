@@ -24,11 +24,14 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Divider from '@mui/material/Divider';
+import ListSubheader from '@mui/material/ListSubheader';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import { alpha } from '@mui/material/styles';
 import type {
     ProductTO,
     MachineTO,
+    CustomerTO,
     MeasuringFeaturePrototypeTO,
     QualityInfoStepTO,
     SetupDataPrototypeTO,
@@ -53,11 +56,14 @@ export function ProductsManagementPanel() {
 
     const [products, setProducts] = useState<LocalProduct[]>([]);
     const [machines, setMachines] = useState<MachineTO[]>([]);
+    const [customers, setCustomers] = useState<CustomerTO[]>([]);
     const [selectedProductId, setSelectedProductId] = useState<number | undefined>(undefined);
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [reference, setReference] = useState('');
     const [selectedMachineIds, setSelectedMachineIds] = useState<number[]>([]);
+    const [selectedCustomerIds, setSelectedCustomerIds] = useState<number[]>([]);
+    const [customerSelectOpen, setCustomerSelectOpen] = useState(false);
     const [productToDelete, setProductToDelete] = useState<LocalProduct | null>(null);
     const [formModalOpen, setFormModalOpen] = useState(false);
 
@@ -105,6 +111,7 @@ export function ProductsManagementPanel() {
     useEffect(() => {
         loadProducts();
         loadMachines();
+        loadCustomers();
     }, []);
 
     useEffect(() => {
@@ -124,6 +131,18 @@ export function ProductsManagementPanel() {
                 if (Array.isArray(response?.data)) data = response.data;
                 else if (Array.isArray(response?.data?.data)) data = response.data.data;
                 setMachines(data);
+            },
+            () => {},
+        );
+    };
+
+    const loadCustomers = () => {
+        Server.getAllCustomers(
+            (response: any) => {
+                let data: CustomerTO[] = [];
+                if (Array.isArray(response?.data)) data = response.data;
+                else if (Array.isArray(response?.data?.data)) data = response.data.data;
+                setCustomers(data);
             },
             () => {},
         );
@@ -160,6 +179,8 @@ export function ProductsManagementPanel() {
         setDescription('');
         setReference('');
         setSelectedMachineIds([]);
+        setSelectedCustomerIds([]);
+        setCustomerSelectOpen(false);
 
         setMeasuringFeaturePrototypes([]);
         setProtoCatalogueId('');
@@ -194,6 +215,11 @@ export function ProductsManagementPanel() {
     const handleMachineIdsChange = (value: unknown) => {
         const ids = Array.isArray(value) ? value : [value];
         setSelectedMachineIds(ids.filter((v): v is number => typeof v === 'number'));
+    };
+
+    const handleCustomerIdsChange = (value: unknown) => {
+        const ids = Array.isArray(value) ? value : [value];
+        setSelectedCustomerIds(ids.filter((v): v is number => typeof v === 'number'));
     };
 
     const resetPrototypeInputs = () => {
@@ -341,11 +367,13 @@ export function ProductsManagementPanel() {
     };
 
     const handleEditClick = (product: LocalProduct) => {
+        setCustomerSelectOpen(false);
         setSelectedProductId(product.id as number | undefined);
         setName(product.name || '');
         setDescription(product.description || '');
         setReference(product.reference || '');
         setSelectedMachineIds(product.machineIds ?? []);
+        setSelectedCustomerIds(product.customerIds ?? []);
         setMeasuringFeaturePrototypes(product.measuringFeaturePrototypes ?? []);
         resetPrototypeInputs();
         const sd = product.setupDataPrototype;
@@ -402,6 +430,7 @@ export function ProductsManagementPanel() {
             description,
             reference: reference.trim(),
             machineIds: selectedMachineIds.length > 0 ? selectedMachineIds : undefined,
+            customerIds: selectedCustomerIds.length > 0 ? selectedCustomerIds : undefined,
             setupDataPrototype: buildSetupDataPrototypePayload(),
             measuringFeaturePrototypes,
             qualityInfoSteps,
@@ -425,6 +454,9 @@ export function ProductsManagementPanel() {
 
     const getMachineNames = (machineIds: number[] | undefined) =>
         (machineIds ?? []).map((id) => machines.find((m) => m.id === id)?.machineName ?? id).filter(Boolean).join(', ') || '—';
+
+    const getCustomerNames = (customerIds: number[] | undefined) =>
+        (customerIds ?? []).map((id) => customers.find((c) => c.id === id)?.companyName ?? id).filter(Boolean).join(', ') || '—';
 
     const handleDeleteClick = (product: LocalProduct) => {
         setProductToDelete(product);
@@ -472,6 +504,7 @@ export function ProductsManagementPanel() {
                                 <TableCell>{t('catalogueId')}</TableCell>
                                 <TableCell>{t('description')}</TableCell>
                                 <TableCell>{t('machine')}</TableCell>
+                                <TableCell>{t('customers')}</TableCell>
                                 <TableCell align="right" sx={tableActionsTableCellSx}>
                                     {t('actions')}
                                 </TableCell>
@@ -484,6 +517,7 @@ export function ProductsManagementPanel() {
                                     <TableCell>{product.reference ?? '—'}</TableCell>
                                     <TableCell>{product.description}</TableCell>
                                     <TableCell>{getMachineNames(product.machineIds)}</TableCell>
+                                    <TableCell>{getCustomerNames(product.customerIds)}</TableCell>
                                     <TableCell align="right" sx={tableActionsTableCellSx}>
                                         <TableActionsRow>
                                             <IconButton
@@ -566,6 +600,81 @@ export function ProductsManagementPanel() {
                                 ))}
                             </TextField>
                         </Box>
+
+                        <TextField
+                            select
+                            SelectProps={{
+                                multiple: true,
+                                open: customerSelectOpen,
+                                onOpen: () => setCustomerSelectOpen(true),
+                                onClose: () => setCustomerSelectOpen(false),
+                                MenuProps: {
+                                    PaperProps: {
+                                        sx: { maxHeight: 360 },
+                                    },
+                                    autoFocus: false,
+                                },
+                                renderValue: (selected) =>
+                                    (selected as number[]).length === 0
+                                        ? t('none')
+                                        : (selected as number[])
+                                              .map(
+                                                  (id) => customers.find((c) => c.id === id)?.companyName ?? id,
+                                              )
+                                              .join(', '),
+                            }}
+                            label={t('customers')}
+                            value={selectedCustomerIds}
+                            onChange={(e) => handleCustomerIdsChange(e.target.value)}
+                            size="small"
+                            fullWidth
+                        >
+                            {customers.map((c) => (
+                                <MenuItem
+                                    key={c.id}
+                                    value={c.id}
+                                    sx={(theme) => ({
+                                        py: 1,
+                                        '&.Mui-selected': {
+                                            backgroundColor: alpha(theme.palette.primary.main, 0.16),
+                                            fontWeight: 600,
+                                            borderLeft: `3px solid ${theme.palette.primary.main}`,
+                                        },
+                                        '&.Mui-selected.Mui-focusVisible': {
+                                            backgroundColor: alpha(theme.palette.primary.main, 0.22),
+                                        },
+                                        '&.Mui-selected:hover': {
+                                            backgroundColor: alpha(theme.palette.primary.main, 0.24),
+                                        },
+                                    })}
+                                >
+                                    {c.companyName}
+                                </MenuItem>
+                            ))}
+                            <Divider component="li" sx={{ my: 0 }} />
+                            <ListSubheader
+                                component="div"
+                                disableSticky
+                                sx={{
+                                    lineHeight: 1,
+                                    p: 0,
+                                    bgcolor: 'background.paper',
+                                }}
+                                onMouseDown={(e) => e.preventDefault()}
+                            >
+                                <Box sx={{ px: 1.25, py: 1 }}>
+                                    <Button
+                                        fullWidth
+                                        variant="contained"
+                                        size="small"
+                                        onMouseDown={(e) => e.preventDefault()}
+                                        onClick={() => setCustomerSelectOpen(false)}
+                                    >
+                                        {t('done')}
+                                    </Button>
+                                </Box>
+                            </ListSubheader>
+                        </TextField>
 
                         <TextField
                             label={t('description')}

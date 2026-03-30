@@ -30,6 +30,8 @@ export interface ProductTO {
     /** Catalogue / reference ID for the product */
     reference?: string,
     machineIds?: number[],
+    /** Customers this product may be sold to (purchase orders). */
+    customerIds?: number[],
     /** Single embedded setup template for the product (central). */
     setupDataPrototype?: SetupDataPrototypeTO,
     measuringFeaturePrototypes?: MeasuringFeaturePrototypeTO[],
