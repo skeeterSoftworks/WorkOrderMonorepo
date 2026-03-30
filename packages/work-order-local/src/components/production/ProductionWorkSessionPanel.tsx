@@ -1,35 +1,23 @@
-import {type Dispatch, type ReactNode, type SetStateAction, useEffect, useRef, useState} from 'react';
+import {type Dispatch, type SetStateAction, useEffect, useRef, useState} from 'react';
 import axios from 'axios';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
-import Backdrop from '@mui/material/Backdrop';
-import TextField from '@mui/material/TextField';
-import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import ListItemText from '@mui/material/ListItemText';
-import IconButton from '@mui/material/IconButton';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import CancelIcon from '@mui/icons-material/Cancel';
-import CloseIcon from '@mui/icons-material/Close';
-import Tooltip from '@mui/material/Tooltip';
-import Checkbox from '@mui/material/Checkbox';
-import FormControl from '@mui/material/FormControl';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import FormLabel from '@mui/material/FormLabel';
-import Radio from '@mui/material/Radio';
-import RadioGroup from '@mui/material/RadioGroup';
 import {useTranslation} from 'react-i18next';
 import type {TFunction} from 'i18next';
 import {Server} from '../../api/Server.ts';
+import {DeclareFaultyProductDialog} from '../../modals/DeclareFaultyProductDialog.tsx';
+import {InitialControlProductDialog} from '../../modals/InitialControlProductDialog.tsx';
+import {ProductionTargetReachedDialog} from '../../modals/ProductionTargetReachedDialog.tsx';
+import {QualityInfoReviewDialog} from '../../modals/QualityInfoReviewDialog.tsx';
+import {RecordControlProductDialog} from '../../modals/RecordControlProductDialog.tsx';
+import {RecordGoodProductsDialog} from '../../modals/RecordGoodProductsDialog.tsx';
+import {ToolChangeSetupDialog} from '../../modals/ToolChangeSetupDialog.tsx';
+import {WorkStationPreconditionsDialog} from '../../modals/WorkStationPreconditionsDialog.tsx';
+import {assessedMeasuredValueForApi, measuredValueToleranceHint} from '../../modals/workSessionMeasuringHelpers.ts';
 import type {
     MeasuringFeaturePrototypeTO,
     ProductionWorkOrderTO,
@@ -42,192 +30,9 @@ import type {
     WorkStationPreconditionItem,
 } from '../../models/ApiRequests.ts';
 import {isWorkOrderClosedForProduction} from './workOrderProductionHelpers.ts';
-import {filterDecimalNumericInput, parseDecimalNumericInputToNumber} from '../../util/decimalNumericInput.ts';
+import {parseDecimalNumericInputToNumber} from '../../util/decimalNumericInput.ts';
 
 const STORAGE_SESSION = 'activeWorkSessionId';
-
-function preconditionText(item: WorkStationPreconditionItem, lang: 'sr' | 'en'): string {
-    if (lang === 'sr') {
-        return (item.sr || item.en || '').trim();
-    }
-    return (item.en || item.sr || '').trim();
-}
-
-function assessedMeasuredValueForApi(raw: string | undefined): string | undefined {
-    const n = parseDecimalNumericInputToNumber(raw ?? '');
-    return n === undefined ? undefined : String(n);
-}
-
-/** Parsed measured value vs prototype absolute [minTolerance, maxTolerance]; no icon if bounds missing or input incomplete. */
-function measuredValueToleranceHint(
-    assessedRaw: string,
-    minTol: number | undefined | null,
-    maxTol: number | undefined | null,
-): 'in' | 'out' | 'none' {
-    const parsed = parseDecimalNumericInputToNumber(assessedRaw);
-    if (parsed === undefined) {
-        return 'none';
-    }
-    if (minTol == null || maxTol == null) {
-        return 'none';
-    }
-    if (!Number.isFinite(minTol) || !Number.isFinite(maxTol) || minTol > maxTol) {
-        return 'none';
-    }
-    if (parsed >= minTol && parsed <= maxTol) {
-        return 'in';
-    }
-    return 'out';
-}
-
-function formatSetupProtoNumber(n: number | undefined | null): string {
-    if (n == null || Number.isNaN(Number(n))) return '—';
-    return String(n);
-}
-
-function qualityStepImageSrc(b64: string | undefined): string | undefined {
-    if (!b64?.trim()) return undefined;
-    return b64.startsWith('data:') ? b64 : `data:image/png;base64,${b64}`;
-}
-
-function technicalDrawingImageSrc(b64: string | undefined): string | undefined {
-    if (!b64?.trim()) return undefined;
-    return b64.startsWith('data:') ? b64 : `data:image/jpeg;base64,${b64}`;
-}
-
-const controlProductDialogPaperSx = {
-    width: 'min(1200px, 96vw)',
-    maxWidth: '96vw',
-    maxHeight: 'min(92vh, 920px)',
-    minHeight: 'min(78vh, 680px)',
-} as const;
-
-function TechnicalDrawingColumn({base64}: {base64?: string}) {
-    const {t} = useTranslation();
-    const [zoomed, setZoomed] = useState(false);
-    const src = technicalDrawingImageSrc(base64);
-    return (
-        <>
-            <Box
-                sx={{
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    borderRadius: 1,
-                    p: 1,
-                    height: '100%',
-                    minHeight: {xs: 120, md: 280},
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    bgcolor: 'action.hover',
-                }}
-            >
-                <Typography variant="caption" color="text.secondary" sx={{alignSelf: 'flex-start', mb: 0.5}}>
-                    {t('technicalDrawing')}
-                </Typography>
-                {src ? (
-                    <Box
-                        component="img"
-                        src={src}
-                        alt=""
-                        onClick={() => setZoomed(true)}
-                        sx={{
-                            width: '100%',
-                            flex: 1,
-                            minHeight: {xs: 160, md: 200},
-                            maxHeight: {xs: 280, md: 'min(58vh, 560px)'},
-                            objectFit: 'contain',
-                            cursor: 'zoom-in',
-                            borderRadius: 0.5,
-                        }}
-                    />
-                ) : (
-                    <Typography variant="body2" color="text.secondary" sx={{py: 2, textAlign: 'center'}}>
-                        {t('technicalDrawingNone')}
-                    </Typography>
-                )}
-            </Box>
-            {src ? (
-                <Backdrop
-                    open={zoomed}
-                    onClick={() => setZoomed(false)}
-                    sx={(theme) => ({
-                        zIndex: theme.zIndex.modal + 2,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                    })}
-                >
-                    <Box
-                        component="img"
-                        src={src}
-                        alt=""
-                        onClick={() => setZoomed(false)}
-                        sx={{
-                            maxHeight: '100vh',
-                            maxWidth: '100vw',
-                            width: 'auto',
-                            height: 'auto',
-                            objectFit: 'contain',
-                            cursor: 'zoom-out',
-                            p: 1,
-                            boxSizing: 'border-box',
-                        }}
-                    />
-                </Backdrop>
-            ) : null}
-        </>
-    );
-}
-
-function ControlProductModalBody({
-    hint,
-    prototypes,
-    assessments,
-    onAssessmentChange,
-    technicalDrawingBase64,
-}: {
-    hint?: ReactNode;
-    prototypes: MeasuringFeaturePrototypeTO[];
-    assessments: WorkSessionMeasuringFeatureInputTO[];
-    onAssessmentChange: (
-        index: number,
-        field: keyof WorkSessionMeasuringFeatureInputTO,
-        value: string | boolean
-    ) => void;
-    technicalDrawingBase64?: string;
-}) {
-    return (
-        <Box
-            sx={{
-                display: 'flex',
-                flexDirection: {xs: 'column', md: 'row'},
-                gap: 2,
-                alignItems: 'flex-start',
-                minHeight: {md: 'min(68vh, 600px)'},
-            }}
-        >
-            <Box sx={{flex: {md: '1 1 75%'}, minWidth: 0, width: {xs: '100%', md: '75%'}}}>
-                {hint}
-                <MeasuringFeaturesForm
-                    prototypes={prototypes}
-                    assessments={assessments}
-                    onAssessmentChange={onAssessmentChange}
-                />
-            </Box>
-            <Box
-                sx={{
-                    flex: {md: '0 0 25%'},
-                    width: {xs: '100%', md: '25%'},
-                    maxWidth: {xs: '100%', md: '25%'},
-                    alignSelf: 'stretch',
-                }}
-            >
-                <TechnicalDrawingColumn base64={technicalDrawingBase64} />
-            </Box>
-        </Box>
-    );
-}
 
 function buildAssessmentsFromPrototypes(prototypes: MeasuringFeaturePrototypeTO[]): WorkSessionMeasuringFeatureInputTO[] {
     return prototypes.map((p) => {
@@ -320,180 +125,6 @@ function extractError(err: unknown): string {
         return err.message;
     }
     return String(err);
-}
-
-function MeasuringFeaturesForm({
-    prototypes,
-    assessments,
-    onAssessmentChange,
-}: {
-    prototypes: MeasuringFeaturePrototypeTO[];
-    assessments: WorkSessionMeasuringFeatureInputTO[];
-    onAssessmentChange: (
-        index: number,
-        field: keyof WorkSessionMeasuringFeatureInputTO,
-        value: string | boolean
-    ) => void;
-}) {
-    const {t} = useTranslation();
-    return (
-        <Stack spacing={2} sx={{mt: 1}}>
-            {prototypes.map((proto, index) => {
-                const assessment = assessments[index];
-                const checkType = proto.checkType;
-                const isMeasured = checkType === 'MEASURED';
-                const isAttributive = checkType === 'ATTRIBUTIVE';
-                const assessedValue = typeof assessment?.assessedValue === 'string' ? assessment.assessedValue : '';
-                const assessedValueGood = Boolean(assessment?.assessedValueGood);
-                const rangeHint = isMeasured
-                    ? measuredValueToleranceHint(assessedValue, proto.minTolerance, proto.maxTolerance)
-                    : 'none';
-
-                return (
-                    <Box
-                        key={proto.catalogueId ?? index}
-                        sx={{border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5}}
-                    >
-                        <Stack direction={{xs: 'column', md: 'row'}} spacing={2} alignItems="stretch">
-                            {/* Column 1: catalogueID, class, frequency */}
-                            <Box sx={{flex: 1, minWidth: 220}}>
-                                <Typography variant="body2">
-                                    {t('catalogueId')}: {proto.catalogueId ?? '—'}
-                                </Typography>
-                                <Typography variant="body2">
-                                    {t('class')}: {proto.classType ?? '—'}
-                                </Typography>
-                                <Typography variant="body2">
-                                    {t('frequency')}: {proto.frequency ?? '—'}
-                                </Typography>
-                            </Box>
-
-                            {/* Column 2: toolType, measuring tool */}
-                            <Box sx={{flex: 1, minWidth: 240}}>
-                                <Typography variant="body2">
-                                    {t('toolType')}: {proto.toolType ?? '—'}
-                                </Typography>
-                                <Typography variant="body2">
-                                    {t('measuringTool')}: {proto.measuringTool ?? '—'}
-                                </Typography>
-                            </Box>
-
-                            {/* Column 3: MEASURED = ref/tolerances + assessed value; ATTRIBUTIVE = OK/NOK → assessedValueGood */}
-                            <Box sx={{flex: 1, minWidth: 260}}>
-                                {isMeasured ? (
-                                    <>
-                                        <Typography variant="body2">
-                                            {t('refValue')}: {proto.refValue ?? '—'}
-                                        </Typography>
-                                        <Typography variant="body2">
-                                            {t('toleranceMin')}: {proto.minTolerance ?? '—'}
-                                        </Typography>
-                                        <Typography variant="body2">
-                                            {t('toleranceMax')}: {proto.maxTolerance ?? '—'}
-                                        </Typography>
-                                        <Stack direction="row" spacing={0.75} alignItems="center" sx={{mt: 1}}>
-                                            <TextField
-                                                label={t('assessedValue')}
-                                                value={assessedValue}
-                                                onChange={(e) =>
-                                                    onAssessmentChange(
-                                                        index,
-                                                        'assessedValue',
-                                                        filterDecimalNumericInput(e.target.value),
-                                                    )
-                                                }
-                                                size="small"
-                                                fullWidth
-                                                inputProps={{inputMode: 'decimal'}}
-                                                sx={{flex: 1, minWidth: 0}}
-                                            />
-                                            {rangeHint === 'in' ? (
-                                                <Tooltip title={t('measuredValueInTolerance')}>
-                                                    <CheckCircleIcon
-                                                        color="success"
-                                                        fontSize="medium"
-                                                        sx={{flexShrink: 0}}
-                                                        aria-label={t('measuredValueInTolerance')}
-                                                    />
-                                                </Tooltip>
-                                            ) : rangeHint === 'out' ? (
-                                                <Tooltip title={t('measuredValueOutOfTolerance')}>
-                                                    <CancelIcon
-                                                        color="error"
-                                                        fontSize="medium"
-                                                        sx={{flexShrink: 0}}
-                                                        aria-label={t('measuredValueOutOfTolerance')}
-                                                    />
-                                                </Tooltip>
-                                            ) : null}
-                                        </Stack>
-                                    </>
-                                ) : isAttributive ? (
-                                    <FormControl sx={{mt: 0.5}} component="fieldset" variant="standard">
-                                        <FormLabel component="legend">{t('okNokChoice')}</FormLabel>
-                                        <RadioGroup
-                                            row
-                                            value={assessedValueGood ? 'ok' : 'nok'}
-                                            onChange={(e) =>
-                                                onAssessmentChange(
-                                                    index,
-                                                    'assessedValueGood',
-                                                    e.target.value === 'ok',
-                                                )
-                                            }
-                                        >
-                                            <FormControlLabel
-                                                value="ok"
-                                                control={<Radio size="small" />}
-                                                label={t('ok')}
-                                            />
-                                            <FormControlLabel
-                                                value="nok"
-                                                control={<Radio size="small" />}
-                                                label={t('nok')}
-                                            />
-                                        </RadioGroup>
-                                    </FormControl>
-                                ) : (
-                                    <>
-                                        <Typography variant="body2">
-                                            {t('toleranceMin')}: {proto.minTolerance ?? '—'}
-                                        </Typography>
-                                        <Typography variant="body2">
-                                            {t('toleranceMax')}: {proto.maxTolerance ?? '—'}
-                                        </Typography>
-                                        <FormControlLabel
-                                            sx={{mt: 0.5}}
-                                            control={
-                                                <Checkbox
-                                                    checked={assessedValueGood}
-                                                    onChange={(e) =>
-                                                        onAssessmentChange(
-                                                            index,
-                                                            'assessedValueGood',
-                                                            e.target.checked,
-                                                        )
-                                                    }
-                                                />
-                                            }
-                                            label={t('assessedValueGood')}
-                                        />
-                                    </>
-                                )}
-                            </Box>
-                        </Stack>
-
-                        {/* Description row underneath */}
-                        <Box sx={{mt: 1}}>
-                            <Typography variant="body2" color="text.secondary">
-                                {t('description')}: {proto.description ?? '—'}
-                            </Typography>
-                        </Box>
-                    </Box>
-                );
-            })}
-        </Stack>
-    );
 }
 
 export type ProductionWorkSessionPanelProps = {
@@ -1224,221 +855,60 @@ export function ProductionWorkSessionPanel({
                 </Box>
             )}
 
-            <Dialog
+            <WorkStationPreconditionsDialog
                 open={workStationPreconditionsOpen}
                 onClose={() => setWorkStationPreconditionsOpen(false)}
-                fullWidth
-                maxWidth="sm"
-            >
-                <DialogTitle sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', pr: 1}}>
-                    {t('workStationPreconditionsTitle')}
-                    <IconButton
-                        aria-label={t('close')}
-                        onClick={() => setWorkStationPreconditionsOpen(false)}
-                        size="small"
-                    >
-                        <CloseIcon />
-                    </IconButton>
-                </DialogTitle>
-                <DialogContent dividers>
-                    {loadingPreconditions && (
-                        <Box sx={{display: 'flex', justifyContent: 'center', py: 3}}>
-                            <CircularProgress size={36} />
-                        </Box>
-                    )}
-                    {!loadingPreconditions && preconditionsFetchErrorKey && (
-                        <Typography color="error" variant="body2">
-                            {t(preconditionsFetchErrorKey)}
-                        </Typography>
-                    )}
-                    {!loadingPreconditions && !preconditionsFetchErrorKey && (
-                        <List dense disablePadding>
-                            {preconditionItems.map((item, index) => {
-                                const text = preconditionText(item, lang);
-                                if (!text) return null;
-                                return (
-                                    <ListItem
-                                        key={index}
-                                        secondaryAction={
-                                            <CheckCircleIcon color="success" fontSize="small" aria-hidden />
-                                        }
-                                        sx={{'& .MuiListItemSecondaryAction-root': {right: 8}}}
-                                    >
-                                        <ListItemText primary={text} primaryTypographyProps={{variant: 'body2'}} />
-                                    </ListItem>
-                                );
-                            })}
-                        </List>
-                    )}
-                </DialogContent>
-                <DialogActions sx={{px: 3, pb: 2}}>
-                    <Button variant="outlined" color="primary" onClick={() => setWorkStationPreconditionsOpen(false)}>
-                        {t('close')}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                loading={loadingPreconditions}
+                fetchErrorKey={preconditionsFetchErrorKey}
+                items={preconditionItems}
+                lang={lang}
+            />
 
-            <Dialog open={qualityInfoModalOpen} fullWidth maxWidth="md" disableEscapeKeyDown onClose={() => {}}>
-                <DialogTitle>{t('qualityInfoReviewTitle')}</DialogTitle>
-                <DialogContent>
-                    {qualityInfoSteps.length > 0 && (
-                        <Stack spacing={2} sx={{mt: 1}}>
-                            <Typography variant="body2" color="text.secondary">
-                                {t('qualityInfoStepOf', {
-                                    current: qualityInfoStepIndex + 1,
-                                    total: qualityInfoSteps.length,
-                                })}
-                            </Typography>
-                            {(() => {
-                                const step = qualityInfoSteps[qualityInfoStepIndex];
-                                const src = qualityStepImageSrc(step?.imageDataBase64);
-                                return (
-                                    <>
-                                        {src ? (
-                                            <Box
-                                                component="img"
-                                                src={src}
-                                                alt=""
-                                                sx={{
-                                                    width: '100%',
-                                                    maxHeight: 360,
-                                                    objectFit: 'contain',
-                                                }}
-                                            />
-                                        ) : (
-                                            <Typography variant="body2" color="text.secondary">
-                                                {t('qualityInfoNoImage')}
-                                            </Typography>
-                                        )}
-                                        <Typography variant="body1" sx={{whiteSpace: 'pre-wrap'}}>
-                                            {step?.stepDescription?.trim() ? step.stepDescription : '—'}
-                                        </Typography>
-                                    </>
-                                );
-                            })()}
-                        </Stack>
-                    )}
-                </DialogContent>
-                <DialogActions sx={{flexWrap: 'wrap', gap: 1}}>
-                    <Button onClick={() => void abortQualityInfoReview()} color="inherit" disabled={openingSession}>
-                        {t('workSessionAbortSession')}
-                    </Button>
-                    <Box sx={{flexGrow: 1}} />
-                    {qualityInfoStepIndex > 0 && (
-                        <Button onClick={() => setQualityInfoStepIndex((i) => i - 1)} disabled={openingSession}>
-                            {t('previous')}
-                        </Button>
-                    )}
-                    {qualityInfoStepIndex < qualityInfoSteps.length - 1 && (
-                        <Button
-                            variant="contained"
-                            onClick={() => setQualityInfoStepIndex((i) => i + 1)}
-                            disabled={openingSession}
-                        >
-                            {t('next')}
-                        </Button>
-                    )}
-                    {qualityInfoStepIndex === qualityInfoSteps.length - 1 && qualityInfoSteps.length > 0 && (
-                        <Button
-                            variant="contained"
-                            color="primary"
-                            onClick={() => void completeQualityInfoAndOpenSession()}
-                            disabled={openingSession}
-                        >
-                            {t('startProduction')}
-                        </Button>
-                    )}
-                </DialogActions>
-            </Dialog>
+            <QualityInfoReviewDialog
+                open={qualityInfoModalOpen}
+                steps={qualityInfoSteps}
+                stepIndex={qualityInfoStepIndex}
+                openingSession={openingSession}
+                onAbortSession={() => void abortQualityInfoReview()}
+                onStepChange={(idx) => setQualityInfoStepIndex(idx)}
+                onStartProduction={() => void completeQualityInfoAndOpenSession()}
+            />
 
-            <Dialog
+            <InitialControlProductDialog
                 open={initialModalOpen}
-                fullWidth
-                maxWidth={false}
-                disableEscapeKeyDown
-                PaperProps={{sx: controlProductDialogPaperSx}}
-            >
-                <DialogTitle>{t('workSessionMandatoryFirstControl')}</DialogTitle>
-                <DialogContent dividers sx={{overflow: 'auto'}}>
-                    <ControlProductModalBody
-                        hint={
-                            <Typography variant="body2" color="text.secondary" sx={{mb: 1}}>
-                                {t('workSessionMandatoryFirstControlHint')}
-                            </Typography>
-                        }
-                        prototypes={session?.measuringFeaturePrototypes ?? []}
-                        assessments={rowsInitial}
-                        onAssessmentChange={(i, field, value) =>
-                            updateAssessment(setRowsInitial, i, field, value)
-                        }
-                        technicalDrawingBase64={session?.technicalDrawingBase64}
-                    />
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => void abortInitialSession()} color="inherit" disabled={submitting}>
-                        {t('workSessionAbortSession')}
-                    </Button>
-                    <Button
-                        onClick={() => void handleSaveInitialControl()}
-                        variant="contained"
-                        disabled={submitting || !initialControlAssessmentsComplete}
-                    >
-                        {t('save')}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                submitting={submitting}
+                initialControlAssessmentsComplete={initialControlAssessmentsComplete}
+                prototypes={session?.measuringFeaturePrototypes ?? []}
+                assessments={rowsInitial}
+                technicalDrawingBase64={session?.technicalDrawingBase64}
+                onAssessmentChange={(i, field, value) => updateAssessment(setRowsInitial, i, field, value)}
+                onAbortSession={() => void abortInitialSession()}
+                onSave={() => void handleSaveInitialControl()}
+            />
 
-            <Dialog
+            <DeclareFaultyProductDialog
                 open={faultyOpen}
                 onClose={() => closeFaultyModalReopenControlIfNeeded()}
-                fullWidth
-                maxWidth="sm"
-            >
-                <DialogTitle>{t('workSessionDeclareFaulty')}</DialogTitle>
-                <DialogContent>
-                    <Stack spacing={1.5} sx={{mt: 1}}>
-                        <TextField label={t('reason')} value={faultyReason} onChange={(e) => setFaultyReason(e.target.value)} fullWidth />
-                        <TextField
-                            select
-                            label={t('workSessionRejectCause')}
-                            value={faultyCause}
-                            onChange={(e) => setFaultyCause(e.target.value)}
-                            fullWidth
-                        >
-                            <MenuItem value="">{t('none')}</MenuItem>
-                            {(() => {
-                                const opts = [...rejectCauseOptions];
-                                if (faultyCause && !opts.includes(faultyCause)) {
-                                    opts.push(faultyCause);
-                                }
-                                return opts.map((cause) => (
-                                    <MenuItem key={cause} value={cause}>
-                                        {cause}
-                                    </MenuItem>
-                                ));
-                            })()}
-                        </TextField>
-                        <TextField
-                            label={t('comment')}
-                            value={faultyComment}
-                            onChange={(e) => setFaultyComment(e.target.value)}
-                            fullWidth
-                            multiline
-                            minRows={2}
-                        />
-                    </Stack>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => closeFaultyModalReopenControlIfNeeded()}>{t('cancel')}</Button>
-                    <Button onClick={() => void handleSaveFaulty()} variant="contained" disabled={submitting}>
-                        {t('save')}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                submitting={submitting}
+                rejectCauseOptions={rejectCauseOptions}
+                faultyReason={faultyReason}
+                onFaultyReasonChange={setFaultyReason}
+                faultyCause={faultyCause}
+                onFaultyCauseChange={setFaultyCause}
+                faultyComment={faultyComment}
+                onFaultyCommentChange={setFaultyComment}
+                onSave={() => void handleSaveFaulty()}
+            />
 
-            <Dialog
+            <RecordControlProductDialog
                 open={controlOpen}
-                onClose={(_, reason) => {
+                submitting={submitting}
+                recordControlAssessmentsComplete={recordControlAssessmentsComplete}
+                prototypes={session?.measuringFeaturePrototypes ?? []}
+                assessments={rowsControl}
+                technicalDrawingBase64={session?.technicalDrawingBase64}
+                onAssessmentChange={(i, field, value) => updateAssessment(setRowsControl, i, field, value)}
+                onEscapeOrBackdrop={(reason) => {
                     if (!recordControlAssessmentsComplete) {
                         if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
                             setActionError(t('allFieldsRequired'));
@@ -1448,277 +918,45 @@ export function ProductionWorkSessionPanel({
                     setControlOpen(false);
                     setActionError(null);
                 }}
-                disableEscapeKeyDown={!recordControlAssessmentsComplete}
-                fullWidth
-                maxWidth={false}
-                PaperProps={{sx: controlProductDialogPaperSx}}
-            >
-                <DialogTitle>{t('workSessionRecordControl')}</DialogTitle>
-                <DialogContent dividers sx={{overflow: 'auto'}}>
-                    <ControlProductModalBody
-                        prototypes={session?.measuringFeaturePrototypes ?? []}
-                        assessments={rowsControl}
-                        onAssessmentChange={(i, field, value) =>
-                            updateAssessment(setRowsControl, i, field, value)
-                        }
-                        technicalDrawingBase64={session?.technicalDrawingBase64}
-                    />
-                </DialogContent>
-                <DialogActions>
-                    <Button
-                        variant="outlined"
-                        color="inherit"
-                        onClick={() => {
-                            setControlOpen(false);
-                            setActionError(null);
-                        }}
-                        disabled={submitting || !recordControlAssessmentsComplete}
-                    >
-                        {t('cancel')}
-                    </Button>
-                    <Button
-                        onClick={() => void handleSaveOnDemandControl()}
-                        variant="contained"
-                        disabled={submitting || !recordControlAssessmentsComplete}
-                    >
-                        {t('save')}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                onCancel={() => {
+                    setControlOpen(false);
+                    setActionError(null);
+                }}
+                onSave={() => void handleSaveOnDemandControl()}
+            />
 
-            <Dialog
+            <ToolChangeSetupDialog
                 open={toolOpen}
-                onClose={() => !submitting && setToolOpen(false)}
-                fullWidth
-                maxWidth="md"
-                scroll="paper"
-            >
-                <DialogTitle>{t('workSessionToolChange')}</DialogTitle>
-                <DialogContent dividers sx={{overflow: 'auto'}}>
-                    {setupModalLoading ? (
-                        <Stack direction="row" alignItems="center" spacing={1.5} sx={{py: 2}}>
-                            <CircularProgress size={22} />
-                            <Typography variant="body2" color="text.secondary">
-                                {t('workSessionSetupLoading')}
-                            </Typography>
-                        </Stack>
-                    ) : (
-                        <Stack spacing={2} sx={{mt: 0.5}}>
-                            <Typography variant="body2" color="text.secondary">
-                                {t('workSessionSetupFormHint')}
-                            </Typography>
-                            <Stack direction={{xs: 'column', md: 'row'}} spacing={2} alignItems="flex-start">
-                                <Box sx={{flex: 1, minWidth: {md: 160}}}>
-                                    <Typography variant="subtitle2" gutterBottom color="text.secondary">
-                                        {t('operation')}
-                                    </Typography>
-                                    <Typography variant="body2">{setupModalProto?.operationID?.trim() || '—'}</Typography>
-                                    <Typography variant="subtitle2" gutterBottom color="text.secondary" sx={{mt: 1.5}}>
-                                        {t('workSessionSetupToolId')}
-                                    </Typography>
-                                    <Typography variant="body2">{setupModalProto?.toolID?.trim() || '—'}</Typography>
-                                </Box>
+                onClose={() => setToolOpen(false)}
+                submitting={submitting}
+                setupModalLoading={setupModalLoading}
+                setupModalProto={setupModalProto}
+                setupHeightMeasured={setupHeightMeasured}
+                onSetupHeightMeasuredChange={setSetupHeightMeasured}
+                setupHeightOkNok={setupHeightOkNok}
+                onSetupHeightOkNokChange={setSetupHeightOkNok}
+                setupDiamMeasured={setupDiamMeasured}
+                onSetupDiamMeasuredChange={setSetupDiamMeasured}
+                setupDiamOkNok={setupDiamOkNok}
+                onSetupDiamOkNokChange={setSetupDiamOkNok}
+                setupMeasuredHeightRangeHint={setupMeasuredHeightRangeHint}
+                setupMeasuredDiameterRangeHint={setupMeasuredDiameterRangeHint}
+                onRecordSetup={() => void handleRecordSetup()}
+            />
 
-                                <Box sx={{flex: 1, minWidth: 0, width: '100%'}}>
-                                    <Typography variant="subtitle2" gutterBottom>
-                                        {t('heightMeasurement')}
-                                    </Typography>
-                                    {!setupModalProto ? (
-                                        <Typography variant="body2" color="text.secondary">
-                                            {t('workSessionSetupNoPrototype')}
-                                        </Typography>
-                                    ) : setupModalProto.attributiveHeightMeasurement ? (
-                                        <FormControl component="fieldset" variant="standard" sx={{mt: 0.5}}>
-                                            <FormLabel component="legend">{t('okNokChoice')}</FormLabel>
-                                            <RadioGroup
-                                                row
-                                                value={setupHeightOkNok}
-                                                onChange={(e) =>
-                                                    setSetupHeightOkNok(e.target.value === 'ok' ? 'ok' : 'nok')
-                                                }
-                                            >
-                                                <FormControlLabel value="ok" control={<Radio size="small" />} label={t('ok')} />
-                                                <FormControlLabel value="nok" control={<Radio size="small" />} label={t('nok')} />
-                                            </RadioGroup>
-                                        </FormControl>
-                                    ) : (
-                                        <Stack spacing={1} sx={{mt: 0.5}}>
-                                            <Typography variant="body2">
-                                                {t('refHeight')}: {formatSetupProtoNumber(setupModalProto.heightRefValue)}
-                                            </Typography>
-                                            <Typography variant="body2">
-                                                {t('heightMaxNegTolerance')}:{' '}
-                                                {formatSetupProtoNumber(setupModalProto.heightMaxNegTolerance)}
-                                            </Typography>
-                                            <Typography variant="body2">
-                                                {t('heightMaxPosTolerance')}:{' '}
-                                                {formatSetupProtoNumber(setupModalProto.heightMaxPosTolerance)}
-                                            </Typography>
-                                            <Stack direction="row" spacing={0.75} alignItems="center">
-                                                <TextField
-                                                    label={t('workSessionSetupMeasuredValue')}
-                                                    value={setupHeightMeasured}
-                                                    onChange={(e) =>
-                                                        setSetupHeightMeasured(
-                                                            filterDecimalNumericInput(e.target.value),
-                                                        )
-                                                    }
-                                                    size="small"
-                                                    fullWidth
-                                                    inputProps={{inputMode: 'decimal'}}
-                                                    sx={{flex: 1, minWidth: 0}}
-                                                />
-                                                {setupMeasuredHeightRangeHint === 'in' ? (
-                                                    <Tooltip title={t('measuredValueInTolerance')}>
-                                                        <CheckCircleIcon
-                                                            color="success"
-                                                            fontSize="medium"
-                                                            sx={{flexShrink: 0}}
-                                                            aria-label={t('measuredValueInTolerance')}
-                                                        />
-                                                    </Tooltip>
-                                                ) : setupMeasuredHeightRangeHint === 'out' ? (
-                                                    <Tooltip title={t('measuredValueOutOfTolerance')}>
-                                                        <CancelIcon
-                                                            color="error"
-                                                            fontSize="medium"
-                                                            sx={{flexShrink: 0}}
-                                                            aria-label={t('measuredValueOutOfTolerance')}
-                                                        />
-                                                    </Tooltip>
-                                                ) : null}
-                                            </Stack>
-                                        </Stack>
-                                    )}
-                                </Box>
+            <ProductionTargetReachedDialog
+                open={productionTargetReachedOpen}
+                onAcknowledge={() => void acknowledgeProductionTargetReached()}
+            />
 
-                                <Box sx={{flex: 1, minWidth: 0, width: '100%'}}>
-                                    <Typography variant="subtitle2" gutterBottom>
-                                        {t('diameterMeasurement')}
-                                    </Typography>
-                                    {!setupModalProto ? (
-                                        <Typography variant="body2" color="text.secondary">
-                                            {t('workSessionSetupNoPrototype')}
-                                        </Typography>
-                                    ) : setupModalProto.attributiveDiameterMeasurement ? (
-                                        <FormControl component="fieldset" variant="standard" sx={{mt: 0.5}}>
-                                            <FormLabel component="legend">{t('okNokChoice')}</FormLabel>
-                                            <RadioGroup
-                                                row
-                                                value={setupDiamOkNok}
-                                                onChange={(e) =>
-                                                    setSetupDiamOkNok(e.target.value === 'ok' ? 'ok' : 'nok')
-                                                }
-                                            >
-                                                <FormControlLabel value="ok" control={<Radio size="small" />} label={t('ok')} />
-                                                <FormControlLabel value="nok" control={<Radio size="small" />} label={t('nok')} />
-                                            </RadioGroup>
-                                        </FormControl>
-                                    ) : (
-                                        <Stack spacing={1} sx={{mt: 0.5}}>
-                                            <Typography variant="body2">
-                                                {t('refDiameter')}: {formatSetupProtoNumber(setupModalProto.diameterRefValue)}
-                                            </Typography>
-                                            <Typography variant="body2">
-                                                {t('diameterMaxNegTolerance')}:{' '}
-                                                {formatSetupProtoNumber(setupModalProto.diameterMaxNegTolerance)}
-                                            </Typography>
-                                            <Typography variant="body2">
-                                                {t('diameterMaxPosTolerance')}:{' '}
-                                                {formatSetupProtoNumber(setupModalProto.diameterMaxPosTolerance)}
-                                            </Typography>
-                                            <Stack direction="row" spacing={0.75} alignItems="center">
-                                                <TextField
-                                                    label={t('workSessionSetupMeasuredValue')}
-                                                    value={setupDiamMeasured}
-                                                    onChange={(e) =>
-                                                        setSetupDiamMeasured(filterDecimalNumericInput(e.target.value))
-                                                    }
-                                                    size="small"
-                                                    fullWidth
-                                                    inputProps={{inputMode: 'decimal'}}
-                                                    sx={{flex: 1, minWidth: 0}}
-                                                />
-                                                {setupMeasuredDiameterRangeHint === 'in' ? (
-                                                    <Tooltip title={t('measuredValueInTolerance')}>
-                                                        <CheckCircleIcon
-                                                            color="success"
-                                                            fontSize="medium"
-                                                            sx={{flexShrink: 0}}
-                                                            aria-label={t('measuredValueInTolerance')}
-                                                        />
-                                                    </Tooltip>
-                                                ) : setupMeasuredDiameterRangeHint === 'out' ? (
-                                                    <Tooltip title={t('measuredValueOutOfTolerance')}>
-                                                        <CancelIcon
-                                                            color="error"
-                                                            fontSize="medium"
-                                                            sx={{flexShrink: 0}}
-                                                            aria-label={t('measuredValueOutOfTolerance')}
-                                                        />
-                                                    </Tooltip>
-                                                ) : null}
-                                            </Stack>
-                                        </Stack>
-                                    )}
-                                </Box>
-                            </Stack>
-                        </Stack>
-                    )}
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setToolOpen(false)} disabled={submitting}>
-                        {t('cancel')}
-                    </Button>
-                    <Button
-                        onClick={() => void handleRecordSetup()}
-                        variant="contained"
-                        disabled={submitting || setupModalLoading}
-                    >
-                        {t('workSessionRecordSetup')}
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            <Dialog open={productionTargetReachedOpen} onClose={() => void acknowledgeProductionTargetReached()}>
-                <DialogTitle>{t('workOrderProductionTargetReachedTitle')}</DialogTitle>
-                <DialogContent>
-                    <Typography variant="body2" sx={{mt: 1}}>
-                        {t('workOrderProductionTargetReachedBody')}
-                    </Typography>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => void acknowledgeProductionTargetReached()} variant="contained">
-                        {t('close')}
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            <Dialog open={goodOpen} onClose={() => setGoodOpen(false)} fullWidth maxWidth="sm">
-                <DialogTitle>{t('workSessionRecordGood')}</DialogTitle>
-                <DialogContent>
-                    <Stack spacing={1.5} sx={{mt: 1}}>
-                        <TextField
-                            label={t('workSessionGoodCountDelta')}
-                            type="number"
-                            inputProps={{min: 1, step: 1}}
-                            value={goodDelta}
-                            onChange={(e) => setGoodDelta(e.target.value)}
-                            fullWidth
-                            required
-                        />
-                        <Typography variant="caption" color="text.secondary">
-                            {t('workSessionGoodFlushHint')}
-                        </Typography>
-                    </Stack>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setGoodOpen(false)}>{t('cancel')}</Button>
-                    <Button onClick={() => void handleSaveGood()} variant="contained" disabled={submitting}>
-                        {t('save')}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+            <RecordGoodProductsDialog
+                open={goodOpen}
+                onClose={() => setGoodOpen(false)}
+                submitting={submitting}
+                goodDelta={goodDelta}
+                onGoodDeltaChange={setGoodDelta}
+                onSave={() => void handleSaveGood()}
+            />
         </Box>
     );
 }
