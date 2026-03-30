@@ -24,6 +24,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import type { PurchaseOrderTO, ProductOrderTO, CustomerTO, ProductTO } from 'sf-common/src/models/ApiRequests';
 import { formatEuropeanDate, formatEuropeanDateTime } from 'sf-common/src/util/DateUtils';
 import { Server, ConfirmationModal } from 'sf-common';
@@ -47,6 +48,26 @@ type PurchaseOrderCurrency = (typeof PURCHASE_ORDER_CURRENCIES)[number];
 function normalizePurchaseOrderCurrency(value: string | undefined | null): PurchaseOrderCurrency {
     const v = (value ?? '').trim().toUpperCase();
     return v === 'EUR' ? 'EUR' : 'RSD';
+}
+
+function purchaseOrderStatusLabel(status: string | undefined, translate: TFunction): string {
+    const s = status ?? 'CREATED';
+    switch (s) {
+        case 'CREATED':
+            return translate('stateCreated');
+        case 'CONFIRMED':
+            return translate('stateConfirmed');
+        case 'IN_PRODUCTION':
+            return translate('stateInProduction');
+        case 'COMPLETED':
+            return translate('stateCompleted');
+        case 'DELIVERED':
+            return translate('stateDelivered');
+        case 'CANCELLED':
+            return translate('stateCancelled');
+        default:
+            return status ?? '—';
+    }
 }
 
 type ProductOrderRow = {
@@ -550,7 +571,7 @@ export function PurchaseOrdersManagementPanel() {
                                     <TableCell>{order.customer?.companyName}</TableCell>
                                     <TableCell>{catalogueSummary(order)}</TableCell>
                                     <TableCell>{order.currency}</TableCell>
-                                    <TableCell>{order.orderStatus}</TableCell>
+                                    <TableCell>{purchaseOrderStatusLabel(order.orderStatus, t)}</TableCell>
                                     <TableCell>{formatDeliveryDate(order.deliveryDate)}</TableCell>
                                     <TableCell>{order.deliveryTerms}</TableCell>
                                     <TableCell>{order.shippingAddress}</TableCell>

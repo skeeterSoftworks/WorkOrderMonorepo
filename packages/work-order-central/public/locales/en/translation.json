@@ -418,6 +418,7 @@
   "stateInProduction": "In production",
   "stateCompleted": "Completed",
   "stateDelivered": "Delivered",
+  "stateCancelled": "Cancelled",
   "currentState": "Current state",
   "createWorkOrderFromThis": "Create work order from this purchase order",
   "notYet": "Not yet",

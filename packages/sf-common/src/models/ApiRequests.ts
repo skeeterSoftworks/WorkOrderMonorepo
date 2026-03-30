@@ -121,10 +121,11 @@ export interface StationConfigDTO {
     stationType?: string //WORKSTATION | CENTRAL
 }
 
-/** Central `./config/SelectOptions.json` — dropdown sources for products and purchase orders. */
+/** Central `./config/SelectOptions.json` — dropdown sources for products, purchase orders, production rejects, etc. */
 export interface SelectOptionsTO {
     measuringTools?: string[],
     deliveryTerms?: string[],
+    rejectCauses?: string[],
 }
 
 export interface ApplicationUserTO {

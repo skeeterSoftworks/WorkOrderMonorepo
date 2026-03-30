@@ -11,6 +11,7 @@ import type {
     WorkSessionResponseTO,
     WorkSessionSetupProductCreateTO,
 } from "../models/ApiRequests";
+import type { SelectOptionsTO } from "sf-common/src/models/ApiRequests";
 import axios from "axios";
 import {getServerUrl} from "../util/EnvUtils";
 
@@ -89,6 +90,15 @@ export class Server {
 
     static saveWorkstationMachine(config: WorkstationMachineConfigTO, onSuccess: Function, onError?: Function) {
         axios.post(`${getServerUrl()}/config/workstation-machine`, config)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError && onError(error);
+            });
+    }
+
+    static getSelectOptions(onSuccess: Function, onError?: Function) {
+        axios.get<SelectOptionsTO>(`${getServerUrl()}/config/select-options`)
             .then(response => onSuccess(response))
             .catch(error => {
                 console.log(error);

@@ -418,6 +418,7 @@
   "stateInProduction": "U proizvodnji",
   "stateCompleted": "Završen",
   "stateDelivered": "Isporučen",
+  "stateCancelled": "Otkazan",
   "currentState": "Trenutno stanje",
   "createWorkOrderFromThis": "Kreiraj radni nalog na osnovu ove narudžbenice",
   "notYet": "Još ne",

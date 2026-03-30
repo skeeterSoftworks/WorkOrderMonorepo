@@ -9,6 +9,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Backdrop from '@mui/material/Backdrop';
 import TextField from '@mui/material/TextField';
+import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
@@ -486,6 +487,7 @@ export function ProductionWorkSessionPanel({
     const [faultyReason, setFaultyReason] = useState('');
     const [faultyCause, setFaultyCause] = useState('');
     const [faultyComment, setFaultyComment] = useState('');
+    const [rejectCauseOptions, setRejectCauseOptions] = useState<string[]>([]);
 
     const [goodDelta, setGoodDelta] = useState('1');
 
@@ -509,6 +511,18 @@ export function ProductionWorkSessionPanel({
     useEffect(() => {
         sessionIdRef.current = session?.id ?? null;
     }, [session?.id]);
+
+    useEffect(() => {
+        Server.getSelectOptions(
+            (resp: {data?: {rejectCauses?: string[]}}) => {
+                const list = resp?.data?.rejectCauses;
+                if (Array.isArray(list)) {
+                    setRejectCauseOptions(list);
+                }
+            },
+            () => {},
+        );
+    }, []);
 
     useEffect(() => {
         if (!workStationPreconditionsOpen) {
@@ -1285,7 +1299,26 @@ export function ProductionWorkSessionPanel({
                 <DialogContent>
                     <Stack spacing={1.5} sx={{mt: 1}}>
                         <TextField label={t('reason')} value={faultyReason} onChange={(e) => setFaultyReason(e.target.value)} fullWidth />
-                        <TextField label={t('workSessionRejectCause')} value={faultyCause} onChange={(e) => setFaultyCause(e.target.value)} fullWidth />
+                        <TextField
+                            select
+                            label={t('workSessionRejectCause')}
+                            value={faultyCause}
+                            onChange={(e) => setFaultyCause(e.target.value)}
+                            fullWidth
+                        >
+                            <MenuItem value="">{t('none')}</MenuItem>
+                            {(() => {
+                                const opts = [...rejectCauseOptions];
+                                if (faultyCause && !opts.includes(faultyCause)) {
+                                    opts.push(faultyCause);
+                                }
+                                return opts.map((cause) => (
+                                    <MenuItem key={cause} value={cause}>
+                                        {cause}
+                                    </MenuItem>
+                                ));
+                            })()}
+                        </TextField>
                         <TextField
                             label={t('comment')}
                             value={faultyComment}
