@@ -313,7 +313,7 @@ function MeasuringFeaturesForm({
                                 </Typography>
                             </Box>
 
-                            {/* Column 2: toolType, measuring tool, absoluteMeasure checkmark */}
+                            {/* Column 2: toolType, measuring tool */}
                             <Box sx={{flex: 1, minWidth: 240}}>
                                 <Typography variant="body2">
                                     {t('toolType')}: {proto.toolType ?? '—'}
@@ -321,11 +321,6 @@ function MeasuringFeaturesForm({
                                 <Typography variant="body2">
                                     {t('measuringTool')}: {proto.measuringTool ?? '—'}
                                 </Typography>
-                                {proto.absoluteMeasure ? (
-                                    <Typography variant="body2">
-                                        {t('absoluteMeasure')}: ✓
-                                    </Typography>
-                                ) : null}
                             </Box>
 
                             {/* Column 3: MEASURED = ref/tolerances + assessed value; ATTRIBUTIVE = OK/NOK → assessedValueGood */}

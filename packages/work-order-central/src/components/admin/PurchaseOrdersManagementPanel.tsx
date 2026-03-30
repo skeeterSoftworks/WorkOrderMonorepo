@@ -80,11 +80,22 @@ export function PurchaseOrdersManagementPanel() {
     const [detailsOrder, setDetailsOrder] = useState<LocalPurchaseOrder | null>(null);
     const [detailsLoading, setDetailsLoading] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
+    const [deliveryTermsSelectOptions, setDeliveryTermsSelectOptions] = useState<string[]>([]);
 
     useEffect(() => {
         loadOrders();
         loadCustomers();
         loadProducts();
+    }, []);
+
+    useEffect(() => {
+        Server.getSelectOptions(
+            (resp: { data?: { deliveryTerms?: string[] } }) => {
+                const list = resp?.data?.deliveryTerms;
+                if (Array.isArray(list)) setDeliveryTermsSelectOptions(list);
+            },
+            () => {},
+        );
     }, []);
 
     const loadCustomers = () => {
@@ -594,12 +605,25 @@ export function PurchaseOrdersManagementPanel() {
                             InputLabelProps={{ shrink: true }}
                         />
                         <TextField
+                            select
                             label={t('deliveryTerms')}
                             value={deliveryTerms}
                             onChange={(e) => setDeliveryTerms(e.target.value)}
                             size="small"
                             fullWidth
-                        />
+                        >
+                            <MenuItem value="">{t('none')}</MenuItem>
+                            {(() => {
+                                const v = deliveryTerms;
+                                const opts = [...deliveryTermsSelectOptions];
+                                if (v && !opts.includes(v)) opts.push(v);
+                                return opts.map((o) => (
+                                    <MenuItem key={o} value={o}>
+                                        {o}
+                                    </MenuItem>
+                                ));
+                            })()}
+                        </TextField>
                         <TextField
                             label={t('shippingAddress')}
                             value={shippingAddress}

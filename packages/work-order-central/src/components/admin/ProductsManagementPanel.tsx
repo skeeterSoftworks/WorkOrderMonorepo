@@ -68,7 +68,6 @@ export function ProductsManagementPanel() {
     // "Add new prototype" form state (added to `measuringFeaturePrototypes` list).
     const [protoCatalogueId, setProtoCatalogueId] = useState('');
     const [protoDescription, setProtoDescription] = useState('');
-    const [protoAbsoluteMeasure, setProtoAbsoluteMeasure] = useState(false);
     const [protoRefValue, setProtoRefValue] = useState('');
     const [protoMinTolerance, setProtoMinTolerance] = useState('');
     const [protoMaxTolerance, setProtoMaxTolerance] = useState('');
@@ -77,6 +76,7 @@ export function ProductsManagementPanel() {
     const [protoCheckType, setProtoCheckType] = useState<'ATTRIBUTIVE' | 'MEASURED' | ''>('');
     const [protoToolType, setProtoToolType] = useState('');
     const [protoMeasuringTool, setProtoMeasuringTool] = useState('');
+    const [measuringToolSelectOptions, setMeasuringToolSelectOptions] = useState<string[]>([]);
 
     const [setupOpId, setSetupOpId] = useState('');
     const [setupToolId, setSetupToolId] = useState('');
@@ -105,6 +105,16 @@ export function ProductsManagementPanel() {
     useEffect(() => {
         loadProducts();
         loadMachines();
+    }, []);
+
+    useEffect(() => {
+        Server.getSelectOptions(
+            (resp: { data?: { measuringTools?: string[] } }) => {
+                const list = resp?.data?.measuringTools;
+                if (Array.isArray(list)) setMeasuringToolSelectOptions(list);
+            },
+            () => {},
+        );
     }, []);
 
     const loadMachines = () => {
@@ -154,7 +164,6 @@ export function ProductsManagementPanel() {
         setMeasuringFeaturePrototypes([]);
         setProtoCatalogueId('');
         setProtoDescription('');
-        setProtoAbsoluteMeasure(false);
         setProtoRefValue('');
         setProtoMinTolerance('');
         setProtoMaxTolerance('');
@@ -190,7 +199,6 @@ export function ProductsManagementPanel() {
     const resetPrototypeInputs = () => {
         setProtoCatalogueId('');
         setProtoDescription('');
-        setProtoAbsoluteMeasure(false);
         setProtoRefValue('');
         setProtoMinTolerance('');
         setProtoMaxTolerance('');
@@ -280,7 +288,6 @@ export function ProductsManagementPanel() {
             id: undefined,
             catalogueId,
             description: desc,
-            absoluteMeasure: protoAbsoluteMeasure,
             refValue: isAttributive || !protoRefValue.trim()
                 ? undefined
                 : parseDecimalNumericInputToNumber(protoRefValue),
@@ -658,7 +665,7 @@ export function ProductsManagementPanel() {
                                 />
                             </Box>
 
-                            {/* Row 2: measuringType, absoluteMeasure checkbox, measuring tool (and toolType) */}
+                            {/* Row 2: measuringType, measuring tool, toolType */}
                             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                 <TextField
                                     select
@@ -680,22 +687,26 @@ export function ProductsManagementPanel() {
                                     <MenuItem value="ATTRIBUTIVE">{t('attributive')}</MenuItem>
                                     <MenuItem value="MEASURED">{t('measured')}</MenuItem>
                                 </TextField>
-                                <FormControlLabel
-                                    control={
-                                        <Checkbox
-                                            checked={protoAbsoluteMeasure}
-                                            onChange={(e) => setProtoAbsoluteMeasure(e.target.checked)}
-                                        />
-                                    }
-                                    label={t('absoluteMeasure')}
-                                />
                                 <TextField
+                                    select
                                     label={t('measuringTool')}
                                     value={protoMeasuringTool}
                                     onChange={(e) => setProtoMeasuringTool(e.target.value)}
                                     size="small"
                                     sx={{ minWidth: 180 }}
-                                />
+                                >
+                                    <MenuItem value="">{t('none')}</MenuItem>
+                                    {(() => {
+                                        const v = protoMeasuringTool;
+                                        const opts = [...measuringToolSelectOptions];
+                                        if (v && !opts.includes(v)) opts.push(v);
+                                        return opts.map((o) => (
+                                            <MenuItem key={o} value={o}>
+                                                {o}
+                                            </MenuItem>
+                                        ));
+                                    })()}
+                                </TextField>
                                 <TextField
                                     label={t('toolType')}
                                     value={protoToolType}
@@ -767,7 +778,6 @@ export function ProductsManagementPanel() {
                                     <TableCell>{t('description')}</TableCell>
                                     <TableCell>{t('class')}</TableCell>
                                     <TableCell>{t('measuringType')}</TableCell>
-                                    <TableCell>{t('absoluteMeasure')}</TableCell>
                                     <TableCell align="right" sx={tableActionsTableCellSx}>
                                         {t('actions')}
                                     </TableCell>
@@ -787,13 +797,6 @@ export function ProductsManagementPanel() {
                                                       ? t('measured')
                                                       : p.checkType ?? '—'}
                                             </TableCell>
-                                            <TableCell>
-                                                {p.absoluteMeasure == null
-                                                    ? '—'
-                                                    : p.absoluteMeasure
-                                                      ? t('absolute')
-                                                      : t('relative')}
-                                            </TableCell>
                                             <TableCell align="right" sx={tableActionsTableCellSx}>
                                                 <TableActionsRow>
                                                     <IconButton
@@ -810,7 +813,7 @@ export function ProductsManagementPanel() {
                                     ))
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan={6}>
+                                        <TableCell colSpan={5}>
                                             <Typography variant="body2" color="text.secondary">
                                                 {t('none')}
                                             </Typography>

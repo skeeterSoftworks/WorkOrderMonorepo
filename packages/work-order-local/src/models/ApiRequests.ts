@@ -76,7 +76,6 @@ export interface MeasuringFeaturePrototypeTO {
     id?: number
     catalogueId?: string
     description?: string
-    absoluteMeasure?: boolean
     refValue?: number
     minTolerance?: number
     maxTolerance?: number

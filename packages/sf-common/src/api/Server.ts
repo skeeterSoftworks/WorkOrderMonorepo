@@ -1,6 +1,7 @@
 import type {
     ApplicationUserTO,
     StationConfigDTO,
+    SelectOptionsTO,
     PurchaseOrderTO,
     ProductTO,
     CustomerTO,
@@ -356,6 +357,26 @@ export class Server {
             .catch((error) => {
                 console.error(error);
                 onError(error);
+            });
+    }
+
+    static getSelectOptions(onSuccess: Function, onError?: Function) {
+        axios
+            .get<SelectOptionsTO>(`${getServerUrl()}/config/select-options`)
+            .then((response) => onSuccess(response))
+            .catch((error) => {
+                console.log(error);
+                onError && onError(error);
+            });
+    }
+
+    static saveSelectOptions(options: SelectOptionsTO, onSuccess: Function, onError?: Function) {
+        axios
+            .put(`${getServerUrl()}/config/select-options`, options)
+            .then((response) => onSuccess(response))
+            .catch((error) => {
+                console.log(error);
+                onError && onError(error);
             });
     }
 }

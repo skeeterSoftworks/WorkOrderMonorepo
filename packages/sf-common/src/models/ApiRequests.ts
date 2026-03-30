@@ -81,7 +81,6 @@ export interface MeasuringFeaturePrototypeTO {
     id?: number,
     catalogueId?: string,
     description?: string,
-    absoluteMeasure?: boolean,
     refValue?: number,
     minTolerance?: number,
     maxTolerance?: number,
@@ -120,6 +119,12 @@ export interface StationConfigDTO {
     stationType?: string //WORKSTATION | CENTRAL
 }
 
+/** Central `./config/SelectOptions.json` — dropdown sources for products and purchase orders. */
+export interface SelectOptionsTO {
+    measuringTools?: string[],
+    deliveryTerms?: string[],
+}
+
 export interface ApplicationUserTO {
     name?: string,
     surname?: string,
@@ -146,15 +151,11 @@ export interface ToolTO {
 export interface MachineTO {
     id?: number,
     machineName?: string,
-    cycleTime?: number,
-    barLocation?: string,
-    piecesPerBar?: number,
-    barsPerSeries?: number,
-    barsCount?: number,
-    weightPerBar?: number,
-    sumBarWeight?: number,
-    seriesID?: string,
-    tools?: ToolTO[]
+    manufacturer?: string,
+    manufactureYear?: number,
+    internalNumber?: string,
+    serialNumber?: string,
+    location?: string,
 }
 
 export interface ProductOrderTO {
