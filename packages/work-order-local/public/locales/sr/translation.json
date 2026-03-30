@@ -443,6 +443,8 @@
   "workSessionToolChange": "Promena alata",
   "workSessionRecordGood": "Evidentiraj ispravne komade",
   "workSessionRejectCause": "Uzrok odbacivanja",
+  "workSessionControlRejectReasonMeasured": "Izmereno {{measured}}, očekivano {{min}}–{{max}}",
+  "workSessionControlRejectReasonFeatureNok": "{{catalogueId}} — {{verdict}}",
   "workSessionToolChangeTbd": "Tok promene alata još nije implementiran (TBD).",
   "workSessionGoodCountDelta": "Broj ispravnih komada",
   "workSessionGoodDeltaInvalid": "Unesite pozitivan ceo broj ispravnih komada.",

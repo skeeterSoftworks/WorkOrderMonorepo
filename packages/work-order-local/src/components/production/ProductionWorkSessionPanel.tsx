@@ -28,6 +28,7 @@ import FormLabel from '@mui/material/FormLabel';
 import Radio from '@mui/material/Radio';
 import RadioGroup from '@mui/material/RadioGroup';
 import {useTranslation} from 'react-i18next';
+import type {TFunction} from 'i18next';
 import {Server} from '../../api/Server.ts';
 import type {
     MeasuringFeaturePrototypeTO,
@@ -259,6 +260,59 @@ function areControlAssessmentsComplete(
     });
 }
 
+function isMeasuredControlNok(
+    proto: MeasuringFeaturePrototypeTO,
+    row: WorkSessionMeasuringFeatureInputTO | undefined,
+): boolean {
+    if (proto.checkType !== 'MEASURED') return false;
+    const v = row?.assessedValue ?? '';
+    return measuredValueToleranceHint(v, proto.minTolerance, proto.maxTolerance) === 'out';
+}
+
+function isNonMeasuredControlNok(
+    proto: MeasuringFeaturePrototypeTO,
+    row: WorkSessionMeasuringFeatureInputTO | undefined,
+): boolean {
+    if (proto.checkType === 'MEASURED') return false;
+    return !Boolean(row?.assessedValueGood);
+}
+
+/** Non-empty summary when any feature is NOK (out of tolerance or not OK); otherwise null. */
+function buildControlNokRejectReason(
+    prototypes: MeasuringFeaturePrototypeTO[],
+    rows: WorkSessionMeasuringFeatureInputTO[],
+    t: TFunction,
+): string | null {
+    const parts: string[] = [];
+    prototypes.forEach((p, idx) => {
+        const row = rows[idx];
+        if (isMeasuredControlNok(p, row)) {
+            const v = row?.assessedValue ?? '';
+            const parsed = parseDecimalNumericInputToNumber(v);
+            const measuredStr = parsed !== undefined ? String(parsed) : v.trim() || '—';
+            const minStr =
+                p.minTolerance != null && Number.isFinite(Number(p.minTolerance)) ? String(p.minTolerance) : '—';
+            const maxStr =
+                p.maxTolerance != null && Number.isFinite(Number(p.maxTolerance)) ? String(p.maxTolerance) : '—';
+            parts.push(
+                t('workSessionControlRejectReasonMeasured', {
+                    measured: measuredStr,
+                    min: minStr,
+                    max: maxStr,
+                }),
+            );
+        } else if (isNonMeasuredControlNok(p, row)) {
+            parts.push(
+                t('workSessionControlRejectReasonFeatureNok', {
+                    catalogueId: String(p.catalogueId ?? '—'),
+                    verdict: t('nok'),
+                }),
+            );
+        }
+    });
+    return parts.length > 0 ? parts.join('; ') : null;
+}
+
 function extractError(err: unknown): string {
     if (axios.isAxiosError(err)) {
         const d = err.response?.data;
@@ -471,6 +525,8 @@ export function ProductionWorkSessionPanel({
     const [firstControlDone, setFirstControlDone] = useState(false);
 
     const [faultyOpen, setFaultyOpen] = useState(false);
+    /** When opening the reject modal from a control save, cancel reopens this dialog. */
+    const faultyModalReturnToControlRef = useRef<'initial' | 'ondemand' | null>(null);
     const [controlOpen, setControlOpen] = useState(false);
     const [toolOpen, setToolOpen] = useState(false);
     const [setupModalProto, setSetupModalProto] = useState<SetupDataPrototypeTO | null>(null);
@@ -800,6 +856,17 @@ export function ProductionWorkSessionPanel({
             return;
         }
 
+        const nokReason = buildControlNokRejectReason(prototypes, rowsInitial, t);
+        if (nokReason) {
+            faultyModalReturnToControlRef.current = 'initial';
+            setFaultyReason(nokReason);
+            setFaultyCause('');
+            setFaultyComment('');
+            setInitialModalOpen(false);
+            setFaultyOpen(true);
+            return;
+        }
+
         const features: WorkSessionMeasuringFeatureInputTO[] = rowsInitial.map((a) => ({
             catalogueId: a.catalogueId ?? undefined,
             assessedValue: assessedMeasuredValueForApi(a.assessedValue),
@@ -833,6 +900,17 @@ export function ProductionWorkSessionPanel({
             return;
         }
 
+        const nokReason = buildControlNokRejectReason(prototypes, rowsControl, t);
+        if (nokReason) {
+            faultyModalReturnToControlRef.current = 'ondemand';
+            setFaultyReason(nokReason);
+            setFaultyCause('');
+            setFaultyComment('');
+            setControlOpen(false);
+            setFaultyOpen(true);
+            return;
+        }
+
         const features: WorkSessionMeasuringFeatureInputTO[] = rowsControl.map((a) => ({
             catalogueId: a.catalogueId ?? undefined,
             assessedValue: assessedMeasuredValueForApi(a.assessedValue),
@@ -854,6 +932,20 @@ export function ProductionWorkSessionPanel({
         }
     };
 
+    const closeFaultyModalReopenControlIfNeeded = () => {
+        const returnTo = faultyModalReturnToControlRef.current;
+        faultyModalReturnToControlRef.current = null;
+        setFaultyOpen(false);
+        setFaultyReason('');
+        setFaultyCause('');
+        setFaultyComment('');
+        if (returnTo === 'initial') {
+            setInitialModalOpen(true);
+        } else if (returnTo === 'ondemand') {
+            setControlOpen(true);
+        }
+    };
+
     const handleSaveFaulty = async () => {
         if (sessionId == null) return;
         setSubmitting(true);
@@ -865,6 +957,7 @@ export function ProductionWorkSessionPanel({
                 rejectComment: faultyComment || undefined,
             });
             setSession(updated);
+            faultyModalReturnToControlRef.current = null;
             setFaultyOpen(false);
             setFaultyReason('');
             setFaultyCause('');
@@ -1096,9 +1189,10 @@ export function ProductionWorkSessionPanel({
                         <Button
                             size="medium"
                             variant="contained"
-                            sx={{bgcolor: '#c62828', '&:hover': {bgcolor: '#b71c1c'}}}
+                            sx={{bgcolor: '#c62828', '&:hover': {bgcolor: '#b71c1c'}                            }}
                             onClick={() => {
                                 setActionError(null);
+                                faultyModalReturnToControlRef.current = null;
                                 setFaultyOpen(true);
                             }}
                         >
@@ -1294,7 +1388,12 @@ export function ProductionWorkSessionPanel({
                 </DialogActions>
             </Dialog>
 
-            <Dialog open={faultyOpen} onClose={() => setFaultyOpen(false)} fullWidth maxWidth="sm">
+            <Dialog
+                open={faultyOpen}
+                onClose={() => closeFaultyModalReopenControlIfNeeded()}
+                fullWidth
+                maxWidth="sm"
+            >
                 <DialogTitle>{t('workSessionDeclareFaulty')}</DialogTitle>
                 <DialogContent>
                     <Stack spacing={1.5} sx={{mt: 1}}>
@@ -1330,7 +1429,7 @@ export function ProductionWorkSessionPanel({
                     </Stack>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setFaultyOpen(false)}>{t('cancel')}</Button>
+                    <Button onClick={() => closeFaultyModalReopenControlIfNeeded()}>{t('cancel')}</Button>
                     <Button onClick={() => void handleSaveFaulty()} variant="contained" disabled={submitting}>
                         {t('save')}
                     </Button>

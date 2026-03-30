@@ -443,6 +443,8 @@
   "workSessionToolChange": "Tool change",
   "workSessionRecordGood": "Record good products",
   "workSessionRejectCause": "Reject cause",
+  "workSessionControlRejectReasonMeasured": "Measured {{measured}}, expected {{min}}–{{max}}",
+  "workSessionControlRejectReasonFeatureNok": "{{catalogueId}} — {{verdict}}",
   "workSessionToolChangeTbd": "Tool change workflow is not implemented yet (TBD).",
   "workSessionGoodCountDelta": "Good pieces count",
   "workSessionGoodDeltaInvalid": "Enter a positive whole number for good pieces.",
