@@ -21,7 +21,12 @@ export function toastServerError(err: unknown, t: TFunction): void {
         msg = data;
     } else if (data && typeof data === 'object') {
         const o = data as Record<string, unknown>;
-        if (typeof o.message === 'string' && o.message.trim()) msg = o.message;
+        if (typeof o.code === 'string' && o.code.trim()) {
+            const p = o.params;
+            const params =
+                p != null && typeof p === 'object' && !Array.isArray(p) ? (p as Record<string, unknown>) : {};
+            msg = t(o.code, params);
+        } else if (typeof o.message === 'string' && o.message.trim()) msg = o.message;
         else if (typeof o.error === 'string' && o.error.trim()) msg = o.error;
         else if (r.response?.status != null) msg = t('toastActionErrorHttp', { status: r.response.status });
     } else if (r.response?.status != null) {
