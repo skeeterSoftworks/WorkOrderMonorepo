@@ -26,6 +26,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Server } from '../../api/Server.ts';
 import type { BoundMachineProductTO, QualityInfoStepTO, WorkstationMachineConfigTO } from '../../models/ApiRequests.ts';
+import { isPdfDataUrl, normalizeBinaryDataUrl } from 'sf-common/src/util/mediaDataUrl';
 
 function withSequentialStepNumbers(steps: QualityInfoStepTO[]): QualityInfoStepTO[] {
     return steps.map((s, i) => ({ ...s, stepNumber: i + 1 }));
@@ -283,7 +284,7 @@ export function QualityInfoStepsPage() {
                                                 key={qiImageInputKey}
                                                 hidden
                                                 type="file"
-                                                accept="image/*"
+                                                accept="image/*,application/pdf,.pdf"
                                                 onChange={(e) => {
                                                     handleQiImageFile(e.target.files);
                                                     e.target.value = '';
@@ -300,25 +301,37 @@ export function QualityInfoStepsPage() {
                                             </Button>
                                         )}
                                     </Box>
-                                    {(qiImageBase64 && qiImageBase64.length > 0) ||
-                                    (editingQualityStepIndex !== null &&
-                                        qiImageBase64 === undefined &&
-                                        qualityInfoSteps[editingQualityStepIndex]?.imageDataBase64) ? (
-                                        <Box
-                                            component="img"
-                                            alt=""
-                                            src={
-                                                qiImageBase64 && qiImageBase64.length > 0
-                                                    ? qiImageBase64
-                                                    : qualityInfoSteps[editingQualityStepIndex!]?.imageDataBase64?.startsWith(
-                                                          'data:',
-                                                      )
-                                                      ? qualityInfoSteps[editingQualityStepIndex!]!.imageDataBase64!
-                                                      : `data:image/png;base64,${qualityInfoSteps[editingQualityStepIndex!]!.imageDataBase64}`
-                                            }
-                                            sx={{ maxHeight: 120, maxWidth: '100%', objectFit: 'contain' }}
-                                        />
-                                    ) : null}
+                                    {(() => {
+                                        const qiRaw =
+                                            qiImageBase64 && qiImageBase64.length > 0
+                                                ? qiImageBase64
+                                                : editingQualityStepIndex !== null && qiImageBase64 === undefined
+                                                  ? qualityInfoSteps[editingQualityStepIndex]?.imageDataBase64
+                                                  : undefined;
+                                        const qiUrl = qiRaw ? normalizeBinaryDataUrl(qiRaw, 'image/png') : undefined;
+                                        if (!qiUrl) return null;
+                                        return isPdfDataUrl(qiUrl) ? (
+                                            <Box
+                                                component="iframe"
+                                                title=""
+                                                src={qiUrl}
+                                                sx={{
+                                                    maxHeight: 180,
+                                                    minHeight: 100,
+                                                    width: '100%',
+                                                    border: 'none',
+                                                    borderRadius: 1,
+                                                }}
+                                            />
+                                        ) : (
+                                            <Box
+                                                component="img"
+                                                alt=""
+                                                src={qiUrl}
+                                                sx={{ maxHeight: 120, maxWidth: '100%', objectFit: 'contain' }}
+                                            />
+                                        );
+                                    })()}
                                     <TextField
                                         label={t('description')}
                                         value={qiStepDescription}
@@ -405,16 +418,33 @@ export function QualityInfoStepsPage() {
                                                     <TableCell>{s.stepDescription ?? '—'}</TableCell>
                                                     <TableCell>
                                                         {s.imageDataBase64 ? (
-                                                            <Box
-                                                                component="img"
-                                                                alt=""
-                                                                src={
-                                                                    s.imageDataBase64.startsWith('data:')
-                                                                        ? s.imageDataBase64
-                                                                        : `data:image/png;base64,${s.imageDataBase64}`
-                                                                }
-                                                                sx={{ maxHeight: 48, maxWidth: 80, objectFit: 'contain' }}
-                                                            />
+                                                            (() => {
+                                                                const u = normalizeBinaryDataUrl(s.imageDataBase64, 'image/png');
+                                                                if (!u) return '—';
+                                                                return isPdfDataUrl(u) ? (
+                                                                    <Box
+                                                                        component="iframe"
+                                                                        title=""
+                                                                        src={u}
+                                                                        sx={{
+                                                                            height: 52,
+                                                                            width: 72,
+                                                                            border: 'none',
+                                                                        }}
+                                                                    />
+                                                                ) : (
+                                                                    <Box
+                                                                        component="img"
+                                                                        alt=""
+                                                                        src={u}
+                                                                        sx={{
+                                                                            maxHeight: 48,
+                                                                            maxWidth: 80,
+                                                                            objectFit: 'contain',
+                                                                        }}
+                                                                    />
+                                                                );
+                                                            })()
                                                         ) : (
                                                             '—'
                                                         )}

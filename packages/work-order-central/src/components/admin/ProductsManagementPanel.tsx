@@ -38,6 +38,7 @@ import type {
 } from 'sf-common/src/models/ApiRequests';
 import { Server, ConfirmationModal } from 'sf-common';
 import { filterDecimalNumericInput, parseDecimalNumericInputToNumber } from 'sf-common/src/util/DataUtils';
+import { isPdfDataUrl, normalizeBinaryDataUrl } from 'sf-common/src/util/mediaDataUrl';
 import { toastActionSuccess, toastServerError } from '../../util/actionToast';
 import {
     TableActionsRow,
@@ -414,9 +415,7 @@ export function ProductsManagementPanel() {
         resetQualityStepInputs();
         const td = product.technicalDrawingBase64?.trim();
         setTechnicalDrawingBase64(undefined);
-        setTechnicalDrawingLoadedSrc(
-            td ? (td.startsWith('data:') ? td : `data:image/jpeg;base64,${td}`) : undefined
-        );
+        setTechnicalDrawingLoadedSrc(td ? normalizeBinaryDataUrl(td) : undefined);
         setTechnicalDrawingInputKey((k) => k + 1);
         setFormModalOpen(true);
     };
@@ -716,7 +715,7 @@ export function ProductsManagementPanel() {
                                     <input
                                         key={technicalDrawingInputKey}
                                         type="file"
-                                        accept="image/*"
+                                        accept="image/*,application/pdf,.pdf"
                                         hidden
                                         onChange={(e) => {
                                             handleTechnicalDrawingFile(e.target.files);
@@ -742,20 +741,36 @@ export function ProductsManagementPanel() {
                                     {t('clearImage')}
                                 </Button>
                             </Box>
-                            {(technicalDrawingBase64 !== undefined
-                                ? technicalDrawingBase64
-                                : technicalDrawingLoadedSrc) && (
-                                <Box
-                                    component="img"
-                                    alt=""
-                                    src={
-                                        (technicalDrawingBase64 !== undefined
-                                            ? technicalDrawingBase64
-                                            : technicalDrawingLoadedSrc) as string
-                                    }
-                                    sx={{ maxHeight: 160, maxWidth: '100%', objectFit: 'contain', borderRadius: 1 }}
-                                />
-                            )}
+                            {(() => {
+                                const rawTd =
+                                    technicalDrawingBase64 !== undefined
+                                        ? technicalDrawingBase64
+                                        : technicalDrawingLoadedSrc;
+                                const tdUrl = rawTd ? normalizeBinaryDataUrl(rawTd) : undefined;
+                                if (!tdUrl) return null;
+                                return isPdfDataUrl(tdUrl) ? (
+                                    <Box
+                                        component="iframe"
+                                        title=""
+                                        src={tdUrl}
+                                        sx={{
+                                            maxHeight: 200,
+                                            minHeight: 120,
+                                            width: '100%',
+                                            maxWidth: '100%',
+                                            border: 'none',
+                                            borderRadius: 1,
+                                        }}
+                                    />
+                                ) : (
+                                    <Box
+                                        component="img"
+                                        alt=""
+                                        src={tdUrl}
+                                        sx={{ maxHeight: 160, maxWidth: '100%', objectFit: 'contain', borderRadius: 1 }}
+                                    />
+                                );
+                            })()}
                         </Box>
 
                         <Divider variant="middle" sx={{ my: 2, borderWidth: 2, borderColor: 'text.secondary' }} />
@@ -1086,7 +1101,7 @@ export function ProductsManagementPanel() {
                                         key={qiImageInputKey}
                                         hidden
                                         type="file"
-                                        accept="image/*"
+                                        accept="image/*,application/pdf,.pdf"
                                         onChange={(e) => {
                                             handleQiImageFile(e.target.files);
                                             e.target.value = '';
@@ -1101,25 +1116,37 @@ export function ProductsManagementPanel() {
                                     </Button>
                                 )}
                             </Box>
-                            {(qiImageBase64 && qiImageBase64.length > 0) ||
-                            (editingQualityStepIndex !== null &&
-                                qiImageBase64 === undefined &&
-                                qualityInfoSteps[editingQualityStepIndex]?.imageDataBase64) ? (
-                                <Box
-                                    component="img"
-                                    alt=""
-                                    src={
-                                        qiImageBase64 && qiImageBase64.length > 0
-                                            ? qiImageBase64
-                                            : qualityInfoSteps[editingQualityStepIndex!]?.imageDataBase64?.startsWith(
-                                                    'data:',
-                                                )
-                                              ? qualityInfoSteps[editingQualityStepIndex!]!.imageDataBase64!
-                                              : `data:image/png;base64,${qualityInfoSteps[editingQualityStepIndex!]!.imageDataBase64}`
-                                    }
-                                    sx={{ maxHeight: 120, maxWidth: '100%', objectFit: 'contain' }}
-                                />
-                            ) : null}
+                            {(() => {
+                                const qiRaw =
+                                    qiImageBase64 && qiImageBase64.length > 0
+                                        ? qiImageBase64
+                                        : editingQualityStepIndex !== null && qiImageBase64 === undefined
+                                          ? qualityInfoSteps[editingQualityStepIndex]?.imageDataBase64
+                                          : undefined;
+                                const qiUrl = qiRaw ? normalizeBinaryDataUrl(qiRaw, 'image/png') : undefined;
+                                if (!qiUrl) return null;
+                                return isPdfDataUrl(qiUrl) ? (
+                                    <Box
+                                        component="iframe"
+                                        title=""
+                                        src={qiUrl}
+                                        sx={{
+                                            maxHeight: 180,
+                                            minHeight: 100,
+                                            width: '100%',
+                                            border: 'none',
+                                            borderRadius: 1,
+                                        }}
+                                    />
+                                ) : (
+                                    <Box
+                                        component="img"
+                                        alt=""
+                                        src={qiUrl}
+                                        sx={{ maxHeight: 120, maxWidth: '100%', objectFit: 'contain' }}
+                                    />
+                                );
+                            })()}
                             <TextField
                                 label={t('description')}
                                 value={qiStepDescription}
@@ -1210,16 +1237,30 @@ export function ProductsManagementPanel() {
                                             <TableCell>{s.stepDescription ?? '—'}</TableCell>
                                             <TableCell>
                                                 {s.imageDataBase64 ? (
-                                                    <Box
-                                                        component="img"
-                                                        alt=""
-                                                        src={
-                                                            s.imageDataBase64.startsWith('data:')
-                                                                ? s.imageDataBase64
-                                                                : `data:image/png;base64,${s.imageDataBase64}`
-                                                        }
-                                                        sx={{ maxHeight: 48, maxWidth: 80, objectFit: 'contain' }}
-                                                    />
+                                                    (() => {
+                                                        const u = normalizeBinaryDataUrl(s.imageDataBase64, 'image/png');
+                                                        if (!u) return '—';
+                                                        return isPdfDataUrl(u) ? (
+                                                            <Box
+                                                                component="iframe"
+                                                                title=""
+                                                                src={u}
+                                                                sx={{
+                                                                    height: 52,
+                                                                    width: 72,
+                                                                    border: 'none',
+                                                                    verticalAlign: 'middle',
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <Box
+                                                                component="img"
+                                                                alt=""
+                                                                src={u}
+                                                                sx={{ maxHeight: 48, maxWidth: 80, objectFit: 'contain' }}
+                                                            />
+                                                        );
+                                                    })()
                                                 ) : (
                                                     '—'
                                                 )}

@@ -35,4 +35,6 @@ export {
     parseDecimalNumericInputToNumber,
 } from "./util/DataUtils"
 
+export { normalizeBinaryDataUrl, isPdfDataUrl } from "./util/mediaDataUrl"
+
 export {SOCKET_URL, measuringFeaturesTableHeaders, mfClassTypes} from "./constants/Constants"

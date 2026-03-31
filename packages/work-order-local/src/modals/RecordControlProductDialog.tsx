@@ -3,6 +3,8 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
+import Typography from '@mui/material/Typography';
+import Stack from '@mui/material/Stack';
 import {useTranslation} from 'react-i18next';
 import type {MeasuringFeaturePrototypeTO, WorkSessionMeasuringFeatureInputTO} from '../models/ApiRequests';
 import {controlProductDialogPaperSx} from './workSessionDialogStyles';
@@ -12,6 +14,7 @@ export type RecordControlProductDialogProps = {
     open: boolean;
     submitting: boolean;
     recordControlAssessmentsComplete: boolean;
+    showFaultyProductWarning: boolean;
     prototypes: MeasuringFeaturePrototypeTO[];
     assessments: WorkSessionMeasuringFeatureInputTO[];
     technicalDrawingBase64?: string;
@@ -29,6 +32,7 @@ export function RecordControlProductDialog({
     open,
     submitting,
     recordControlAssessmentsComplete,
+    showFaultyProductWarning,
     prototypes,
     assessments,
     technicalDrawingBase64,
@@ -60,22 +64,32 @@ export function RecordControlProductDialog({
                     technicalDrawingBase64={technicalDrawingBase64}
                 />
             </DialogContent>
-            <DialogActions>
-                <Button
-                    variant="outlined"
-                    color="inherit"
-                    onClick={onCancel}
-                    disabled={submitting || !recordControlAssessmentsComplete}
-                >
-                    {t('cancel')}
-                </Button>
-                <Button
-                    onClick={onSave}
-                    variant="contained"
-                    disabled={submitting || !recordControlAssessmentsComplete}
-                >
-                    {t('save')}
-                </Button>
+            <DialogActions sx={{display: 'block', px: 3, pb: 2, pt: 1}}>
+                <Stack spacing={1.5}>
+                    {showFaultyProductWarning ? (
+                        <Typography variant="body2" color="error" sx={{fontWeight: 600}}>
+                            {t('workSessionControlProductFaultyWarning')}
+                        </Typography>
+                    ) : null}
+                    <Stack direction="row" justifyContent="flex-end" spacing={1} flexWrap="wrap" useFlexGap>
+                        <Button
+                            variant="outlined"
+                            color="inherit"
+                            onClick={onCancel}
+                            disabled={submitting || !recordControlAssessmentsComplete}
+                        >
+                            {t('cancel')}
+                        </Button>
+                        <Button
+                            onClick={onSave}
+                            variant="contained"
+                            color={showFaultyProductWarning ? 'error' : 'primary'}
+                            disabled={submitting || !recordControlAssessmentsComplete}
+                        >
+                            {showFaultyProductWarning ? t('workSessionDeclareAsFaulty') : t('save')}
+                        </Button>
+                    </Stack>
+                </Stack>
             </DialogActions>
         </Dialog>
     );

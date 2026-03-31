@@ -464,6 +464,13 @@ export function ProductionWorkSessionPanel({
         session?.measuringFeaturePrototypes ?? [],
         rowsInitial,
     );
+    const sessionPrototypes = session?.measuringFeaturePrototypes ?? [];
+    const showInitialFaultyProductWarning =
+        initialControlAssessmentsComplete &&
+        buildControlNokRejectReason(sessionPrototypes, rowsInitial, t) !== null;
+    const showRecordFaultyProductWarning =
+        recordControlAssessmentsComplete &&
+        buildControlNokRejectReason(sessionPrototypes, rowsControl, t) !== null;
 
     const acknowledgeProductionTargetReached = async () => {
         setProductionTargetReachedOpen(false);
@@ -601,6 +608,7 @@ export function ProductionWorkSessionPanel({
 
     const handleSaveFaulty = async () => {
         if (sessionId == null) return;
+        const reopenControlKind = faultyModalReturnToControlRef.current;
         setSubmitting(true);
         setActionError(null);
         try {
@@ -615,6 +623,18 @@ export function ProductionWorkSessionPanel({
             setFaultyReason('');
             setFaultyCause('');
             setFaultyComment('');
+
+            const protos =
+                updated.measuringFeaturePrototypes ??
+                session?.measuringFeaturePrototypes ??
+                [];
+            if (reopenControlKind === 'initial') {
+                setRowsInitial(buildAssessmentsFromPrototypes(protos));
+                setInitialModalOpen(true);
+            } else if (reopenControlKind === 'ondemand') {
+                setRowsControl(buildAssessmentsFromPrototypes(protos));
+                setControlOpen(true);
+            }
         } catch (e) {
             setActionError(extractError(e));
         } finally {
@@ -914,6 +934,7 @@ export function ProductionWorkSessionPanel({
                 open={initialModalOpen}
                 submitting={submitting}
                 initialControlAssessmentsComplete={initialControlAssessmentsComplete}
+                showFaultyProductWarning={showInitialFaultyProductWarning}
                 prototypes={session?.measuringFeaturePrototypes ?? []}
                 assessments={rowsInitial}
                 technicalDrawingBase64={session?.technicalDrawingBase64}
@@ -940,6 +961,7 @@ export function ProductionWorkSessionPanel({
                 open={controlOpen}
                 submitting={submitting}
                 recordControlAssessmentsComplete={recordControlAssessmentsComplete}
+                showFaultyProductWarning={showRecordFaultyProductWarning}
                 prototypes={session?.measuringFeaturePrototypes ?? []}
                 assessments={rowsControl}
                 technicalDrawingBase64={session?.technicalDrawingBase64}

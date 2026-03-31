@@ -17,16 +17,13 @@ import {useTranslation} from 'react-i18next';
 import type {MeasuringFeaturePrototypeTO, WorkSessionMeasuringFeatureInputTO} from '../models/ApiRequests';
 import {filterDecimalNumericInput} from '../util/decimalNumericInput';
 import {measuredValueToleranceHint} from './workSessionMeasuringHelpers';
-
-function technicalDrawingImageSrc(b64: string | undefined): string | undefined {
-    if (!b64?.trim()) return undefined;
-    return b64.startsWith('data:') ? b64 : `data:image/jpeg;base64,${b64}`;
-}
+import {isPdfDataUrl, normalizeBinaryDataUrl} from 'sf-common/src/util/mediaDataUrl';
 
 function TechnicalDrawingColumn({base64}: {base64?: string}) {
     const {t} = useTranslation();
     const [zoomed, setZoomed] = useState(false);
-    const src = technicalDrawingImageSrc(base64);
+    const src = normalizeBinaryDataUrl(base64);
+    const isPdf = Boolean(src && isPdfDataUrl(src));
     return (
         <>
             <Box
@@ -47,21 +44,48 @@ function TechnicalDrawingColumn({base64}: {base64?: string}) {
                     {t('technicalDrawing')}
                 </Typography>
                 {src ? (
-                    <Box
-                        component="img"
-                        src={src}
-                        alt=""
-                        onClick={() => setZoomed(true)}
-                        sx={{
-                            width: '100%',
-                            flex: 1,
-                            minHeight: {xs: 160, md: 200},
-                            maxHeight: {xs: 280, md: 'min(58vh, 560px)'},
-                            objectFit: 'contain',
-                            cursor: 'zoom-in',
-                            borderRadius: 0.5,
-                        }}
-                    />
+                    isPdf ? (
+                        <Box
+                            onClick={() => setZoomed(true)}
+                            sx={{
+                                width: '100%',
+                                flex: 1,
+                                minHeight: {xs: 160, md: 200},
+                                maxHeight: {xs: 280, md: 'min(58vh, 560px)'},
+                                cursor: 'zoom-in',
+                            }}
+                        >
+                            <Box
+                                component="iframe"
+                                src={src}
+                                title=""
+                                sx={{
+                                    width: '100%',
+                                    height: '100%',
+                                    minHeight: {xs: 160, md: 200},
+                                    border: 'none',
+                                    borderRadius: 0.5,
+                                    display: 'block',
+                                }}
+                            />
+                        </Box>
+                    ) : (
+                        <Box
+                            component="img"
+                            src={src}
+                            alt=""
+                            onClick={() => setZoomed(true)}
+                            sx={{
+                                width: '100%',
+                                flex: 1,
+                                minHeight: {xs: 160, md: 200},
+                                maxHeight: {xs: 280, md: 'min(58vh, 560px)'},
+                                objectFit: 'contain',
+                                cursor: 'zoom-in',
+                                borderRadius: 0.5,
+                            }}
+                        />
+                    )
                 ) : (
                     <Typography variant="body2" color="text.secondary" sx={{py: 2, textAlign: 'center'}}>
                         {t('technicalDrawingNone')}
@@ -79,22 +103,38 @@ function TechnicalDrawingColumn({base64}: {base64?: string}) {
                         justifyContent: 'center',
                     })}
                 >
-                    <Box
-                        component="img"
-                        src={src}
-                        alt=""
-                        onClick={() => setZoomed(false)}
-                        sx={{
-                            maxHeight: '100vh',
-                            maxWidth: '100vw',
-                            width: 'auto',
-                            height: 'auto',
-                            objectFit: 'contain',
-                            cursor: 'zoom-out',
-                            p: 1,
-                            boxSizing: 'border-box',
-                        }}
-                    />
+                    {isPdf ? (
+                        <Box
+                            component="iframe"
+                            src={src}
+                            title=""
+                            onClick={(e) => e.stopPropagation()}
+                            sx={{
+                                width: 'min(92vw, 1200px)',
+                                height: 'min(88vh, 900px)',
+                                border: 'none',
+                                borderRadius: 1,
+                                bgcolor: 'background.paper',
+                            }}
+                        />
+                    ) : (
+                        <Box
+                            component="img"
+                            src={src}
+                            alt=""
+                            onClick={() => setZoomed(false)}
+                            sx={{
+                                maxHeight: '100vh',
+                                maxWidth: '100vw',
+                                width: 'auto',
+                                height: 'auto',
+                                objectFit: 'contain',
+                                cursor: 'zoom-out',
+                                p: 1,
+                                boxSizing: 'border-box',
+                            }}
+                        />
+                    )}
                 </Backdrop>
             ) : null}
         </>

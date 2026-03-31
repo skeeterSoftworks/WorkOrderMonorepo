@@ -8,11 +8,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import {useTranslation} from 'react-i18next';
 import type {QualityInfoStepTO} from '../models/ApiRequests';
-
-function qualityStepImageSrc(b64: string | undefined): string | undefined {
-    if (!b64?.trim()) return undefined;
-    return b64.startsWith('data:') ? b64 : `data:image/png;base64,${b64}`;
-}
+import {isPdfDataUrl, normalizeBinaryDataUrl} from 'sf-common/src/util/mediaDataUrl';
 
 export type QualityInfoReviewDialogProps = {
     open: boolean;
@@ -48,20 +44,35 @@ export function QualityInfoReviewDialog({
                         </Typography>
                         {(() => {
                             const step = steps[stepIndex];
-                            const src = qualityStepImageSrc(step?.imageDataBase64);
+                            const src = normalizeBinaryDataUrl(step?.imageDataBase64, 'image/png');
                             return (
                                 <>
                                     {src ? (
-                                        <Box
-                                            component="img"
-                                            src={src}
-                                            alt=""
-                                            sx={{
-                                                width: '100%',
-                                                maxHeight: 360,
-                                                objectFit: 'contain',
-                                            }}
-                                        />
+                                        isPdfDataUrl(src) ? (
+                                            <Box
+                                                component="iframe"
+                                                src={src}
+                                                title=""
+                                                sx={{
+                                                    width: '100%',
+                                                    maxHeight: 360,
+                                                    minHeight: 280,
+                                                    border: 'none',
+                                                    borderRadius: 1,
+                                                }}
+                                            />
+                                        ) : (
+                                            <Box
+                                                component="img"
+                                                src={src}
+                                                alt=""
+                                                sx={{
+                                                    width: '100%',
+                                                    maxHeight: 360,
+                                                    objectFit: 'contain',
+                                                }}
+                                            />
+                                        )
                                     ) : (
                                         <Typography variant="body2" color="text.secondary">
                                             {t('qualityInfoNoImage')}

@@ -4,6 +4,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Typography from '@mui/material/Typography';
+import Stack from '@mui/material/Stack';
 import {useTranslation} from 'react-i18next';
 import type {MeasuringFeaturePrototypeTO, WorkSessionMeasuringFeatureInputTO} from '../models/ApiRequests';
 import {controlProductDialogPaperSx} from './workSessionDialogStyles';
@@ -13,6 +14,8 @@ export type InitialControlProductDialogProps = {
     open: boolean;
     submitting: boolean;
     initialControlAssessmentsComplete: boolean;
+    /** When assessments are complete but any measure is NOK / out of tolerance. */
+    showFaultyProductWarning: boolean;
     prototypes: MeasuringFeaturePrototypeTO[];
     assessments: WorkSessionMeasuringFeatureInputTO[];
     technicalDrawingBase64?: string;
@@ -29,6 +32,7 @@ export function InitialControlProductDialog({
     open,
     submitting,
     initialControlAssessmentsComplete,
+    showFaultyProductWarning,
     prototypes,
     assessments,
     technicalDrawingBase64,
@@ -53,13 +57,27 @@ export function InitialControlProductDialog({
                     technicalDrawingBase64={technicalDrawingBase64}
                 />
             </DialogContent>
-            <DialogActions>
-                <Button onClick={onAbortSession} color="inherit" disabled={submitting}>
-                    {t('workSessionAbortSession')}
-                </Button>
-                <Button onClick={onSave} variant="contained" disabled={submitting || !initialControlAssessmentsComplete}>
-                    {t('save')}
-                </Button>
+            <DialogActions sx={{display: 'block', px: 3, pb: 2, pt: 1}}>
+                <Stack spacing={1.5}>
+                    {showFaultyProductWarning ? (
+                        <Typography variant="body2" color="error" sx={{fontWeight: 600}}>
+                            {t('workSessionControlProductFaultyWarning')}
+                        </Typography>
+                    ) : null}
+                    <Stack direction="row" justifyContent="flex-end" spacing={1} flexWrap="wrap" useFlexGap>
+                        <Button onClick={onAbortSession} color="inherit" disabled={submitting}>
+                            {t('workSessionAbortSession')}
+                        </Button>
+                        <Button
+                            onClick={onSave}
+                            variant="contained"
+                            color={showFaultyProductWarning ? 'error' : 'primary'}
+                            disabled={submitting || !initialControlAssessmentsComplete}
+                        >
+                            {showFaultyProductWarning ? t('workSessionDeclareAsFaulty') : t('save')}
+                        </Button>
+                    </Stack>
+                </Stack>
             </DialogActions>
         </Dialog>
     );
