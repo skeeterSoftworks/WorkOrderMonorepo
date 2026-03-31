@@ -254,6 +254,7 @@
   "actions": "Akcije",
   "processType": "Tip procesa",
   "measuringTool": "Merni instrument",
+  "selectMeasuringTool": "Izaberite merni instrument",
   "addedMeasuringFeatures": "Dodate merne karakteristike",
   "changeAction": "Izmeni",
   "addAction": "Dodaj",

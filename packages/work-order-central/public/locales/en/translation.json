@@ -253,6 +253,7 @@
   "actions": "Actions",
   "processType": "Process type",
   "measuringTool": "Measuring tool",
+  "selectMeasuringTool": "Select measuring tool",
   "addedMeasuringFeatures": "Added measuring features",
   "changeAction": "Change",
   "addAction": "Add",

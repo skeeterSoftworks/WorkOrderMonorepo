@@ -51,6 +51,9 @@ function withSequentialStepNumbers(steps: QualityInfoStepTO[]): QualityInfoStepT
     return steps.map((s, i) => ({ ...s, stepNumber: i + 1 }));
 }
 
+const DEFAULT_PROTO_CLASS_TYPE = 'CC';
+const DEFAULT_PROTO_CHECK_TYPE: 'MEASURED' = 'MEASURED';
+
 export function ProductsManagementPanel() {
     const { t } = useTranslation();
 
@@ -77,10 +80,9 @@ export function ProductsManagementPanel() {
     const [protoRefValue, setProtoRefValue] = useState('');
     const [protoMinTolerance, setProtoMinTolerance] = useState('');
     const [protoMaxTolerance, setProtoMaxTolerance] = useState('');
-    const [protoClassType, setProtoClassType] = useState<string>('');
+    const [protoClassType, setProtoClassType] = useState<string>(DEFAULT_PROTO_CLASS_TYPE);
     const [protoFrequency, setProtoFrequency] = useState('');
-    const [protoCheckType, setProtoCheckType] = useState<'ATTRIBUTIVE' | 'MEASURED' | ''>('');
-    const [protoToolType, setProtoToolType] = useState('');
+    const [protoCheckType, setProtoCheckType] = useState<'ATTRIBUTIVE' | 'MEASURED'>(DEFAULT_PROTO_CHECK_TYPE);
     const [protoMeasuringTool, setProtoMeasuringTool] = useState('');
     const [measuringToolSelectOptions, setMeasuringToolSelectOptions] = useState<string[]>([]);
 
@@ -188,10 +190,9 @@ export function ProductsManagementPanel() {
         setProtoRefValue('');
         setProtoMinTolerance('');
         setProtoMaxTolerance('');
-        setProtoClassType('');
+        setProtoClassType(DEFAULT_PROTO_CLASS_TYPE);
         setProtoFrequency('');
-        setProtoCheckType('');
-        setProtoToolType('');
+        setProtoCheckType(DEFAULT_PROTO_CHECK_TYPE);
         setProtoMeasuringTool('');
 
         resetSetupInputs();
@@ -228,10 +229,9 @@ export function ProductsManagementPanel() {
         setProtoRefValue('');
         setProtoMinTolerance('');
         setProtoMaxTolerance('');
-        setProtoClassType('');
+        setProtoClassType(DEFAULT_PROTO_CLASS_TYPE);
         setProtoFrequency('');
-        setProtoCheckType('');
-        setProtoToolType('');
+        setProtoCheckType(DEFAULT_PROTO_CHECK_TYPE);
         setProtoMeasuringTool('');
     };
 
@@ -304,16 +304,37 @@ export function ProductsManagementPanel() {
         setQiImageInputKey((k) => k + 1);
     };
 
+    const isMeasuringFeaturePrototypeFormValid = (): boolean => {
+        if (!protoCatalogueId.trim()) return false;
+        if (!protoClassType) return false;
+        if (!protoFrequency.trim()) return false;
+        if (!protoMeasuringTool.trim()) return false;
+        if (protoCheckType === 'MEASURED') {
+            const ref = protoRefValue.trim();
+            const min = protoMinTolerance.trim();
+            const max = protoMaxTolerance.trim();
+            if (!ref || !min || !max) return false;
+            if (
+                parseDecimalNumericInputToNumber(ref) === undefined ||
+                parseDecimalNumericInputToNumber(min) === undefined ||
+                parseDecimalNumericInputToNumber(max) === undefined
+            ) {
+                return false;
+            }
+        }
+        return true;
+    };
+
     const addMeasuringFeaturePrototype = () => {
+        if (!isMeasuringFeaturePrototypeFormValid()) return;
+
         const catalogueId = protoCatalogueId.trim();
         const desc = protoDescription.trim();
-        if (!catalogueId || !desc) return;
-
         const isAttributive = protoCheckType === 'ATTRIBUTIVE';
         const toAdd: MeasuringFeaturePrototypeTO = {
             id: undefined,
             catalogueId,
-            description: desc,
+            description: desc || undefined,
             refValue: isAttributive || !protoRefValue.trim()
                 ? undefined
                 : parseDecimalNumericInputToNumber(protoRefValue),
@@ -323,11 +344,10 @@ export function ProductsManagementPanel() {
             maxTolerance: isAttributive || !protoMaxTolerance.trim()
                 ? undefined
                 : parseDecimalNumericInputToNumber(protoMaxTolerance),
-            classType: protoClassType || undefined,
-            frequency: protoFrequency.trim() || undefined,
-            checkType: protoCheckType || undefined,
-            toolType: protoToolType.trim() || undefined,
-            measuringTool: protoMeasuringTool.trim() || undefined,
+            classType: protoClassType,
+            frequency: protoFrequency.trim(),
+            checkType: protoCheckType,
+            measuringTool: protoMeasuringTool.trim(),
         };
 
         setMeasuringFeaturePrototypes((prev) => [...prev, toAdd]);
@@ -746,6 +766,7 @@ export function ProductsManagementPanel() {
                             {/* Row 1: catalogueID, class, frequency */}
                             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'nowrap' }}>
                                 <TextField
+                                    required
                                     label={t('catalogueId')}
                                     value={protoCatalogueId}
                                     onChange={(e) => setProtoCatalogueId(e.target.value)}
@@ -753,6 +774,7 @@ export function ProductsManagementPanel() {
                                     sx={{ flex: 1, minWidth: 160 }}
                                 />
                                 <TextField
+                                    required
                                     select
                                     label={t('class')}
                                     value={protoClassType}
@@ -760,12 +782,12 @@ export function ProductsManagementPanel() {
                                     size="small"
                                     sx={{ minWidth: 140 }}
                                 >
-                                    <MenuItem value="">{t('none')}</MenuItem>
                                     <MenuItem value="CIC">CIC</MenuItem>
                                     <MenuItem value="NORM">NORM</MenuItem>
                                     <MenuItem value="CC">CC</MenuItem>
                                 </TextField>
                                 <TextField
+                                    required
                                     label={t('frequency')}
                                     value={protoFrequency}
                                     onChange={(e) => setProtoFrequency(e.target.value)}
@@ -774,14 +796,15 @@ export function ProductsManagementPanel() {
                                 />
                             </Box>
 
-                            {/* Row 2: measuringType, measuring tool, toolType */}
+                            {/* Row 2: measuringType, measuring tool */}
                             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                 <TextField
+                                    required
                                     select
                                     label={t('measuringType')}
                                     value={protoCheckType}
                                     onChange={(e) => {
-                                        const v = e.target.value as 'ATTRIBUTIVE' | 'MEASURED' | '';
+                                        const v = e.target.value as 'ATTRIBUTIVE' | 'MEASURED';
                                         setProtoCheckType(v);
                                         if (v === 'ATTRIBUTIVE') {
                                             setProtoRefValue('');
@@ -792,11 +815,11 @@ export function ProductsManagementPanel() {
                                     size="small"
                                     sx={{ minWidth: 200 }}
                                 >
-                                    <MenuItem value="">{t('none')}</MenuItem>
                                     <MenuItem value="ATTRIBUTIVE">{t('attributive')}</MenuItem>
                                     <MenuItem value="MEASURED">{t('measured')}</MenuItem>
                                 </TextField>
                                 <TextField
+                                    required
                                     select
                                     label={t('measuringTool')}
                                     value={protoMeasuringTool}
@@ -804,7 +827,7 @@ export function ProductsManagementPanel() {
                                     size="small"
                                     sx={{ minWidth: 180 }}
                                 >
-                                    <MenuItem value="">{t('none')}</MenuItem>
+                                    <MenuItem value="">{t('selectMeasuringTool')}</MenuItem>
                                     {(() => {
                                         const v = protoMeasuringTool;
                                         const opts = [...measuringToolSelectOptions];
@@ -816,18 +839,12 @@ export function ProductsManagementPanel() {
                                         ));
                                     })()}
                                 </TextField>
-                                <TextField
-                                    label={t('toolType')}
-                                    value={protoToolType}
-                                    onChange={(e) => setProtoToolType(e.target.value)}
-                                    size="small"
-                                    sx={{ minWidth: 180 }}
-                                />
                             </Box>
 
                             {/* Row 3: ref value, min tolerance, max tolerance (not used for ATTRIBUTIVE) */}
                             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                 <TextField
+                                    required={protoCheckType === 'MEASURED'}
                                     label={t('refValue')}
                                     value={protoRefValue}
                                     onChange={(e) => setProtoRefValue(filterDecimalNumericInput(e.target.value))}
@@ -837,6 +854,7 @@ export function ProductsManagementPanel() {
                                     inputProps={{ inputMode: 'decimal' }}
                                 />
                                 <TextField
+                                    required={protoCheckType === 'MEASURED'}
                                     label={t('toleranceMin')}
                                     value={protoMinTolerance}
                                     onChange={(e) => setProtoMinTolerance(filterDecimalNumericInput(e.target.value))}
@@ -846,6 +864,7 @@ export function ProductsManagementPanel() {
                                     inputProps={{ inputMode: 'decimal' }}
                                 />
                                 <TextField
+                                    required={protoCheckType === 'MEASURED'}
                                     label={t('toleranceMax')}
                                     value={protoMaxTolerance}
                                     onChange={(e) => setProtoMaxTolerance(filterDecimalNumericInput(e.target.value))}
@@ -873,7 +892,7 @@ export function ProductsManagementPanel() {
                                     color="primary"
                                     startIcon={<AddIcon />}
                                     onClick={addMeasuringFeaturePrototype}
-                                    disabled={!protoCatalogueId.trim() || !protoDescription.trim()}
+                                    disabled={!isMeasuringFeaturePrototypeFormValid()}
                                 >
                                     {t('addMeasuringFeaturePrototype')}
                                 </Button>

@@ -148,9 +148,6 @@ function MeasuringFeaturesForm({
 
                             <Box sx={{flex: 1, minWidth: 240}}>
                                 <Typography variant="body2">
-                                    {t('toolType')}: {proto.toolType ?? '—'}
-                                </Typography>
-                                <Typography variant="body2">
                                     {t('measuringTool')}: {proto.measuringTool ?? '—'}
                                 </Typography>
                             </Box>

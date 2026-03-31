@@ -68,7 +68,6 @@ export interface MeasuringFeatureTO {
     refValue?: number,
     minTolerance?: number,
     maxTolerance?: number,
-    toolType?: string,
     absoluteMeasure?: boolean
 }
 

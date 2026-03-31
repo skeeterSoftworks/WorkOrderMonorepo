@@ -75,7 +75,6 @@ export interface MeasuringFeatureTO {
     refValue?: number,
     minTolerance?: number,
     maxTolerance?: number,
-    toolType?: string,
     absoluteMeasure?: boolean
 }
 
@@ -89,7 +88,6 @@ export interface MeasuringFeaturePrototypeTO {
     classType?: string,
     frequency?: string,
     checkType?: "ATTRIBUTIVE" | "MEASURED" | string,
-    toolType?: string,
     measuringTool?: string,
 }
 

@@ -7,7 +7,7 @@ export const SOCKET_URL: string = getServerUrl().replace("http", "ws") + '/ws-me
 
 
 export const measuringFeaturesTableHeaders: string[] = ["catalogueId", "description", "specification", "classType",
-    "frequency", "toolType", "checkType"]
+    "frequency", "checkType"]
 
 
 export const mfClassTypes: string[] = ["CC", "CIC", "NORM"]
