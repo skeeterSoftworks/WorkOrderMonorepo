@@ -1,5 +1,8 @@
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import CloseIcon from '@mui/icons-material/Close';
+import KeyboardDoubleArrowLeftIcon from '@mui/icons-material/KeyboardDoubleArrowLeft';
+import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -87,13 +90,25 @@ export function QualityInfoReviewDialog({
                     </Stack>
                 )}
             </DialogContent>
-            <DialogActions sx={{flexWrap: 'wrap', gap: 1}}>
-                <Button onClick={onAbortSession} color="inherit" disabled={openingSession}>
+            <DialogActions sx={{flexWrap: 'wrap', gap: 1, px: 2, pb: 2}}>
+                <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={onAbortSession}
+                    disabled={openingSession}
+                    startIcon={<CloseIcon />}
+                >
                     {t('workSessionAbortSession')}
                 </Button>
                 <Box sx={{flexGrow: 1}} />
                 {stepIndex > 0 && (
-                    <Button onClick={() => onStepChange(stepIndex - 1)} disabled={openingSession}>
+                    <Button
+                        variant="outlined"
+                        color="inherit"
+                        onClick={() => onStepChange(stepIndex - 1)}
+                        disabled={openingSession}
+                        startIcon={<KeyboardDoubleArrowLeftIcon />}
+                    >
                         {t('previous')}
                     </Button>
                 )}
@@ -102,6 +117,7 @@ export function QualityInfoReviewDialog({
                         variant="contained"
                         onClick={() => onStepChange(stepIndex + 1)}
                         disabled={openingSession}
+                        endIcon={<KeyboardDoubleArrowRightIcon />}
                     >
                         {t('next')}
                     </Button>

@@ -19,6 +19,7 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import {useTranslation} from 'react-i18next';
 import type {SetupDataPrototypeTO} from '../models/ApiRequests';
 import {filterDecimalNumericInput} from '../util/decimalNumericInput';
+import {setupProductDialogTitleSx} from './workSessionDialogStyles';
 
 function formatSetupProtoNumber(n: number | undefined | null): string {
     if (n == null || Number.isNaN(Number(n))) return '—';
@@ -71,7 +72,7 @@ export function ToolChangeSetupDialog({
             maxWidth="md"
             scroll="paper"
         >
-            <DialogTitle>{t('workSessionToolChange')}</DialogTitle>
+            <DialogTitle sx={setupProductDialogTitleSx}>{t('workSessionToolChange')}</DialogTitle>
             <DialogContent dividers sx={{overflow: 'auto'}}>
                 {setupModalLoading ? (
                     <Stack direction="row" alignItems="center" spacing={1.5} sx={{py: 2}}>

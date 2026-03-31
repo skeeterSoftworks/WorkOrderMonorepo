@@ -7,6 +7,7 @@ import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import {useTranslation} from 'react-i18next';
+import {faultyProductDialogTitleSx} from './workSessionDialogStyles';
 
 export type DeclareFaultyProductDialogProps = {
     open: boolean;
@@ -38,7 +39,7 @@ export function DeclareFaultyProductDialog({
     const {t} = useTranslation();
     return (
         <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-            <DialogTitle>{t('workSessionDeclareFaulty')}</DialogTitle>
+            <DialogTitle sx={faultyProductDialogTitleSx}>{t('workSessionDeclareFaulty')}</DialogTitle>
             <DialogContent>
                 <Stack spacing={1.5} sx={{mt: 1}}>
                     <TextField

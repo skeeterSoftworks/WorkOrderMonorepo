@@ -7,7 +7,7 @@ import Typography from '@mui/material/Typography';
 import Stack from '@mui/material/Stack';
 import {useTranslation} from 'react-i18next';
 import type {MeasuringFeaturePrototypeTO, WorkSessionMeasuringFeatureInputTO} from '../models/ApiRequests';
-import {controlProductDialogPaperSx} from './workSessionDialogStyles';
+import {controlProductDialogPaperSx, controlProductDialogTitleSx} from './workSessionDialogStyles';
 import {ControlProductModalBody} from './ControlProductModalBody';
 
 export type InitialControlProductDialogProps = {
@@ -43,7 +43,7 @@ export function InitialControlProductDialog({
     const {t} = useTranslation();
     return (
         <Dialog open={open} fullWidth maxWidth={false} disableEscapeKeyDown PaperProps={{sx: controlProductDialogPaperSx}}>
-            <DialogTitle>{t('workSessionMandatoryFirstControl')}</DialogTitle>
+            <DialogTitle sx={controlProductDialogTitleSx}>{t('workSessionMandatoryFirstControl')}</DialogTitle>
             <DialogContent dividers sx={{overflow: 'auto'}}>
                 <ControlProductModalBody
                     hint={
