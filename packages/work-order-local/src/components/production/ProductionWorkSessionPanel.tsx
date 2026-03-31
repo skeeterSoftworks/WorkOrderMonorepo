@@ -8,16 +8,16 @@ import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import {useTranslation} from 'react-i18next';
 import type {TFunction} from 'i18next';
-import {Server} from '../../api/Server.ts';
-import {DeclareFaultyProductDialog} from '../../modals/DeclareFaultyProductDialog.tsx';
-import {InitialControlProductDialog} from '../../modals/InitialControlProductDialog.tsx';
-import {ProductionTargetReachedDialog} from '../../modals/ProductionTargetReachedDialog.tsx';
-import {QualityInfoReviewDialog} from '../../modals/QualityInfoReviewDialog.tsx';
-import {RecordControlProductDialog} from '../../modals/RecordControlProductDialog.tsx';
-import {RecordGoodProductsDialog} from '../../modals/RecordGoodProductsDialog.tsx';
-import {ToolChangeSetupDialog} from '../../modals/ToolChangeSetupDialog.tsx';
-import {WorkStationPreconditionsDialog} from '../../modals/WorkStationPreconditionsDialog.tsx';
-import {assessedMeasuredValueForApi, measuredValueToleranceHint} from '../../modals/workSessionMeasuringHelpers.ts';
+import {Server} from '../../api/Server';
+import {DeclareFaultyProductDialog} from '../../modals/DeclareFaultyProductDialog';
+import {InitialControlProductDialog} from '../../modals/InitialControlProductDialog';
+import {ProductionTargetReachedDialog} from '../../modals/ProductionTargetReachedDialog';
+import {QualityInfoReviewDialog} from '../../modals/QualityInfoReviewDialog';
+import {RecordControlProductDialog} from '../../modals/RecordControlProductDialog';
+import {RecordGoodProductsDialog} from '../../modals/RecordGoodProductsDialog';
+import {ToolChangeSetupDialog} from '../../modals/ToolChangeSetupDialog';
+import {WorkStationPreconditionsDialog} from '../../modals/WorkStationPreconditionsDialog';
+import {assessedMeasuredValueForApi, measuredValueToleranceHint} from '../../modals/workSessionMeasuringHelpers';
 import type {
     MeasuringFeaturePrototypeTO,
     ProductionWorkOrderTO,
@@ -29,8 +29,8 @@ import type {
     WorkstationMachineConfigTO,
     WorkStationPreconditionItem,
 } from '../../models/ApiRequests.ts';
-import {isWorkOrderClosedForProduction} from './workOrderProductionHelpers.ts';
-import {parseDecimalNumericInputToNumber} from '../../util/decimalNumericInput.ts';
+import {isWorkOrderClosedForProduction} from './workOrderProductionHelpers';
+import {parseDecimalNumericInputToNumber} from '../../util/decimalNumericInput';
 
 const STORAGE_SESSION = 'activeWorkSessionId';
 

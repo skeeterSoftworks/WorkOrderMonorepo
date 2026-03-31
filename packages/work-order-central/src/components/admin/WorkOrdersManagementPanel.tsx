@@ -38,6 +38,7 @@ import {
     tableActionIconButtonSx
 } from '../shared/tableActions';
 import { toastActionSuccess, toastServerError } from '../../util/actionToast';
+import {bookingStatusTranslationKey, bookingTypeTranslationKey} from '../../util/bookingI18n';
 
 /** Normalize PO delivery date for HTML date input (yyyy-MM-dd). */
 function purchaseOrderDeliveryToDueDateInput(
@@ -155,36 +156,6 @@ function formatDateTime(value: string | undefined): string {
     if (!value) return '—';
     const d = new Date(value);
     return Number.isNaN(d.getTime()) ? value : formatEuropeanDateTime(d);
-}
-
-function bookingTypeTranslationKey(type: string | undefined): string {
-    switch (type) {
-        case 'PRODUCTION':
-            return 'bookingTypeProduction';
-        case 'MAINTENANCE':
-            return 'bookingTypeMaintenance';
-        case 'SETUP':
-            return 'bookingTypeSetup';
-        case 'OTHER':
-            return 'bookingTypeOther';
-        default:
-            return '';
-    }
-}
-
-function bookingStatusTranslationKey(status: string | undefined): string {
-    switch (status) {
-        case 'PLANNED':
-            return 'bookingStatusPlanned';
-        case 'CONFIRMED':
-            return 'bookingStatusConfirmed';
-        case 'COMPLETED':
-            return 'bookingStatusCompleted';
-        case 'CANCELLED':
-            return 'bookingStatusCancelled';
-        default:
-            return '';
-    }
 }
 
 function machineDisplayName(b: MachineBookingTO, machines: MachineTO[]): string {

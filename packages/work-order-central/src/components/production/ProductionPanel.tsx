@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import type { MachineTO, MachineBookingTO } from 'sf-common/src/models/ApiRequests';
 import { formatEuropeanDateTime } from 'sf-common/src/util/DateUtils';
 import { Server } from 'sf-common';
+import { bookingStatusTranslationKey, bookingTypeTranslationKey } from '../../util/bookingI18n';
 
 const MAX_CALENDAR_RANGE_DAYS_INCLUSIVE = 14;
 
@@ -258,16 +259,24 @@ export function ProductionPanel() {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {bookings.map((b) => (
-                                <TableRow key={b.id}>
-                                    <TableCell>{formatDateTime(b.startDateTime)}</TableCell>
-                                    <TableCell>{formatDateTime(b.endDateTime)}</TableCell>
-                                    <TableCell>{b.workOrderId ?? '—'}</TableCell>
-                                    <TableCell>{b.type ?? '—'}</TableCell>
-                                    <TableCell>{b.status ?? '—'}</TableCell>
-                                    <TableCell>{b.comment ?? ''}</TableCell>
-                                </TableRow>
-                            ))}
+                            {bookings.map((b) => {
+                                const typeKey = bookingTypeTranslationKey(b.type);
+                                const statusKey = bookingStatusTranslationKey(b.status);
+                                return (
+                                    <TableRow key={b.id}>
+                                        <TableCell>{formatDateTime(b.startDateTime)}</TableCell>
+                                        <TableCell>{formatDateTime(b.endDateTime)}</TableCell>
+                                        <TableCell>{b.workOrderId ?? '—'}</TableCell>
+                                        <TableCell>
+                                            {typeKey ? t(typeKey) : b.type ?? '—'}
+                                        </TableCell>
+                                        <TableCell>
+                                            {statusKey ? t(statusKey) : b.status ?? '—'}
+                                        </TableCell>
+                                        <TableCell>{b.comment ?? ''}</TableCell>
+                                    </TableRow>
+                                );
+                            })}
                             {bookings.length === 0 && !loading && (
                                 <TableRow>
                                     <TableCell colSpan={6}>
