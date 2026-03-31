@@ -472,19 +472,19 @@ export function ProductionWorkSessionPanel({
         recordControlAssessmentsComplete &&
         buildControlNokRejectReason(sessionPrototypes, rowsControl, t) !== null;
 
-    const acknowledgeProductionTargetReached = async () => {
+    const continueAfterProductionTargetReached = async () => {
         setProductionTargetReachedOpen(false);
-        sessionStorage.removeItem(STORAGE_SESSION);
-        sessionStorage.removeItem('selectedWorkOrderId');
-        sessionStorage.removeItem('selectedWorkOrder');
-        sessionIdRef.current = null;
         workOrderSelectorLockCbRef.current?.(false);
         try {
             await onWorkOrdersRefresh?.();
         } catch {
             /* ignore */
         }
-        onClearSelection();
+    };
+
+    const closeSessionAfterProductionTargetReached = async () => {
+        setProductionTargetReachedOpen(false);
+        await endAndClearSelection();
     };
 
     const updateAssessment = (
@@ -834,6 +834,15 @@ export function ProductionWorkSessionPanel({
             {!openingSession && !openError && session && (
                 <Stack spacing={2}>
                     <SessionSummary workOrder={workOrder} session={session} />
+                    {sessionIsClosed &&
+                        (session.workOrderCompletedByTarget ||
+                            isWorkOrderClosedForProduction(workOrder)) && (
+                            <Alert severity="info" variant="outlined" sx={{mt: 0.5}}>
+                                <Typography variant="body2">
+                                    {t('workOrderCompleteSessionEndedSummaryHint')}
+                                </Typography>
+                            </Alert>
+                        )}
                     {actionError && (
                         <Typography color="error" variant="body2">
                             {actionError}
@@ -1004,7 +1013,8 @@ export function ProductionWorkSessionPanel({
 
             <ProductionTargetReachedDialog
                 open={productionTargetReachedOpen}
-                onAcknowledge={() => void acknowledgeProductionTargetReached()}
+                onCloseSession={() => void closeSessionAfterProductionTargetReached()}
+                onContinue={() => void continueAfterProductionTargetReached()}
             />
 
             <RecordGoodProductsDialog

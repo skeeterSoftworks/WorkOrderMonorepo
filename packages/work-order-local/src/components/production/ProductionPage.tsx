@@ -85,14 +85,6 @@ export function ProductionPage() {
         }
     }, [selectedId]);
 
-    useEffect(() => {
-        if (selectedId === SELECT_NONE) return;
-        const sel = workOrders.find((w) => w.id === Number(selectedId));
-        if (sel && isWorkOrderClosedForProduction(sel)) {
-            setSelectedId(SELECT_NONE);
-        }
-    }, [workOrders, selectedId]);
-
     const refreshWorkOrders = useCallback((): Promise<void> => {
         return new Promise((resolve) => {
             Server.getProductionWorkOrdersForBoundMachine(
