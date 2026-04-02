@@ -4,6 +4,7 @@ import Typography from '@mui/material/Typography';
 import TextField from '@mui/material/TextField';
 import Stack from '@mui/material/Stack';
 import Backdrop from '@mui/material/Backdrop';
+import Button from '@mui/material/Button';
 import Tooltip from '@mui/material/Tooltip';
 import Checkbox from '@mui/material/Checkbox';
 import FormControl from '@mui/material/FormControl';
@@ -13,17 +14,25 @@ import Radio from '@mui/material/Radio';
 import RadioGroup from '@mui/material/RadioGroup';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
+import CloseIcon from '@mui/icons-material/Close';
 import {useTranslation} from 'react-i18next';
 import type {MeasuringFeaturePrototypeTO, WorkSessionMeasuringFeatureInputTO} from '../models/ApiRequests';
 import {filterDecimalNumericInput} from '../util/decimalNumericInput';
 import {measuredValueToleranceHint} from './workSessionMeasuringHelpers';
 import {isPdfDataUrl, normalizeBinaryDataUrl} from 'sf-common/src/util/mediaDataUrl';
 
+/** Fragment hints for embedded PDF viewers (Chrome etc.); safe on data URLs. */
+function pdfIframeSrc(dataUrl: string): string {
+    const base = dataUrl.replace(/#.*$/, '');
+    return `${base}#toolbar=0&navpanes=0`;
+}
+
 function TechnicalDrawingColumn({base64}: {base64?: string}) {
     const {t} = useTranslation();
     const [zoomed, setZoomed] = useState(false);
     const src = normalizeBinaryDataUrl(base64);
     const isPdf = Boolean(src && isPdfDataUrl(src));
+    const pdfSrc = src && isPdf ? pdfIframeSrc(src) : undefined;
     return (
         <>
             <Box
@@ -44,20 +53,30 @@ function TechnicalDrawingColumn({base64}: {base64?: string}) {
                     {t('technicalDrawing')}
                 </Typography>
                 {src ? (
-                    isPdf ? (
+                    isPdf && pdfSrc ? (
                         <Box
                             onClick={() => setZoomed(true)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    setZoomed(true);
+                                }
+                            }}
+                            role="button"
+                            tabIndex={0}
+                            aria-label={t('technicalDrawing')}
                             sx={{
                                 width: '100%',
                                 flex: 1,
                                 minHeight: {xs: 160, md: 200},
                                 maxHeight: {xs: 280, md: 'min(58vh, 560px)'},
                                 cursor: 'zoom-in',
+                                outline: 'none',
                             }}
                         >
                             <Box
                                 component="iframe"
-                                src={src}
+                                src={pdfSrc}
                                 title=""
                                 sx={{
                                     width: '100%',
@@ -66,6 +85,7 @@ function TechnicalDrawingColumn({base64}: {base64?: string}) {
                                     border: 'none',
                                     borderRadius: 0.5,
                                     display: 'block',
+                                    pointerEvents: 'none',
                                 }}
                             />
                         </Box>
@@ -103,38 +123,86 @@ function TechnicalDrawingColumn({base64}: {base64?: string}) {
                         justifyContent: 'center',
                     })}
                 >
-                    {isPdf ? (
+                    <Box
+                        onClick={(e) => e.stopPropagation()}
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            maxWidth: 'min(92vw, 1200px)',
+                            maxHeight: 'calc(100vh - 32px)',
+                            bgcolor: 'background.paper',
+                            borderRadius: 1,
+                            overflow: 'hidden',
+                            boxShadow: 4,
+                        }}
+                    >
                         <Box
-                            component="iframe"
-                            src={src}
-                            title=""
-                            onClick={(e) => e.stopPropagation()}
                             sx={{
-                                width: 'min(92vw, 1200px)',
-                                height: 'min(88vh, 900px)',
-                                border: 'none',
-                                borderRadius: 1,
+                                flex: '1 1 auto',
+                                minHeight: 0,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                overflow: 'auto',
+                            }}
+                        >
+                            {isPdf && pdfSrc ? (
+                                <Box
+                                    component="iframe"
+                                    src={pdfSrc}
+                                    title=""
+                                    sx={{
+                                        width: 'min(92vw, 1200px)',
+                                        height: 'min(calc(100vh - 140px), 900px)',
+                                        minHeight: 240,
+                                        border: 'none',
+                                        display: 'block',
+                                    }}
+                                />
+                            ) : (
+                                <Box
+                                    component="img"
+                                    src={src}
+                                    alt=""
+                                    onClick={() => setZoomed(false)}
+                                    sx={{
+                                        maxHeight: 'min(calc(100vh - 140px), 900px)',
+                                        maxWidth: '100%',
+                                        width: 'auto',
+                                        height: 'auto',
+                                        objectFit: 'contain',
+                                        cursor: 'zoom-out',
+                                        p: 1,
+                                        boxSizing: 'border-box',
+                                        display: 'block',
+                                    }}
+                                />
+                            )}
+                        </Box>
+                        <Box
+                            sx={{
+                                flexShrink: 0,
+                                display: 'flex',
+                                justifyContent: 'flex-end',
+                                alignItems: 'center',
+                                gap: 1,
+                                px: 2,
+                                py: 1.5,
+                                borderTop: 1,
+                                borderColor: 'divider',
                                 bgcolor: 'background.paper',
                             }}
-                        />
-                    ) : (
-                        <Box
-                            component="img"
-                            src={src}
-                            alt=""
-                            onClick={() => setZoomed(false)}
-                            sx={{
-                                maxHeight: '100vh',
-                                maxWidth: '100vw',
-                                width: 'auto',
-                                height: 'auto',
-                                objectFit: 'contain',
-                                cursor: 'zoom-out',
-                                p: 1,
-                                boxSizing: 'border-box',
-                            }}
-                        />
-                    )}
+                        >
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                onClick={() => setZoomed(false)}
+                                startIcon={<CloseIcon />}
+                            >
+                                {t('close')}
+                            </Button>
+                        </Box>
+                    </Box>
                 </Backdrop>
             ) : null}
         </>

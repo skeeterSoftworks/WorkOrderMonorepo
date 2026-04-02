@@ -540,6 +540,16 @@ export function ProductionWorkSessionPanel({
             setSession(updated);
             setInitialModalOpen(false);
             setFirstControlDone(true);
+            if (sessionIndicatesWorkOrderCompletedTarget(updated)) {
+                setProductionTargetReachedOpen(true);
+            }
+            if (onWorkOrdersRefresh) {
+                try {
+                    await onWorkOrdersRefresh();
+                } catch {
+                    /* ignore refresh errors */
+                }
+            }
         } catch (e) {
             setActionError(extractError(e));
         } finally {
@@ -585,6 +595,16 @@ export function ProductionWorkSessionPanel({
             setControlOpen(false);
             const prototypes2 = updated.measuringFeaturePrototypes ?? prototypes;
             setRowsControl(buildAssessmentsFromPrototypes(prototypes2));
+            if (sessionIndicatesWorkOrderCompletedTarget(updated)) {
+                setProductionTargetReachedOpen(true);
+            }
+            if (onWorkOrdersRefresh) {
+                try {
+                    await onWorkOrdersRefresh();
+                } catch {
+                    /* ignore refresh errors */
+                }
+            }
         } catch (e) {
             setActionError(extractError(e));
         } finally {
