@@ -16,7 +16,6 @@ import {QualityInfoReviewDialog} from '../../modals/QualityInfoReviewDialog';
 import {RecordControlProductDialog} from '../../modals/RecordControlProductDialog';
 import {RecordGoodProductsDialog} from '../../modals/RecordGoodProductsDialog';
 import {ToolChangeSetupDialog} from '../../modals/ToolChangeSetupDialog';
-import {WorkStationPreconditionsDialog} from '../../modals/WorkStationPreconditionsDialog';
 import {assessedMeasuredValueForApi, measuredValueToleranceHint} from '../../modals/workSessionMeasuringHelpers';
 import type {
     MeasuringFeaturePrototypeTO,
@@ -27,7 +26,6 @@ import type {
     WorkSessionResponseTO,
     WorkSessionSetupProductCreateTO,
     WorkstationMachineConfigTO,
-    WorkStationPreconditionItem,
 } from '../../models/ApiRequests.ts';
 import {isWorkOrderClosedForProduction} from './workOrderProductionHelpers';
 import {parseDecimalNumericInputToNumber} from '../../util/decimalNumericInput';
@@ -159,6 +157,8 @@ export type ProductionWorkSessionPanelProps = {
      * When {@code true}, the production work order dropdown should be read-only (session opening or open).
      */
     onWorkOrderSelectorLockedChange?: (locked: boolean) => void;
+    /** When {@code true}, an open work session is active (not ended); parent may hide global production chrome. */
+    onActiveWorkSessionChange?: (active: boolean) => void;
 };
 
 export function ProductionWorkSessionPanel({
@@ -166,9 +166,9 @@ export function ProductionWorkSessionPanel({
     onClearSelection,
     onWorkOrdersRefresh,
     onWorkOrderSelectorLockedChange,
+    onActiveWorkSessionChange,
 }: ProductionWorkSessionPanelProps) {
-    const {t, i18n} = useTranslation();
-    const lang: 'sr' | 'en' = i18n.language?.toLowerCase().startsWith('sr') ? 'sr' : 'en';
+    const {t} = useTranslation();
 
     const [openingSession, setOpeningSession] = useState(true);
     const [openError, setOpenError] = useState<string | null>(null);
@@ -208,18 +208,26 @@ export function ProductionWorkSessionPanel({
     const [qualityInfoSteps, setQualityInfoSteps] = useState<QualityInfoStepTO[]>([]);
     const [qualityInfoStepIndex, setQualityInfoStepIndex] = useState(0);
 
-    const [workStationPreconditionsOpen, setWorkStationPreconditionsOpen] = useState(false);
-    const [preconditionItems, setPreconditionItems] = useState<WorkStationPreconditionItem[]>([]);
-    const [loadingPreconditions, setLoadingPreconditions] = useState(false);
-    const [preconditionsFetchErrorKey, setPreconditionsFetchErrorKey] = useState<string | null>(null);
-
     const sessionIdRef = useRef<number | null>(null);
     const workOrderSelectorLockCbRef = useRef(onWorkOrderSelectorLockedChange);
     workOrderSelectorLockCbRef.current = onWorkOrderSelectorLockedChange;
+    const onActiveWorkSessionChangeRef = useRef(onActiveWorkSessionChange);
+    onActiveWorkSessionChangeRef.current = onActiveWorkSessionChange;
 
     useEffect(() => {
         sessionIdRef.current = session?.id ?? null;
     }, [session?.id]);
+
+    useEffect(() => {
+        const active = Boolean(session && !session.sessionEnd);
+        onActiveWorkSessionChangeRef.current?.(active);
+    }, [session]);
+
+    useEffect(() => {
+        return () => {
+            onActiveWorkSessionChangeRef.current?.(false);
+        };
+    }, []);
 
     useEffect(() => {
         Server.getSelectOptions(
@@ -232,48 +240,6 @@ export function ProductionWorkSessionPanel({
             () => {},
         );
     }, []);
-
-    useEffect(() => {
-        if (!workStationPreconditionsOpen) {
-            setPreconditionItems([]);
-            setPreconditionsFetchErrorKey(null);
-            setLoadingPreconditions(false);
-            return;
-        }
-
-        setLoadingPreconditions(true);
-        setPreconditionsFetchErrorKey(null);
-        setPreconditionItems([]);
-
-        Server.fetchStationConfigWithPreconditions(
-            (resp: {data?: {woPreconditionsJSON?: string}}) => {
-                try {
-                    const raw = resp?.data?.woPreconditionsJSON;
-                    if (raw == null || raw === '') {
-                        setPreconditionItems([]);
-                        setLoadingPreconditions(false);
-                        return;
-                    }
-                    const arr: WorkStationPreconditionItem[] =
-                        typeof raw === 'string' ? JSON.parse(raw) : raw;
-                    if (!Array.isArray(arr)) {
-                        setPreconditionsFetchErrorKey('preconditionsParseError');
-                        setPreconditionItems([]);
-                    } else {
-                        setPreconditionItems(arr);
-                    }
-                } catch {
-                    setPreconditionsFetchErrorKey('preconditionsParseError');
-                    setPreconditionItems([]);
-                }
-                setLoadingPreconditions(false);
-            },
-            () => {
-                setLoadingPreconditions(false);
-                setPreconditionsFetchErrorKey('preconditionsLoadError');
-            },
-        );
-    }, [workStationPreconditionsOpen]);
 
     useEffect(() => {
         if (!toolOpen) {
@@ -800,36 +766,20 @@ export function ProductionWorkSessionPanel({
 
     return (
         <Box sx={{mt: 2}}>
-            <Stack spacing={1} sx={{mb: 1}}>
-                {sessionId != null && !sessionIsClosed && (
-                    <Stack direction="row" justifyContent="flex-start" alignItems="center">
-                        <Button
-                            size="small"
-                            variant="contained"
-                            color="primary"
-                            onClick={() => setWorkStationPreconditionsOpen(true)}
-                            disabled={submitting}
-                            sx={{flexShrink: 0}}
-                        >
-                            {t('workSessionShowPreconditions')}
-                        </Button>
-                    </Stack>
-                )}
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                    {sessionId != null && !sessionIsClosed && (
-                        <Button
-                            size="small"
-                            variant="outlined"
-                            color="primary"
-                            onClick={() => void endAndClearSelection()}
-                            disabled={submitting}
-                            sx={{flexShrink: 0, borderWidth: 2}}
-                        >
-                            {t('workSessionEnd')}
-                        </Button>
-                    )}
+            {sessionId != null && !sessionIsClosed && (
+                <Stack direction="row" justifyContent="flex-start" alignItems="center" sx={{mb: 1}}>
+                    <Button
+                        size="small"
+                        variant="outlined"
+                        color="primary"
+                        onClick={() => void endAndClearSelection()}
+                        disabled={submitting}
+                        sx={{flexShrink: 0, borderWidth: 2}}
+                    >
+                        {t('workSessionEnd')}
+                    </Button>
                 </Stack>
-            </Stack>
+            )}
 
             {openingSession && (
                 <Stack direction="row" alignItems="center" spacing={1.5} sx={{py: 1}}>
@@ -939,15 +889,6 @@ export function ProductionWorkSessionPanel({
                     </Stack>
                 </Box>
             )}
-
-            <WorkStationPreconditionsDialog
-                open={workStationPreconditionsOpen}
-                onClose={() => setWorkStationPreconditionsOpen(false)}
-                loading={loadingPreconditions}
-                fetchErrorKey={preconditionsFetchErrorKey}
-                items={preconditionItems}
-                lang={lang}
-            />
 
             <QualityInfoReviewDialog
                 open={qualityInfoModalOpen}

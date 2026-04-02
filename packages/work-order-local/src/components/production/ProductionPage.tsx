@@ -45,6 +45,11 @@ export function ProductionPage() {
     const [workOrders, setWorkOrders] = useState<ProductionWorkOrderTO[]>([]);
     const [selectedId, setSelectedId] = useState<string>(SELECT_NONE);
     const [workOrderSelectorLocked, setWorkOrderSelectorLocked] = useState(false);
+    const [hideProductionChrome, setHideProductionChrome] = useState(false);
+
+    const handleActiveWorkSessionChange = useCallback((active: boolean) => {
+        setHideProductionChrome(active);
+    }, []);
 
     useEffect(() => {
         setListLoading(true);
@@ -82,6 +87,7 @@ export function ProductionPage() {
     useEffect(() => {
         if (selectedId === SELECT_NONE) {
             setWorkOrderSelectorLocked(false);
+            setHideProductionChrome(false);
         }
     }, [selectedId]);
 
@@ -100,16 +106,23 @@ export function ProductionPage() {
 
     return (
         <Container maxWidth="md">
-            <AppBar position="static">
-                <Toolbar>
-                    <IconButton color="inherit" onClick={() => navigate('/')} sx={{mr: 1}} aria-label={t('backToHome')}>
-                        <ArrowBackIcon />
-                    </IconButton>
-                    <Typography variant="h6">{t('production')}</Typography>
-                </Toolbar>
-            </AppBar>
+            {!hideProductionChrome && (
+                <AppBar position="static">
+                    <Toolbar>
+                        <IconButton
+                            color="inherit"
+                            onClick={() => navigate('/')}
+                            sx={{mr: 1}}
+                            aria-label={t('backToHome')}
+                        >
+                            <ArrowBackIcon />
+                        </IconButton>
+                        <Typography variant="h6">{t('production')}</Typography>
+                    </Toolbar>
+                </AppBar>
+            )}
 
-            <Box sx={{mt: 3}}>
+            <Box sx={{mt: hideProductionChrome ? 2 : 3}}>
                 {listLoading && <LinearProgress sx={{mb: 2}} />}
 
                 {!listLoading && errorKey && (
@@ -126,31 +139,33 @@ export function ProductionPage() {
 
                 {!listLoading && !errorKey && workOrders.length > 0 && (
                     <Box sx={{display: 'flex', flexDirection: 'column', gap: 2}}>
-                        <TextField
-                            select
-                            fullWidth
-                            size="small"
-                            label={t('productionSelectWorkOrder')}
-                            value={selectedId}
-                            onChange={(e) => setSelectedId(e.target.value)}
-                            disabled={workOrderSelectorLocked}
-                            helperText={workOrderSelectorLocked ? t('productionWorkOrderLockedHint') : undefined}
-                        >
-                            <MenuItem value={SELECT_NONE}>
-                                <em>{t('none')}</em>
-                            </MenuItem>
-                            {workOrders.map((wo) =>
-                                wo.id != null ? (
-                                    <MenuItem
-                                        key={wo.id}
-                                        value={String(wo.id)}
-                                        disabled={isWorkOrderClosedForProduction(wo)}
-                                    >
-                                        {workOrderLabel(wo, t)}
-                                    </MenuItem>
-                                ) : null
-                            )}
-                        </TextField>
+                        {!hideProductionChrome && (
+                            <TextField
+                                select
+                                fullWidth
+                                size="small"
+                                label={t('productionSelectWorkOrder')}
+                                value={selectedId}
+                                onChange={(e) => setSelectedId(e.target.value)}
+                                disabled={workOrderSelectorLocked}
+                                helperText={workOrderSelectorLocked ? t('productionWorkOrderLockedHint') : undefined}
+                            >
+                                <MenuItem value={SELECT_NONE}>
+                                    <em>{t('none')}</em>
+                                </MenuItem>
+                                {workOrders.map((wo) =>
+                                    wo.id != null ? (
+                                        <MenuItem
+                                            key={wo.id}
+                                            value={String(wo.id)}
+                                            disabled={isWorkOrderClosedForProduction(wo)}
+                                        >
+                                            {workOrderLabel(wo, t)}
+                                        </MenuItem>
+                                    ) : null
+                                )}
+                            </TextField>
+                        )}
 
                         {selected && (
                             <Paper variant="outlined" sx={{p: 2}}>
@@ -181,6 +196,7 @@ export function ProductionPage() {
                                     onClearSelection={handleClearWorkOrderSelection}
                                     onWorkOrdersRefresh={refreshWorkOrders}
                                     onWorkOrderSelectorLockedChange={setWorkOrderSelectorLocked}
+                                    onActiveWorkSessionChange={handleActiveWorkSessionChange}
                                 />
                             </Paper>
                         )}
