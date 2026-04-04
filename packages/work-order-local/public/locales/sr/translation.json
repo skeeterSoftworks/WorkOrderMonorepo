@@ -470,6 +470,7 @@
   "workSessionProductCount": "Broj ispravnih (centrala)",
   "productionWorkOrderRequiredQuantity": "Naručena količina",
   "productionWorkOrderProducedGood": "Ispravni komadi proizvedeni (radni nalog)",
+  "productionMachineImage": "Mašina radne stanice",
   "productionWorkSessionGoodRecorded": "Ispravni komadi evidentirani (ova sesija)",
   "productionWorkSessionControlCount": "Kontrolni komadi (ova sesija)",
   "productionWorkSessionFaultyCount": "Odbačeni komadi (ova sesija)",

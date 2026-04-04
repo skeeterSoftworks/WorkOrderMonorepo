@@ -298,6 +298,15 @@ export class Server {
             });
     }
 
+    static async getMachineById(id: number): Promise<MachineTO | null> {
+        try {
+            const r = await axios.get<MachineTO>(`${getServerUrl()}/machines/${id}`);
+            return r.data ?? null;
+        } catch {
+            return null;
+        }
+    }
+
     static addMachine(machine: MachineTO, onSuccess: Function, onError: Function) {
         axios.post(`${getServerUrl()}/machines/add`, machine)
             .then(response => onSuccess(response))

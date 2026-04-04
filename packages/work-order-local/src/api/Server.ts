@@ -1,5 +1,6 @@
 import type {
     BoundMachineProductTO,
+    CentralMachineTO,
     QualityInfoStepTO,
     WorkSessionControlProductCreateTO,
     WorkSessionFaultyProductCreateTO,
@@ -92,6 +93,16 @@ export class Server {
                 console.log(error);
                 onError && onError(error);
             });
+    }
+
+    /** Bound workstation machine row from central (via local proxy). */
+    static async getCentralMachineById(machineId: number): Promise<CentralMachineTO | null> {
+        try {
+            const r = await axios.get<CentralMachineTO>(`${getServerUrl()}/machines/${machineId}`);
+            return r.data ?? null;
+        } catch {
+            return null;
+        }
     }
 
     /** Work orders with non-cancelled bookings on the workstation's bound machine (local → central). */

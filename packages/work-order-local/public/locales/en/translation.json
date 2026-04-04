@@ -470,6 +470,7 @@
   "workSessionProductCount": "Good count (central)",
   "productionWorkOrderRequiredQuantity": "Ordered quantity",
   "productionWorkOrderProducedGood": "Good products produced (work order)",
+  "productionMachineImage": "Workstation machine",
   "productionWorkSessionGoodRecorded": "Good products recorded (this session)",
   "productionWorkSessionControlCount": "Control products (this session)",
   "productionWorkSessionFaultyCount": "Faulty products (this session)",

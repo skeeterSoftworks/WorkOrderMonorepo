@@ -24,6 +24,7 @@ import {useEffect, useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import type {MachineTO, ProductTO} from 'sf-common/src/models/ApiRequests';
 import {Server, ConfirmationModal} from 'sf-common';
+import {normalizeBinaryDataUrl} from 'sf-common/src/util/mediaDataUrl';
 import {toastActionSuccess, toastServerError} from '../../util/actionToast';
 import {
     TableActionsRow,
@@ -58,6 +59,10 @@ export function MachinesManagementPanel() {
     const [location, setLocation] = useState('');
     const [machineToDelete, setMachineToDelete] = useState<MachineTO | null>(null);
     const [formModalOpen, setFormModalOpen] = useState(false);
+    /** `undefined` = unchanged on save when editing; `''` = clear. */
+    const [machineImageBase64, setMachineImageBase64] = useState<string | undefined>(undefined);
+    const [machineImageLoadedSrc, setMachineImageLoadedSrc] = useState<string | undefined>(undefined);
+    const [machineImageInputKey, setMachineImageInputKey] = useState(0);
 
     const linkedMachineIds = useMemo(() => {
         const s = new Set<number>();
@@ -106,6 +111,9 @@ export function MachinesManagementPanel() {
         setInternalNumber('');
         setSerialNumber('');
         setLocation('');
+        setMachineImageBase64(undefined);
+        setMachineImageLoadedSrc(undefined);
+        setMachineImageInputKey((k) => k + 1);
     };
 
     const openFormModal = () => {
@@ -126,7 +134,22 @@ export function MachinesManagementPanel() {
         setInternalNumber(machine.internalNumber || '');
         setSerialNumber(machine.serialNumber || '');
         setLocation(machine.location || '');
+        setMachineImageBase64(undefined);
+        const img = machine.machineImageBase64?.trim();
+        setMachineImageLoadedSrc(img ? normalizeBinaryDataUrl(img) : undefined);
+        setMachineImageInputKey((k) => k + 1);
         setFormModalOpen(true);
+    };
+
+    const handleMachineImageFile = (fileList: FileList | null) => {
+        const file = fileList?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+            const r = reader.result;
+            if (typeof r === 'string') setMachineImageBase64(r);
+        };
+        reader.readAsDataURL(file);
     };
 
     const handleSubmit = () => {
@@ -139,6 +162,9 @@ export function MachinesManagementPanel() {
             serialNumber: serialNumber || undefined,
             location: location || undefined,
         };
+        if (machineImageBase64 !== undefined) {
+            payload.machineImageBase64 = machineImageBase64.length > 0 ? machineImageBase64 : '';
+        }
         const onSuccess = () => {
             loadMachines();
             loadProducts();
@@ -199,6 +225,7 @@ export function MachinesManagementPanel() {
                             {machines.map((machine) => {
                                 const mid = machine.id;
                                 const unlinked = mid != null && !linkedMachineIds.has(mid);
+                                const noImage = !machine.machineImageBase64?.trim();
                                 return (
                                     <TableRow key={machine.id ?? machine.machineName}>
                                         <TableCell>
@@ -210,6 +237,20 @@ export function MachinesManagementPanel() {
                                                             size="small"
                                                             label={t('machineNoProductsBadge')}
                                                             color="warning"
+                                                            variant="outlined"
+                                                            sx={{
+                                                                height: 22,
+                                                                '& .MuiChip-label': {px: 1, fontSize: '0.7rem'},
+                                                            }}
+                                                        />
+                                                    </Tooltip>
+                                                )}
+                                                {noImage && (
+                                                    <Tooltip title={t('machineNoImageHint')}>
+                                                        <Chip
+                                                            size="small"
+                                                            label={t('machineNoImageBadge')}
+                                                            color="default"
                                                             variant="outlined"
                                                             sx={{
                                                                 height: 22,
@@ -250,7 +291,7 @@ export function MachinesManagementPanel() {
                 </TableContainer>
             </Paper>
 
-            <Dialog open={formModalOpen} onClose={closeFormModal} maxWidth="sm" fullWidth scroll="paper">
+            <Dialog open={formModalOpen} onClose={closeFormModal} maxWidth="md" fullWidth scroll="paper">
                 <DialogTitle sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
                     {selectedMachineId ? t('editMachine') : t('addMachine')}
                     <IconButton size="small" onClick={closeFormModal} aria-label={t('close')}>
@@ -302,6 +343,60 @@ export function MachinesManagementPanel() {
                             size="small"
                             fullWidth
                         />
+                        <Box sx={{display: 'flex', flexDirection: 'column', gap: 1}}>
+                            <Box sx={{display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center'}}>
+                                <Button variant="outlined" component="label" size="small">
+                                    {t('machineImage')}
+                                    <input
+                                        key={machineImageInputKey}
+                                        hidden
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                            handleMachineImageFile(e.target.files);
+                                            e.target.value = '';
+                                        }}
+                                    />
+                                </Button>
+                                {(() => {
+                                    const previewSrc =
+                                        machineImageBase64 !== undefined
+                                            ? machineImageBase64.trim() !== ''
+                                                ? machineImageBase64
+                                                : undefined
+                                            : machineImageLoadedSrc;
+                                    return previewSrc ? (
+                                        <Button
+                                            size="small"
+                                            onClick={() => {
+                                                setMachineImageBase64('');
+                                                setMachineImageLoadedSrc(undefined);
+                                                setMachineImageInputKey((k) => k + 1);
+                                            }}
+                                        >
+                                            {t('clearImage')}
+                                        </Button>
+                                    ) : null;
+                                })()}
+                            </Box>
+                            {(() => {
+                                const previewSrc =
+                                    machineImageBase64 !== undefined
+                                        ? machineImageBase64.trim() !== ''
+                                            ? machineImageBase64
+                                            : undefined
+                                        : machineImageLoadedSrc;
+                                if (!previewSrc) return null;
+                                return (
+                                    <Box
+                                        component="img"
+                                        src={previewSrc}
+                                        alt=""
+                                        sx={{maxHeight: 200, maxWidth: '100%', objectFit: 'contain', borderRadius: 1}}
+                                    />
+                                );
+                            })()}
+                        </Box>
                         <Box sx={{display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap'}}>
                             <Button variant="contained" color="primary" onClick={handleSubmit}>
                                 {selectedMachineId ? t('editMachine') : t('addMachine')}

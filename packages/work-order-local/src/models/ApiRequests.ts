@@ -221,10 +221,11 @@ export interface ProductionWorkOrderTO {
     comment?: string,
 }
 
-/** Proxied from central `/machines/all`. */
+/** Proxied from central `/machines/all` or `/machines/{id}`. */
 export interface CentralMachineTO {
     id?: number,
     machineName?: string,
+    machineImageBase64?: string,
 }
 
 export interface WorkStationPreconditionItem {

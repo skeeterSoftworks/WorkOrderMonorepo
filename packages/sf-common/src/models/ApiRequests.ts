@@ -157,6 +157,8 @@ export interface MachineTO {
     internalNumber?: string,
     serialNumber?: string,
     location?: string,
+    /** Raw Base64 or data URL; omit on update to keep existing; empty string clears. */
+    machineImageBase64?: string,
 }
 
 export interface ProductOrderTO {
