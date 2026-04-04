@@ -42,14 +42,11 @@ export function AdminHome() {
             </AppBar>
 
             <Box sx={{ borderBottom: 1, borderColor: 'divider', mt: 2 }}>
-                <Tabs
-                    value={activeTab}
-                    onChange={(_, newValue) => setActiveTab(newValue)}
-                >
-                    <Tab label={t('users')} value={AdminTabs.USERS} />
-                    <Tab label={t('products')} value={AdminTabs.PRODUCTS} />
+                <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
                     <Tab label={t('customers')} value={AdminTabs.CUSTOMERS} />
                     <Tab label={t('machines')} value={AdminTabs.MACHINES} />
+                    <Tab label={t('products')} value={AdminTabs.PRODUCTS} />
+                    <Tab label={t('users')} value={AdminTabs.USERS} />
                     <Tab label={t('misc')} value={AdminTabs.MISC} />
                 </Tabs>
             </Box>

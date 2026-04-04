@@ -10,13 +10,21 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import Stack from '@mui/material/Stack';
+import Chip from '@mui/material/Chip';
+import Tooltip from '@mui/material/Tooltip';
 import LinkIcon from '@mui/icons-material/Link';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import type { MachineTO } from 'sf-common/src/models/ApiRequests';
-import { Server, ConfirmationModal } from 'sf-common';
-import { toastActionSuccess, toastServerError } from '../../util/actionToast';
+import AddIcon from '@mui/icons-material/Add';
+import CloseIcon from '@mui/icons-material/Close';
+import {useEffect, useMemo, useState} from 'react';
+import {useTranslation} from 'react-i18next';
+import type {MachineTO, ProductTO} from 'sf-common/src/models/ApiRequests';
+import {Server, ConfirmationModal} from 'sf-common';
+import {toastActionSuccess, toastServerError} from '../../util/actionToast';
 import {
     TableActionsRow,
     tableActionsTableCellSx,
@@ -29,10 +37,18 @@ function toNum(v: string): number | undefined {
     return Number.isNaN(n) ? undefined : n;
 }
 
+function parseProductsResponse(response: unknown): ProductTO[] {
+    const r = response as {data?: ProductTO[] | {data?: ProductTO[]}};
+    if (Array.isArray(r?.data)) return r.data;
+    if (Array.isArray(r?.data?.data)) return r.data.data;
+    return [];
+}
+
 export function MachinesManagementPanel() {
-    const { t } = useTranslation();
+    const {t} = useTranslation();
 
     const [machines, setMachines] = useState<MachineTO[]>([]);
+    const [products, setProducts] = useState<ProductTO[]>([]);
     const [selectedMachineId, setSelectedMachineId] = useState<number | undefined>(undefined);
     const [machineName, setMachineName] = useState('');
     const [manufacturer, setManufacturer] = useState('');
@@ -41,18 +57,42 @@ export function MachinesManagementPanel() {
     const [serialNumber, setSerialNumber] = useState('');
     const [location, setLocation] = useState('');
     const [machineToDelete, setMachineToDelete] = useState<MachineTO | null>(null);
+    const [formModalOpen, setFormModalOpen] = useState(false);
+
+    const linkedMachineIds = useMemo(() => {
+        const s = new Set<number>();
+        for (const p of products) {
+            for (const id of p.machineIds ?? []) {
+                if (typeof id === 'number' && Number.isFinite(id)) {
+                    s.add(id);
+                }
+            }
+        }
+        return s;
+    }, [products]);
 
     useEffect(() => {
         loadMachines();
+        loadProducts();
     }, []);
 
     const loadMachines = () => {
         Server.getAllMachines(
-            (response: any) => {
+            (response: unknown) => {
+                const r = response as {data?: MachineTO[] | {data?: MachineTO[]}};
                 let data: MachineTO[] = [];
-                if (Array.isArray(response?.data)) data = response.data;
-                else if (Array.isArray(response?.data?.data)) data = response.data.data;
+                if (Array.isArray(r?.data)) data = r.data;
+                else if (Array.isArray(r?.data?.data)) data = r.data.data;
                 setMachines(data);
+            },
+            () => {},
+        );
+    };
+
+    const loadProducts = () => {
+        Server.getAllProducts(
+            (response: unknown) => {
+                setProducts(parseProductsResponse(response));
             },
             () => {},
         );
@@ -68,6 +108,16 @@ export function MachinesManagementPanel() {
         setLocation('');
     };
 
+    const openFormModal = () => {
+        resetForm();
+        setFormModalOpen(true);
+    };
+
+    const closeFormModal = () => {
+        setFormModalOpen(false);
+        resetForm();
+    };
+
     const handleEditClick = (machine: MachineTO) => {
         setSelectedMachineId(machine.id);
         setMachineName(machine.machineName || '');
@@ -76,6 +126,7 @@ export function MachinesManagementPanel() {
         setInternalNumber(machine.internalNumber || '');
         setSerialNumber(machine.serialNumber || '');
         setLocation(machine.location || '');
+        setFormModalOpen(true);
     };
 
     const handleSubmit = () => {
@@ -90,7 +141,8 @@ export function MachinesManagementPanel() {
         };
         const onSuccess = () => {
             loadMachines();
-            resetForm();
+            loadProducts();
+            closeFormModal();
             toastActionSuccess(selectedMachineId ? t('toastMachineUpdated') : t('toastMachineAdded'));
         };
         if (selectedMachineId) {
@@ -109,6 +161,7 @@ export function MachinesManagementPanel() {
             Number(machineToDelete.id),
             () => {
                 loadMachines();
+                loadProducts();
                 setMachineToDelete(null);
                 toastActionSuccess(t('toastMachineDeleted'));
             },
@@ -120,30 +173,15 @@ export function MachinesManagementPanel() {
     };
 
     return (
-        <Box sx={{ display: 'flex', gap: 3, mt: 3, flexWrap: 'wrap' }}>
-            <Paper sx={{ flex: 1, minWidth: 340, p: 2, maxHeight: '85vh', overflow: 'auto' }}>
-                <Typography variant="h6" gutterBottom>
-                    {t('machinesManagement')}
-                </Typography>
-                <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <TextField label={t('machineName')} value={machineName} onChange={(e) => setMachineName(e.target.value)} size="small" fullWidth />
-                    <TextField label={t('manufacturer')} value={manufacturer} onChange={(e) => setManufacturer(e.target.value)} size="small" fullWidth />
-                    <TextField label={t('manufactureYear')} type="number" value={manufactureYear} onChange={(e) => setManufactureYear(e.target.value)} size="small" fullWidth />
-                    <TextField label={t('internalNumber')} value={internalNumber} onChange={(e) => setInternalNumber(e.target.value)} size="small" fullWidth />
-                    <TextField label={t('serialNumber')} value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} size="small" fullWidth />
-                    <TextField label={t('machineLocation')} value={location} onChange={(e) => setLocation(e.target.value)} size="small" fullWidth />
+        <Box sx={{mt: 3}}>
+            <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2}}>
+                <Typography variant="h6">{t('machinesManagement')}</Typography>
+                <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={openFormModal}>
+                    {t('addMachine')}
+                </Button>
+            </Box>
 
-                    <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                        <Button variant="contained" color="primary" onClick={handleSubmit}>
-                            {selectedMachineId ? t('editMachine') : t('addMachine')}
-                        </Button>
-                        <Button variant="outlined" onClick={resetForm}>{t('reset')}</Button>
-                    </Box>
-                </Box>
-            </Paper>
-
-            <Paper sx={{ flex: 2, minWidth: 400, p: 2 }}>
-                <Typography variant="h6" gutterBottom>{t('machinesList')}</Typography>
+            <Paper sx={{p: 2}}>
                 <TableContainer>
                     <Table size="small">
                         <TableHead>
@@ -158,36 +196,123 @@ export function MachinesManagementPanel() {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {machines.map((machine) => (
-                                <TableRow key={machine.id || machine.machineName}>
-                                    <TableCell>{machine.machineName}</TableCell>
-                                    <TableCell>{machine.manufacturer}</TableCell>
-                                    <TableCell>{machine.serialNumber}</TableCell>
-                                    <TableCell>{machine.location}</TableCell>
-                                    <TableCell align="right" sx={tableActionsTableCellSx}>
-                                        <TableActionsRow>
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleEditClick(machine)}
-                                                sx={tableActionIconButtonSx.edit}
-                                            >
-                                                <LinkIcon fontSize="small" />
-                                            </IconButton>
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => setMachineToDelete(machine)}
-                                                sx={tableActionIconButtonSx.delete}
-                                            >
-                                                <DeleteIcon fontSize="small" />
-                                            </IconButton>
-                                        </TableActionsRow>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
+                            {machines.map((machine) => {
+                                const mid = machine.id;
+                                const unlinked = mid != null && !linkedMachineIds.has(mid);
+                                return (
+                                    <TableRow key={machine.id ?? machine.machineName}>
+                                        <TableCell>
+                                            <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap" useFlexGap>
+                                                <span>{machine.machineName}</span>
+                                                {unlinked && (
+                                                    <Tooltip title={t('machineNoProductsLinkedHint')}>
+                                                        <Chip
+                                                            size="small"
+                                                            label={t('machineNoProductsBadge')}
+                                                            color="warning"
+                                                            variant="outlined"
+                                                            sx={{
+                                                                height: 22,
+                                                                '& .MuiChip-label': {px: 1, fontSize: '0.7rem'},
+                                                            }}
+                                                        />
+                                                    </Tooltip>
+                                                )}
+                                            </Stack>
+                                        </TableCell>
+                                        <TableCell>{machine.manufacturer}</TableCell>
+                                        <TableCell>{machine.serialNumber}</TableCell>
+                                        <TableCell>{machine.location}</TableCell>
+                                        <TableCell align="right" sx={tableActionsTableCellSx}>
+                                            <TableActionsRow>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => handleEditClick(machine)}
+                                                    sx={tableActionIconButtonSx.edit}
+                                                    title={t('editMachine')}
+                                                >
+                                                    <LinkIcon fontSize="small" />
+                                                </IconButton>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => setMachineToDelete(machine)}
+                                                    sx={tableActionIconButtonSx.delete}
+                                                >
+                                                    <DeleteIcon fontSize="small" />
+                                                </IconButton>
+                                            </TableActionsRow>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
                         </TableBody>
                     </Table>
                 </TableContainer>
             </Paper>
+
+            <Dialog open={formModalOpen} onClose={closeFormModal} maxWidth="sm" fullWidth scroll="paper">
+                <DialogTitle sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+                    {selectedMachineId ? t('editMachine') : t('addMachine')}
+                    <IconButton size="small" onClick={closeFormModal} aria-label={t('close')}>
+                        <CloseIcon />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent dividers>
+                    <Box component="form" sx={{display: 'flex', flexDirection: 'column', gap: 2, pt: 1}}>
+                        <TextField
+                            label={t('machineName')}
+                            value={machineName}
+                            onChange={(e) => setMachineName(e.target.value)}
+                            size="small"
+                            fullWidth
+                        />
+                        <TextField
+                            label={t('manufacturer')}
+                            value={manufacturer}
+                            onChange={(e) => setManufacturer(e.target.value)}
+                            size="small"
+                            fullWidth
+                        />
+                        <TextField
+                            label={t('manufactureYear')}
+                            type="number"
+                            value={manufactureYear}
+                            onChange={(e) => setManufactureYear(e.target.value)}
+                            size="small"
+                            fullWidth
+                        />
+                        <TextField
+                            label={t('internalNumber')}
+                            value={internalNumber}
+                            onChange={(e) => setInternalNumber(e.target.value)}
+                            size="small"
+                            fullWidth
+                        />
+                        <TextField
+                            label={t('serialNumber')}
+                            value={serialNumber}
+                            onChange={(e) => setSerialNumber(e.target.value)}
+                            size="small"
+                            fullWidth
+                        />
+                        <TextField
+                            label={t('machineLocation')}
+                            value={location}
+                            onChange={(e) => setLocation(e.target.value)}
+                            size="small"
+                            fullWidth
+                        />
+                        <Box sx={{display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap'}}>
+                            <Button variant="contained" color="primary" onClick={handleSubmit}>
+                                {selectedMachineId ? t('editMachine') : t('addMachine')}
+                            </Button>
+                            <Button variant="outlined" onClick={closeFormModal}>
+                                {t('cancel')}
+                            </Button>
+                        </Box>
+                    </Box>
+                </DialogContent>
+            </Dialog>
 
             <ConfirmationModal
                 open={!!machineToDelete}

@@ -1,5 +1,6 @@
 import { createTheme } from "@mui/material";
 import { blueGrey, cyan, green } from "@mui/material/colors";
+import { muiTableHeaderThemeComponents } from "./tableHeaderTheme";
 
 
 export function getLocalStationTheme() {
@@ -15,7 +16,10 @@ export function getLocalStationTheme() {
 				default: "#E8F5E9"
 			}
 
-		}
+		},
+		components: {
+			...muiTableHeaderThemeComponents,
+		},
 	})
 
 }
@@ -33,7 +37,10 @@ export function getCentralTheme() {
 				default: "#E8F5E9"
 			}
 
-		}
+		},
+		components: {
+			...muiTableHeaderThemeComponents,
+		},
 	})
 
 }
@@ -51,7 +58,10 @@ export function getDispenserTheme() {
 				default: "#E8F5E9"
 			}
 
-		}
+		},
+		components: {
+			...muiTableHeaderThemeComponents,
+		},
 	})
 
 }

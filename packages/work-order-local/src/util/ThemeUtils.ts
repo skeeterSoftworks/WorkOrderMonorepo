@@ -1,5 +1,6 @@
 import { createTheme } from "@mui/material";
 import { blueGrey, green } from "@mui/material/colors";
+import { muiTableHeaderThemeComponents } from "sf-common/src/util/tableHeaderTheme";
 
 
 export function getLocalStationTheme() {
@@ -15,7 +16,10 @@ export function getLocalStationTheme() {
 				default: "#E8F5E9"
 			}
 
-		}
+		},
+		components: {
+			...muiTableHeaderThemeComponents,
+		},
 	})
 
 }
@@ -33,7 +37,10 @@ export function getCentralTheme() {
 				default: "#E8F5E9"
 			}
 
-		}
+		},
+		components: {
+			...muiTableHeaderThemeComponents,
+		},
 	})
 
 }
