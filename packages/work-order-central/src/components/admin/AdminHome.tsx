@@ -13,15 +13,18 @@ import { ProductsManagementPanel } from './ProductsManagementPanel';
 import { CustomersManagementPanel } from './CustomersManagementPanel';
 import { MachinesManagementPanel } from './MachinesManagementPanel';
 import { MiscManagementPanel } from './MiscManagementPanel';
+import { LicenseActivationPanel } from './LicenseActivationPanel';
 
-// @ts-ignore
-enum AdminTabs {
-    USERS = 0,
-    PRODUCTS = 1,
-    CUSTOMERS = 2,
-    MACHINES = 3,
-    MISC = 4,
-}
+const AdminTabs = {
+    CUSTOMERS: 0,
+    MACHINES: 1,
+    PRODUCTS: 2,
+    USERS: 3,
+    MISC: 4,
+    LICENSE: 5,
+} as const;
+
+type AdminTabId = (typeof AdminTabs)[keyof typeof AdminTabs];
 
 export function AdminHome() {
     const { t } = useTranslation();
@@ -29,7 +32,7 @@ export function AdminHome() {
     const userDataString = sessionStorage.getItem('userData');
     const userData: LoggedUser = userDataString && JSON.parse(userDataString);
 
-    const [activeTab, setActiveTab] = useState<AdminTabs>(AdminTabs.USERS);
+    const [activeTab, setActiveTab] = useState<AdminTabId>(AdminTabs.CUSTOMERS);
 
     return (
         <Container>
@@ -42,12 +45,13 @@ export function AdminHome() {
             </AppBar>
 
             <Box sx={{ borderBottom: 1, borderColor: 'divider', mt: 2 }}>
-                <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
+                <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue as AdminTabId)}>
                     <Tab label={t('customers')} value={AdminTabs.CUSTOMERS} />
                     <Tab label={t('machines')} value={AdminTabs.MACHINES} />
                     <Tab label={t('products')} value={AdminTabs.PRODUCTS} />
                     <Tab label={t('users')} value={AdminTabs.USERS} />
                     <Tab label={t('misc')} value={AdminTabs.MISC} />
+                    <Tab label={t('licenseActivationTab')} value={AdminTabs.LICENSE} />
                 </Tabs>
             </Box>
 
@@ -56,6 +60,7 @@ export function AdminHome() {
             {activeTab === AdminTabs.CUSTOMERS && <CustomersManagementPanel />}
             {activeTab === AdminTabs.MACHINES && <MachinesManagementPanel />}
             {activeTab === AdminTabs.MISC && <MiscManagementPanel />}
+            {activeTab === AdminTabs.LICENSE && <LicenseActivationPanel />}
         </Container>
     );
 }

@@ -151,6 +151,18 @@ export interface WipReportRequest {
     dateUntil?: string
 }
 
+/** Matches server `LicenseActivationInfoTO`. */
+export interface LicenseActivationInfoTO {
+    scenario?: string
+    macAddresses?: string[]
+    issuedTo?: string
+    validUntil?: string
+    timeLimitedExpired?: boolean | null
+    licenseMacAddress?: string
+    macMatchesLicense?: boolean
+    errorMessage?: string
+}
+
 
 
 

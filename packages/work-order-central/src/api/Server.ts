@@ -1,4 +1,4 @@
-import type {ApplicationUserTO, StationConfigDTO} from "../models/ApiRequests";
+import type {ApplicationUserTO, LicenseActivationInfoTO, StationConfigDTO} from "../models/ApiRequests";
 import axios from "axios";
 import {getServerUrl} from "../util/EnvUtils";
 
@@ -109,6 +109,15 @@ export class Server {
             .catch(error => {
                 console.error(error)
                 onError(error)
+            });
+    }
+
+    static getLicenseActivationInfo(onSuccess: (data: LicenseActivationInfoTO) => void, onError?: (e: unknown) => void) {
+        axios.get<LicenseActivationInfoTO>(`${getServerUrl()}/license/activation-info`)
+            .then(response => onSuccess(response.data))
+            .catch(error => {
+                console.log(error)
+                onError?.(error)
             });
     }
 }
