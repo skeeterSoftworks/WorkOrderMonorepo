@@ -23,6 +23,15 @@ export interface QualityInfoStepTO {
     imageDataBase64?: string,
 }
 
+/** Process / tooling data owned one-to-one by a central product (separate table on server). */
+export interface TechnologyTO {
+    id?: number,
+    cycleTime?: string,
+    normType?: string,
+    piecesPerMaterial?: number,
+    tools?: ToolTO[],
+}
+
 export interface ProductTO {
     id?: number,
     name?: string,
@@ -32,6 +41,7 @@ export interface ProductTO {
     machineIds?: number[],
     /** Customers this product may be sold to (purchase orders). */
     customerIds?: number[],
+    technologyData?: TechnologyTO,
     /** Single embedded setup template for the product (central). */
     setupDataPrototype?: SetupDataPrototypeTO,
     measuringFeaturePrototypes?: MeasuringFeaturePrototypeTO[],
@@ -143,10 +153,14 @@ export interface CustomerTO {
     description?: string
 }
 
+/** Admin / catalogue tool (Work Order Central). */
 export interface ToolTO {
     id?: number,
     toolName?: string,
-    toolDescription?: string
+    toolDescription?: string,
+    orderNumber?: number,
+    workingTime?: number,
+    technologyId?: number,
 }
 
 export interface MachineTO {
@@ -248,10 +262,11 @@ export interface ClientCompanyTO {
 export interface OperationTO {
     //   id?: string,
     operationID?: string,
-    tools?: ToolTO[]
+    tools?: OperationToolTO[]
 }
 
-export interface ToolTO {
+/** Tool dimensions / setup state on a work-session operation (not the central Tool catalogue). */
+export interface OperationToolTO {
     // id?: string,
     toolID?: string,
     diameterRefValue?: number,

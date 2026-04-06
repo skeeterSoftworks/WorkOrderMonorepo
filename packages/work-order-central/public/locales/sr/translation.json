@@ -189,6 +189,7 @@
   "toastProductAdded": "Proizvod je uspešno dodat.",
   "toastProductUpdated": "Proizvod je uspešno ažuriran.",
   "toastProductDeleted": "Proizvod je uspešno obrisan.",
+  "toastTechnologySaved": "Tehnologija je sačuvana.",
   "toastPurchaseOrderAdded": "Narudžbenica je uspešno kreirana.",
   "toastPurchaseOrderUpdated": "Narudžbenica je uspešno ažurirana.",
   "toastPurchaseOrderDeleted": "Narudžbenica je uspešno obrisana.",
@@ -542,5 +543,19 @@
   "moveUp": "Pomeri gore",
   "moveDown": "Pomeri dole",
   "reorderSteps": "Redosled",
-  "assessedValue": "Izmerena vrednost"
+  "assessedValue": "Izmerena vrednost",
+  "technologyEditorTitle": "Tehnologija",
+  "technologyCycleTime": "Vreme ciklusa",
+  "technologyNormType": "Tip norme",
+  "technologyPiecesPerMaterial": "Komada po materijalu",
+  "technologyEditTooltip": "Izmena tehnologije i alata",
+  "technologySave": "Sačuvaj",
+  "technologyToolsSection": "Alati",
+  "addTechnologyTool": "Dodaj alat",
+  "technologyToolName": "Ime alata",
+  "technologyToolDescription": "Opis",
+  "technologyToolOrderField": "Red. br.",
+  "technologyToolWorkingTime": "Vreme rada",
+  "technologyToolUpdate": "Ažuriraj alat",
+  "technologyToolsEmpty": "Nema alata. Dodajte iznad."
 }

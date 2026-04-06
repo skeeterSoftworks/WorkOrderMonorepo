@@ -188,6 +188,7 @@
   "toastProductAdded": "Product added successfully.",
   "toastProductUpdated": "Product updated successfully.",
   "toastProductDeleted": "Product deleted successfully.",
+  "toastTechnologySaved": "Technology saved.",
   "toastPurchaseOrderAdded": "Purchase order created successfully.",
   "toastPurchaseOrderUpdated": "Purchase order updated successfully.",
   "toastPurchaseOrderDeleted": "Purchase order deleted successfully.",
@@ -542,5 +543,19 @@
   "moveUp": "Move up",
   "moveDown": "Move down",
   "reorderSteps": "Order",
-  "assessedValue": "Assessed value"
+  "assessedValue": "Assessed value",
+  "technologyEditorTitle": "Technology",
+  "technologyCycleTime": "Cycle time",
+  "technologyNormType": "Norm type",
+  "technologyPiecesPerMaterial": "Pieces per material",
+  "technologyEditTooltip": "Edit technology and its tools",
+  "technologySave": "Save",
+  "technologyToolsSection": "Tools",
+  "addTechnologyTool": "Add tool",
+  "technologyToolName": "Tool name",
+  "technologyToolDescription": "Description",
+  "technologyToolOrderField": "Order #",
+  "technologyToolWorkingTime": "Working time",
+  "technologyToolUpdate": "Update tool",
+  "technologyToolsEmpty": "No tools yet. Add one above."
 }

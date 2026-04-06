@@ -15,7 +15,7 @@ export {ErrorModal} from "./modals/ErrorModal"
 export {ProductVO, ProductType, LoggedUser, EClientMode, SessionFilterMode, UpdateProductRequest} from "./models/Common"
 export {
 ProductProfileTO, ApplicationUserTO, ProductTO, QRData, ClientCompanyTO, FetchParams, ProductsFetchParams,
-     MeasuringFeatureTO, OperationTO, SessionTO, SessionFetchParams, SetupTO, ToolTO, StationConfigDTO,FinalInspectionStepTO
+     MeasuringFeatureTO, OperationTO, OperationToolTO, TechnologyTO, SessionTO, SessionFetchParams, SetupTO, ToolTO, StationConfigDTO,FinalInspectionStepTO
 } from "./models/ApiRequests"
 
 export {paddedContainer, mockQrFragment, mockScanContent, green, bold, inputStyles,

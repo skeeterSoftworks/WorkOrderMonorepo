@@ -105,10 +105,11 @@ export interface ClientCompanyTO {
 export interface OperationTO {
     //   id?: string,
     operationID?: string,
-    tools?: ToolTO[]
+    tools?: OperationToolTO[]
 }
 
-export interface ToolTO {
+/** Tool dimensions / setup state on a work-session operation (not the central Tool catalogue). */
+export interface OperationToolTO {
     // id?: string,
     toolID?: string,
     diameterRefValue?: number,
