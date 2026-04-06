@@ -16,8 +16,11 @@ import {QualityInfoReviewDialog} from '../../modals/QualityInfoReviewDialog';
 import {RecordControlProductDialog} from '../../modals/RecordControlProductDialog';
 import {RecordGoodProductsDialog} from '../../modals/RecordGoodProductsDialog';
 import {ToolChangeSetupDialog} from '../../modals/ToolChangeSetupDialog';
+import {ProcessTechnologyDialog} from '../../modals/ProcessTechnologyDialog';
+import {workSessionProcessButtonSx} from '../../modals/workSessionDialogStyles';
 import {assessedMeasuredValueForApi, measuredValueToleranceHint} from '../../modals/workSessionMeasuringHelpers';
 import type {
+    BoundMachineTechnologyTO,
     MeasuringFeaturePrototypeTO,
     ProductionWorkOrderTO,
     QualityInfoStepTO,
@@ -182,6 +185,9 @@ export function ProductionWorkSessionPanel({
     const faultyModalReturnToControlRef = useRef<'initial' | 'ondemand' | null>(null);
     const [controlOpen, setControlOpen] = useState(false);
     const [toolOpen, setToolOpen] = useState(false);
+    const [processOpen, setProcessOpen] = useState(false);
+    const [processLoading, setProcessLoading] = useState(false);
+    const [processTechnology, setProcessTechnology] = useState<BoundMachineTechnologyTO | null>(null);
     const [setupModalProto, setSetupModalProto] = useState<SetupDataPrototypeTO | null>(null);
     const [setupModalLoading, setSetupModalLoading] = useState(false);
     const [setupHeightMeasured, setSetupHeightMeasured] = useState('');
@@ -275,6 +281,38 @@ export function ProductionWorkSessionPanel({
             cancelled = true;
         };
     }, [toolOpen, workOrder.productReference]);
+
+    useEffect(() => {
+        if (!processOpen) {
+            setProcessTechnology(null);
+            setProcessLoading(false);
+            return;
+        }
+        const ref = workOrder.productReference?.trim();
+        if (!ref) {
+            setProcessTechnology(null);
+            setProcessLoading(false);
+            return;
+        }
+        let cancelled = false;
+        setProcessLoading(true);
+        setProcessTechnology(null);
+        void Server.getBoundMachineProducts()
+            .then((products) => {
+                if (cancelled) return;
+                const match = products.find((p) => (p.reference ?? '').trim() === ref);
+                setProcessTechnology(match?.technologyData ?? null);
+            })
+            .catch(() => {
+                if (!cancelled) setProcessTechnology(null);
+            })
+            .finally(() => {
+                if (!cancelled) setProcessLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [processOpen, workOrder.productReference]);
 
     useEffect(() => {
         const woId = workOrder.id;
@@ -764,8 +802,12 @@ export function ProductionWorkSessionPanel({
               )
             : 'none';
 
+    const processProductHint = [workOrder.productReference?.trim(), workOrder.productName?.trim()]
+        .filter(Boolean)
+        .join(' · ');
+
     return (
-        <Box sx={{mt: 2}}>
+        <Box sx={{mt: 2, width: '100%', maxWidth: '100%'}}>
             {sessionId != null && !sessionIsClosed && (
                 <Stack direction="row" justifyContent="flex-start" alignItems="center" sx={{mb: 1}}>
                     <Button
@@ -875,6 +917,7 @@ export function ProductionWorkSessionPanel({
                         >
                             {t('workSessionRecordControl')}
                         </Button>
+
                         <Button
                             size="medium"
                             variant="contained"
@@ -885,6 +928,18 @@ export function ProductionWorkSessionPanel({
                             }}
                         >
                             {t('workSessionToolChange')}
+                        </Button>
+                        <Button
+                            size="medium"
+                            variant="outlined"
+                            color="inherit"
+                            sx={workSessionProcessButtonSx}
+                            onClick={() => {
+                                setActionError(null);
+                                setProcessOpen(true);
+                            }}
+                        >
+                            {t('workSessionProcess')}
                         </Button>
                     </Stack>
                 </Box>
@@ -951,6 +1006,18 @@ export function ProductionWorkSessionPanel({
                     setActionError(null);
                 }}
                 onSave={() => void handleSaveOnDemandControl()}
+            />
+
+            <ProcessTechnologyDialog
+                open={processOpen}
+                onClose={() => setProcessOpen(false)}
+                loading={processLoading}
+                technology={processTechnology}
+                productHint={
+                    processProductHint
+                        ? t('processTechnologyProductHint', {hint: processProductHint})
+                        : undefined
+                }
             />
 
             <ToolChangeSetupDialog

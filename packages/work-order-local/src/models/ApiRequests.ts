@@ -141,6 +141,25 @@ export interface SetupProductTO {
     measuredDiameterOk?: boolean;
 }
 
+/** Tool row under central product technology (mirrored from central JSON). */
+export interface BoundMachineTechnologyToolTO {
+    id?: number;
+    toolName?: string;
+    toolDescription?: string;
+    orderNumber?: number;
+    workingTime?: number;
+    technologyId?: number;
+}
+
+/** Technology + tools from central product (read-only on workstation). */
+export interface BoundMachineTechnologyTO {
+    id?: number;
+    cycleTime?: string;
+    normType?: string;
+    piecesPerMaterial?: number;
+    tools?: BoundMachineTechnologyToolTO[];
+}
+
 /** Central product for the workstation-bound machine (quality steps editor). */
 export interface BoundMachineProductTO {
     id?: number;
@@ -149,6 +168,7 @@ export interface BoundMachineProductTO {
     description?: string;
     setupDataPrototype?: SetupDataPrototypeTO;
     qualityInfoSteps?: QualityInfoStepTO[];
+    technologyData?: BoundMachineTechnologyTO;
 }
 
 export interface WorkSessionOpenRequestTO {

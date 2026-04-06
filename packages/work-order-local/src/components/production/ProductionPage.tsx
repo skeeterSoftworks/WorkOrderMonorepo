@@ -140,7 +140,7 @@ export function ProductionPage() {
     }, []);
 
     return (
-        <Container maxWidth="md">
+        <Container maxWidth="lg">
             {!hideProductionChrome && (
                 <AppBar position="static">
                     <Toolbar>
