@@ -27,6 +27,9 @@ import Divider from '@mui/material/Divider';
 import ListSubheader from '@mui/material/ListSubheader';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import Chip from '@mui/material/Chip';
+import Stack from '@mui/material/Stack';
+import Tooltip from '@mui/material/Tooltip';
 import { alpha } from '@mui/material/styles';
 import type {
     ProductTO,
@@ -56,6 +59,8 @@ function withSequentialStepNumbers(steps: QualityInfoStepTO[]): QualityInfoStepT
 
 const DEFAULT_PROTO_CLASS_TYPE = 'CC';
 const DEFAULT_PROTO_CHECK_TYPE: 'MEASURED' = 'MEASURED';
+
+const TECHNOLOGY_NORM_TYPE_OPTIONS = ['85%', '100%'] as const;
 
 export function ProductsManagementPanel() {
     const { t } = useTranslation();
@@ -648,9 +653,8 @@ export function ProductsManagementPanel() {
                     <Table size="small">
                         <TableHead>
                             <TableRow>
-                                <TableCell>{t('name')}</TableCell>
+                                <TableCell sx={{ minWidth: 173, width: '26%' }}>{t('name')}</TableCell>
                                 <TableCell>{t('catalogueId')}</TableCell>
-                                <TableCell>{t('description')}</TableCell>
                                 <TableCell>{t('machine')}</TableCell>
                                 <TableCell>{t('customers')}</TableCell>
                                 <TableCell align="right" sx={tableActionsTableCellSx}>
@@ -659,11 +663,48 @@ export function ProductsManagementPanel() {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {products.map((product) => (
+                            {products.map((product) => {
+                                const noMeasuringFeatures =
+                                    (product.measuringFeaturePrototypes?.length ?? 0) === 0;
+                                const noQualitySteps = (product.qualityInfoSteps?.length ?? 0) === 0;
+                                const chipSx = {
+                                    height: 22,
+                                    '& .MuiChip-label': { px: 1, fontSize: '0.7rem' },
+                                } as const;
+                                return (
                                 <TableRow key={product.id || product.name}>
-                                    <TableCell>{product.name}</TableCell>
+                                    <TableCell sx={{ maxWidth: 288, verticalAlign: 'top' }}>
+                                        <Stack direction="column" alignItems="flex-start" spacing={0.75}>
+                                            <Typography variant="body2" component="span">
+                                                {product.name}
+                                            </Typography>
+                                            <Stack direction="row" alignItems="center" spacing={0.75} flexWrap="wrap" useFlexGap>
+                                                {noMeasuringFeatures && (
+                                                    <Tooltip title={t('productNoMeasuringFeaturesHint')}>
+                                                        <Chip
+                                                            size="small"
+                                                            label={t('productNoMeasuringFeaturesBadge')}
+                                                            color="warning"
+                                                            variant="outlined"
+                                                            sx={chipSx}
+                                                        />
+                                                    </Tooltip>
+                                                )}
+                                                {noQualitySteps && (
+                                                    <Tooltip title={t('productNoQualityStepsHint')}>
+                                                        <Chip
+                                                            size="small"
+                                                            label={t('productNoQualityStepsBadge')}
+                                                            color="warning"
+                                                            variant="outlined"
+                                                            sx={chipSx}
+                                                        />
+                                                    </Tooltip>
+                                                )}
+                                            </Stack>
+                                        </Stack>
+                                    </TableCell>
                                     <TableCell>{product.reference ?? '—'}</TableCell>
-                                    <TableCell>{product.description}</TableCell>
                                     <TableCell>{getMachineNames(product.machineIds)}</TableCell>
                                     <TableCell>{getCustomerNames(product.customerIds)}</TableCell>
                                     <TableCell align="right" sx={tableActionsTableCellSx}>
@@ -711,7 +752,8 @@ export function ProductsManagementPanel() {
                                         </TableActionsRow>
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                                );
+                            })}
                         </TableBody>
                     </Table>
                 </TableContainer>
@@ -1484,14 +1526,32 @@ export function ProductsManagementPanel() {
                             fullWidth
                         />
                         <TextField
+                            select
                             label={t('technologyNormType')}
-                            value={technologyDraft.normType ?? ''}
-                            onChange={(e) =>
-                                setTechnologyDraft((d) => ({ ...d, normType: e.target.value }))
+                            value={
+                                technologyDraft.normType === '85%' || technologyDraft.normType === '100%'
+                                    ? technologyDraft.normType
+                                    : ''
                             }
+                            onChange={(e) => {
+                                const v = e.target.value;
+                                setTechnologyDraft((d) => ({
+                                    ...d,
+                                    normType: v ? v : undefined,
+                                }));
+                            }}
                             size="small"
                             fullWidth
-                        />
+                        >
+                            <MenuItem value="">
+                                <em>{t('none')}</em>
+                            </MenuItem>
+                            {TECHNOLOGY_NORM_TYPE_OPTIONS.map((opt) => (
+                                <MenuItem key={opt} value={opt}>
+                                    {opt}
+                                </MenuItem>
+                            ))}
+                        </TextField>
                         <TextField
                             label={t('technologyPiecesPerMaterial')}
                             value={
