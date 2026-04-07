@@ -208,77 +208,87 @@ export function ProductionPage() {
                                     {t('workOrderDetails')}
                                 </Typography>
                                 <Divider sx={{my: 1}} />
+                                <Box sx={{width: '100%'}}>
+                                    <Typography variant="body2">
+                                        <strong>{t('woProductLine')}:</strong>{' '}
+                                        {[selected.productReference, selected.productName]
+                                            .filter(Boolean)
+                                            .join(' · ') || '—'}
+                                    </Typography>
+                                    <Typography variant="body2">
+                                        <strong>{t('dueDate')}:</strong> {formatDate(selected.dueDate)}
+                                    </Typography>
+                                    <Typography variant="body2">
+                                        <strong>{t('startDate')}:</strong> {formatDate(selected.startDate)}
+                                    </Typography>
+                                    <Typography variant="body2">
+                                        <strong>{t('endDate')}:</strong> {formatDate(selected.endDate)}
+                                    </Typography>
+                                    <Typography variant="body2" sx={{mt: 1, whiteSpace: 'pre-wrap'}}>
+                                        <strong>{t('comment')}:</strong>{' '}
+                                        {selected.comment?.trim() ? selected.comment : '—'}
+                                    </Typography>
+                                </Box>
+
                                 <Stack
                                     direction={{xs: 'column', sm: 'row'}}
                                     spacing={2}
                                     alignItems={{xs: 'stretch', sm: 'flex-start'}}
-                                    sx={{width: '100%'}}
+                                    sx={{width: '100%', mt: 2}}
                                 >
-                                    <Box sx={{flex: '1 1 0', minWidth: 0}}>
-                                        <Typography variant="body2">
-                                            <strong>{t('woProductLine')}:</strong>{' '}
-                                            {[selected.productReference, selected.productName]
-                                                .filter(Boolean)
-                                                .join(' · ') || '—'}
-                                        </Typography>
-                                        <Typography variant="body2">
-                                            <strong>{t('dueDate')}:</strong> {formatDate(selected.dueDate)}
-                                        </Typography>
-                                        <Typography variant="body2">
-                                            <strong>{t('startDate')}:</strong> {formatDate(selected.startDate)}
-                                        </Typography>
-                                        <Typography variant="body2">
-                                            <strong>{t('endDate')}:</strong> {formatDate(selected.endDate)}
-                                        </Typography>
-                                        <Typography variant="body2" sx={{mt: 1, whiteSpace: 'pre-wrap'}}>
-                                            <strong>{t('comment')}:</strong>{' '}
-                                            {selected.comment?.trim() ? selected.comment : '—'}
-                                        </Typography>
-                                    </Box>
                                     <Box
                                         sx={{
-                                            flex: {sm: '0 0 auto'},
-                                            width: {xs: '100%', sm: 160},
-                                            maxWidth: {sm: 180},
-                                            pl: {sm: 2},
-                                            borderLeft: {sm: 1},
-                                            borderTop: {xs: 1, sm: 0},
-                                            borderColor: 'divider',
-                                            pt: {xs: 2, sm: 0},
+                                            flex: workstationMachineImageSrc ? '1 1 0' : '1 1 auto',
+                                            minWidth: 0,
+                                            width: {xs: '100%', sm: workstationMachineImageSrc ? 'auto' : '100%'},
                                         }}
                                     >
-                                        <Typography variant="caption" color="text.secondary" sx={{mb: 0.75, display: 'block'}}>
-                                            {t('productionMachineImage')}
-                                        </Typography>
-                                        {workstationMachineImageSrc ? (
+                                        <ProductionWorkSessionPanel
+                                            key={selected.id}
+                                            workOrder={selected}
+                                            onClearSelection={handleClearWorkOrderSelection}
+                                            onWorkOrdersRefresh={refreshWorkOrders}
+                                            onWorkOrderSelectorLockedChange={setWorkOrderSelectorLocked}
+                                            onActiveWorkSessionChange={handleActiveWorkSessionChange}
+                                        />
+                                    </Box>
+                                    {workstationMachineImageSrc ? (
+                                        <Box
+                                            sx={{
+                                                flex: {xs: '0 0 auto', sm: '0 0 25%'},
+                                                width: {xs: '100%', sm: '25%'},
+                                                maxWidth: {sm: '25%'},
+                                                flexShrink: 0,
+                                                pl: {sm: 2},
+                                                borderLeft: {sm: 1},
+                                                borderTop: {xs: 1, sm: 0},
+                                                borderColor: 'divider',
+                                                pt: {xs: 2, sm: 0},
+                                                alignSelf: {sm: 'stretch'},
+                                            }}
+                                        >
+                                            <Typography
+                                                variant="caption"
+                                                color="text.secondary"
+                                                sx={{mb: 0.75, display: 'block'}}
+                                            >
+                                                {t('productionMachineImage')}
+                                            </Typography>
                                             <Box
                                                 component="img"
                                                 src={workstationMachineImageSrc}
                                                 alt=""
                                                 sx={{
                                                     width: '100%',
-                                                    maxHeight: 160,
+                                                    maxHeight: {xs: 220, sm: 'min(55vh, 420px)'},
                                                     objectFit: 'contain',
                                                     borderRadius: 1,
                                                     bgcolor: 'background.paper',
                                                 }}
                                             />
-                                        ) : (
-                                            <Typography variant="body2" color="text.secondary">
-                                                {t('none')}
-                                            </Typography>
-                                        )}
-                                    </Box>
+                                        </Box>
+                                    ) : null}
                                 </Stack>
-
-                                <ProductionWorkSessionPanel
-                                    key={selected.id}
-                                    workOrder={selected}
-                                    onClearSelection={handleClearWorkOrderSelection}
-                                    onWorkOrdersRefresh={refreshWorkOrders}
-                                    onWorkOrderSelectorLockedChange={setWorkOrderSelectorLocked}
-                                    onActiveWorkSessionChange={handleActiveWorkSessionChange}
-                                />
                             </Paper>
                         )}
                     </Box>

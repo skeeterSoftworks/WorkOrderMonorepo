@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography';
 import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
+import LinearProgress from '@mui/material/LinearProgress';
 import {useTranslation} from 'react-i18next';
 import type {TFunction} from 'i18next';
 import {Server} from '../../api/Server';
@@ -807,7 +808,7 @@ export function ProductionWorkSessionPanel({
         .join(' · ');
 
     return (
-        <Box sx={{mt: 2, width: '100%', maxWidth: '100%'}}>
+        <Box sx={{mt: 0, width: '100%', maxWidth: '100%'}}>
             {sessionId != null && !sessionIsClosed && (
                 <Stack direction="row" justifyContent="flex-start" alignItems="center" sx={{mb: 1}}>
                     <Button
@@ -897,7 +898,7 @@ export function ProductionWorkSessionPanel({
                         <Button
                             size="medium"
                             variant="contained"
-                            sx={{bgcolor: '#c62828', '&:hover': {bgcolor: '#b71c1c'}                            }}
+                            sx={{bgcolor: '#c62828', '&:hover': {bgcolor: '#b71c1c'}}}
                             onClick={() => {
                                 setActionError(null);
                                 faultyModalReturnToControlRef.current = null;
@@ -917,7 +918,6 @@ export function ProductionWorkSessionPanel({
                         >
                             {t('workSessionRecordControl')}
                         </Button>
-
                         <Button
                             size="medium"
                             variant="contained"
@@ -1064,6 +1064,8 @@ function SessionSummary({workOrder, session}: {workOrder: ProductionWorkOrderTO;
     const sessionGood = session.productCount ?? 0;
     const residualOverOrder =
         required != null && required > 0 && producedWo > required ? producedWo - required : 0;
+    const producedProgressPct =
+        required != null && required > 0 ? Math.min(100, (producedWo / required) * 100) : null;
     return (
         <Box sx={{p: 1.5, bgcolor: 'action.hover', borderRadius: 1}}>
             <Stack
@@ -1078,9 +1080,31 @@ function SessionSummary({workOrder, session}: {workOrder: ProductionWorkOrderTO;
                             {t('productionWorkOrderRequiredQuantity')}: {required}
                         </Typography>
                     )}
-                    <Typography variant="body2">
-                        {t('productionWorkOrderProducedGood')}: {producedWo}
-                    </Typography>
+                    <Stack
+                        direction={{xs: 'column', sm: 'row'}}
+                        alignItems={{xs: 'stretch', sm: 'center'}}
+                        spacing={{xs: 0.75, sm: 1.5}}
+                        sx={{width: '100%'}}
+                    >
+                        <Typography variant="body2" sx={{flexShrink: 0}}>
+                            {t('productionWorkOrderProducedGood')}: {producedWo}
+                        </Typography>
+                        {producedProgressPct != null && (
+                            <LinearProgress
+                                variant="determinate"
+                                value={producedProgressPct}
+                                color={
+                                    required != null && producedWo >= required ? 'success' : 'primary'
+                                }
+                                sx={{
+                                    flex: 1,
+                                    minWidth: {sm: 64},
+                                    height: 8,
+                                    borderRadius: 1,
+                                }}
+                            />
+                        )}
+                    </Stack>
                     <Typography variant="body2">
                         {t('productionWorkSessionGoodRecorded')}: {sessionGood}
                     </Typography>
