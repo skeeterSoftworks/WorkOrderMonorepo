@@ -175,6 +175,7 @@
   "toastActionErrorFallback": "Something went wrong. Please try again.",
   "toastActionErrorHttp": "Request failed (HTTP {{status}}).",
   "errorMachineDeleteLinkedProducts": "Cannot delete this machine: it is linked to {{count}} product(s). Remove the machine from those products first.",
+  "errorMachineDeleteLinkedBookings": "Cannot delete this machine: it has {{count}} machine booking(s). Cancel or complete those bookings first.",
   "errorProductDeleteLinkedOrderLines": "Cannot delete this product: it is still used on {{count}} purchase order line(s). Remove or change those lines first.",
   "toastUserAdded": "User added successfully.",
   "toastUserUpdated": "User updated successfully.",

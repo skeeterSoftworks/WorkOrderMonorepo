@@ -176,6 +176,7 @@
   "toastActionErrorFallback": "Došlo je do greške. Pokušajte ponovo.",
   "toastActionErrorHttp": "Zahtev nije uspeo (HTTP {{status}}).",
   "errorMachineDeleteLinkedProducts": "Brisanje mašine nije moguće: povezana je sa {{count}} proizvod(a). Prvo uklonite mašinu sa tih proizvoda.",
+  "errorMachineDeleteLinkedBookings": "Brisanje mašine nije moguće: postoji {{count}} zakazivanje(a) na mašini. Prvo otkažite ili završite ta zakazivanja.",
   "errorProductDeleteLinkedOrderLines": "Brisanje proizvoda nije moguće: proizvod je na {{count}} stavki narudžbenica. Uklonite ili zamenite te stavke prvo.",
   "toastUserAdded": "Korisnik je uspešno dodat.",
   "toastUserUpdated": "Korisnik je uspešno ažuriran.",
