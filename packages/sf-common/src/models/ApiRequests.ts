@@ -27,7 +27,6 @@ export interface QualityInfoStepTO {
 export interface TechnologyTO {
     id?: number,
     cycleTime?: string,
-    norm85?: number,
     norm100?: number,
     piecesPerMaterial?: number,
     tools?: ToolTO[],
