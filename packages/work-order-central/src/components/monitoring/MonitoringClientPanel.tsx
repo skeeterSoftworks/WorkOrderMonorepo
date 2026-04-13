@@ -31,6 +31,25 @@ function minutesAgoLabel(nowMs: number, eventTimestamp: string | undefined, t: (
     return t('beforeMinutes', {minutes: deltaMin});
 }
 
+/** Minutes since event; null if unknown timestamp. */
+function minutesSinceEvent(nowMs: number, eventTimestamp: string | undefined): number | null {
+    const ts = parseTimestampMs(eventTimestamp);
+    if (ts == null) return null;
+    return Math.max(0, Math.floor((nowMs - ts) / 60000));
+}
+
+/** Light yellow after 15 min, light red after 60 min (for last-event + time-ago labels). */
+function staleEventLabelSx(minutes: number | null): object | undefined {
+    if (minutes == null) return undefined;
+    if (minutes > 60) {
+        return {bgcolor: 'rgba(244, 67, 54, 0.22)', px: 0.75, py: 0.25, borderRadius: 1, display: 'inline-block'};
+    }
+    if (minutes > 15) {
+        return {bgcolor: 'rgba(255, 235, 59, 0.5)', px: 0.75, py: 0.25, borderRadius: 1, display: 'inline-block'};
+    }
+    return undefined;
+}
+
 export function MonitoringClientPanel() {
     const {t} = useTranslation();
     const [machines, setMachines] = useState<MachineTO[]>([]);
@@ -95,6 +114,8 @@ export function MonitoringClientPanel() {
                             ? normalizeBinaryDataUrl(machine.machineImageBase64)
                             : undefined;
                         const eventKey = ev?.eventType ? `monitoringEvent_${ev.eventType}` : 'none';
+                        const ageMinutes = minutesSinceEvent(nowMs, ev?.timestamp);
+                        const staleSx = staleEventLabelSx(ageMinutes);
                         return (
                             <Grid item xs={12} sm={6} md={4} lg={3} key={machine.id ?? machine.machineName}>
                                 <Paper
@@ -128,10 +149,10 @@ export function MonitoringClientPanel() {
                                     <Typography variant="subtitle1" sx={{fontWeight: 700}}>
                                         {machine.machineName ?? t('machine')}
                                     </Typography>
-                                    <Typography variant="body2" color="text.secondary">
+                                    <Typography variant="body2" color="text.secondary" sx={staleSx}>
                                         {t('monitoringLastEvent')}: {t(eventKey)}
                                     </Typography>
-                                    <Typography variant="caption" color="text.secondary">
+                                    <Typography variant="caption" color="text.secondary" sx={staleSx}>
                                         {minutesAgoLabel(nowMs, ev?.timestamp, t)}
                                     </Typography>
                                     {ev?.details ? (
