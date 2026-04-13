@@ -141,6 +141,12 @@ export interface SetupProductTO {
     measuredDiameterOk?: boolean;
 }
 
+export interface ProductsRecordTO {
+    id?: number;
+    goodProductsCount?: number;
+    timestamp?: string;
+}
+
 /** Tool row under central product technology (mirrored from central JSON). */
 export interface BoundMachineTechnologyToolTO {
     id?: number;
@@ -189,6 +195,7 @@ export interface WorkSessionResponseTO {
     faultyProductCount?: number;
     setupProductCount?: number;
     setupProducts?: SetupProductTO[];
+    productRecords?: ProductsRecordTO[];
     productReferenceID?: string;
     operatorQrCode?: string;
     operatorName?: string;
