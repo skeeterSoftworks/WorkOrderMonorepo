@@ -1,6 +1,7 @@
 import type {
     BoundMachineProductTO,
     CentralMachineTO,
+    ProductionWorkSessionConfigTO,
     QualityInfoStepTO,
     WorkSessionControlProductCreateTO,
     WorkSessionFaultyProductCreateTO,
@@ -84,6 +85,11 @@ export class Server {
                 console.log(error);
                 onError && onError(error);
             });
+    }
+
+    static async getProductionWorkSessionConfig(): Promise<ProductionWorkSessionConfigTO> {
+        const r = await axios.get<ProductionWorkSessionConfigTO>(`${getServerUrl()}/config/production-work-session`);
+        return r.data ?? {};
     }
 
     static getMachinesFromCentralViaLocal(onSuccess: Function, onError?: Function) {

@@ -206,6 +206,10 @@ export function ProductionWorkSessionPanel({
     const [rejectCauseOptions, setRejectCauseOptions] = useState<string[]>([]);
 
     const [goodDelta, setGoodDelta] = useState('1');
+    const [controlGoodDelta, setControlGoodDelta] = useState('');
+    const [controlDialogIntervalMinutes, setControlDialogIntervalMinutes] = useState(0);
+    const [controlBlockingMode, setControlBlockingMode] = useState(false);
+    const [lastControlRecordedAt, setLastControlRecordedAt] = useState<number | null>(null);
 
     const [submitting, setSubmitting] = useState(false);
     const [actionError, setActionError] = useState<string | null>(null);
@@ -246,6 +250,22 @@ export function ProductionWorkSessionPanel({
             },
             () => {},
         );
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+        void Server.getProductionWorkSessionConfig()
+            .then((cfg) => {
+                if (cancelled) return;
+                const n = Number(cfg?.controlDialogIntervalMinutes ?? 0);
+                setControlDialogIntervalMinutes(Number.isFinite(n) && n > 0 ? Math.trunc(n) : 0);
+            })
+            .catch(() => {
+                if (!cancelled) setControlDialogIntervalMinutes(0);
+            });
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     useEffect(() => {
@@ -336,6 +356,9 @@ export function ProductionWorkSessionPanel({
             setInitialModalOpen(false);
             setRowsInitial([]);
             setRowsControl([]);
+            setControlGoodDelta('');
+            setControlBlockingMode(false);
+            setLastControlRecordedAt(null);
             setActionError(null);
             setQualityInfoModalOpen(false);
             setQualityInfoSteps([]);
@@ -477,6 +500,47 @@ export function ProductionWorkSessionPanel({
         recordControlAssessmentsComplete &&
         buildControlNokRejectReason(sessionPrototypes, rowsControl, t) !== null;
 
+    useEffect(() => {
+        if (!firstControlDone || sessionIsClosed || sessionId == null) {
+            return;
+        }
+        if (controlDialogIntervalMinutes <= 0 || lastControlRecordedAt == null) {
+            return;
+        }
+        const intervalMs = controlDialogIntervalMinutes * 60_000;
+        const remainingMs = intervalMs - (Date.now() - lastControlRecordedAt);
+        const isAnotherModalOpen =
+            initialModalOpen || faultyOpen || toolOpen || processOpen || goodOpen || qualityInfoModalOpen;
+        const timeout = window.setTimeout(
+            () => {
+                if (isAnotherModalOpen || controlOpen || sessionIsClosed) {
+                    return;
+                }
+                setActionError(null);
+                setControlBlockingMode(true);
+                setControlGoodDelta('');
+                setControlOpen(true);
+            },
+            Math.max(0, remainingMs),
+        );
+        return () => {
+            window.clearTimeout(timeout);
+        };
+    }, [
+        firstControlDone,
+        sessionIsClosed,
+        sessionId,
+        controlDialogIntervalMinutes,
+        lastControlRecordedAt,
+        initialModalOpen,
+        faultyOpen,
+        toolOpen,
+        processOpen,
+        goodOpen,
+        qualityInfoModalOpen,
+        controlOpen,
+    ]);
+
     const continueAfterProductionTargetReached = async () => {
         setProductionTargetReachedOpen(false);
         workOrderSelectorLockCbRef.current?.(false);
@@ -545,6 +609,7 @@ export function ProductionWorkSessionPanel({
             setSession(updated);
             setInitialModalOpen(false);
             setFirstControlDone(true);
+            setLastControlRecordedAt(Date.now());
             if (sessionIndicatesWorkOrderCompletedTarget(updated)) {
                 setProductionTargetReachedOpen(true);
             }
@@ -595,11 +660,40 @@ export function ProductionWorkSessionPanel({
         setSubmitting(true);
         setActionError(null);
         try {
+            if (controlBlockingMode) {
+                const raw = controlGoodDelta.trim();
+                const parsed = Number(raw);
+                if (raw.length === 0 || !Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 0) {
+                    setActionError(t('workSessionGoodDeltaNonNegativeInvalid'));
+                    return;
+                }
+                if (parsed > 0) {
+                    const updatedGood = await Server.postProductionGoodDelta(sessionId, {delta: parsed});
+                    setSession(updatedGood);
+                    if (sessionIndicatesWorkOrderCompletedTarget(updatedGood)) {
+                        setControlOpen(false);
+                        setControlBlockingMode(false);
+                        setControlGoodDelta('');
+                        setProductionTargetReachedOpen(true);
+                        if (onWorkOrdersRefresh) {
+                            try {
+                                await onWorkOrdersRefresh();
+                            } catch {
+                                /* ignore refresh errors */
+                            }
+                        }
+                        return;
+                    }
+                }
+            }
             const updated = await Server.postProductionControlProduct(sessionId, {measuringFeatures: features});
             setSession(updated);
             setControlOpen(false);
+            setControlBlockingMode(false);
+            setControlGoodDelta('');
             const prototypes2 = updated.measuringFeaturePrototypes ?? prototypes;
             setRowsControl(buildAssessmentsFromPrototypes(prototypes2));
+            setLastControlRecordedAt(Date.now());
             if (sessionIndicatesWorkOrderCompletedTarget(updated)) {
                 setProductionTargetReachedOpen(true);
             }
@@ -913,6 +1007,8 @@ export function ProductionWorkSessionPanel({
                             sx={{bgcolor: '#2e7d32', '&:hover': {bgcolor: '#1b5e20'}}}
                             onClick={() => {
                                 setActionError(null);
+                                setControlBlockingMode(false);
+                                setControlGoodDelta('');
                                 setControlOpen(true);
                             }}
                         >
@@ -992,6 +1088,9 @@ export function ProductionWorkSessionPanel({
                 technicalDrawingBase64={session?.technicalDrawingBase64}
                 onAssessmentChange={(i, field, value) => updateAssessment(setRowsControl, i, field, value)}
                 onEscapeOrBackdrop={(reason) => {
+                    if (controlBlockingMode) {
+                        return;
+                    }
                     if (!recordControlAssessmentsComplete) {
                         if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
                             setActionError(t('allFieldsRequired'));
@@ -1001,7 +1100,11 @@ export function ProductionWorkSessionPanel({
                     setControlOpen(false);
                     setActionError(null);
                 }}
+                blocking={controlBlockingMode}
+                goodDelta={controlGoodDelta}
+                onGoodDeltaChange={setControlGoodDelta}
                 onCancel={() => {
+                    if (controlBlockingMode) return;
                     setControlOpen(false);
                     setActionError(null);
                 }}

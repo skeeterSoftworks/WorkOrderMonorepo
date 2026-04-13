@@ -101,6 +101,10 @@ export interface WorkstationMachineConfigTO {
     machineId?: number | null,
 }
 
+export interface ProductionWorkSessionConfigTO {
+    controlDialogIntervalMinutes?: number;
+}
+
 /** Local → central (proxied) work session. */
 export interface QualityInfoStepTO {
     id?: number;

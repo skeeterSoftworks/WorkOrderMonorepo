@@ -5,6 +5,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Typography from '@mui/material/Typography';
 import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
 import {useTranslation} from 'react-i18next';
 import type {MeasuringFeaturePrototypeTO, WorkSessionMeasuringFeatureInputTO} from '../models/ApiRequests';
 import {controlProductDialogPaperSx, controlProductDialogTitleSx} from './workSessionDialogStyles';
@@ -24,6 +25,9 @@ export type RecordControlProductDialogProps = {
         value: string | boolean,
     ) => void;
     onEscapeOrBackdrop: (reason: 'backdropClick' | 'escapeKeyDown') => void;
+    blocking?: boolean;
+    goodDelta?: string;
+    onGoodDeltaChange?: (v: string) => void;
     onCancel: () => void;
     onSave: () => void;
 };
@@ -38,6 +42,9 @@ export function RecordControlProductDialog({
     technicalDrawingBase64,
     onAssessmentChange,
     onEscapeOrBackdrop,
+    blocking = false,
+    goodDelta = '',
+    onGoodDeltaChange,
     onCancel,
     onSave,
 }: RecordControlProductDialogProps) {
@@ -46,11 +53,14 @@ export function RecordControlProductDialog({
         <Dialog
             open={open}
             onClose={(_, reason) => {
+                if (blocking) {
+                    return;
+                }
                 if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
                     onEscapeOrBackdrop(reason);
                 }
             }}
-            disableEscapeKeyDown={!recordControlAssessmentsComplete}
+            disableEscapeKeyDown={blocking || !recordControlAssessmentsComplete}
             fullWidth
             maxWidth={false}
             PaperProps={{sx: controlProductDialogPaperSx}}
@@ -66,20 +76,39 @@ export function RecordControlProductDialog({
             </DialogContent>
             <DialogActions sx={{display: 'block', px: 3, pb: 2, pt: 1}}>
                 <Stack spacing={1.5}>
+                    {blocking ? (
+                        <>
+                            <Typography variant="body2" sx={{fontWeight: 600}}>
+                                {t('workSessionControlBlockingHint')}
+                            </Typography>
+                            <TextField
+                                label={t('workSessionGoodCountDelta')}
+                                type="number"
+                                inputProps={{min: 0, step: 1}}
+                                value={goodDelta}
+                                onChange={(e) => onGoodDeltaChange?.(e.target.value)}
+                                fullWidth
+                                required
+                                disabled={submitting}
+                            />
+                        </>
+                    ) : null}
                     {showFaultyProductWarning ? (
                         <Typography variant="body2" color="error" sx={{fontWeight: 600}}>
                             {t('workSessionControlProductFaultyWarning')}
                         </Typography>
                     ) : null}
                     <Stack direction="row" justifyContent="flex-end" spacing={1} flexWrap="wrap" useFlexGap>
-                        <Button
-                            variant="outlined"
-                            color="inherit"
-                            onClick={onCancel}
-                            disabled={submitting || !recordControlAssessmentsComplete}
-                        >
-                            {t('cancel')}
-                        </Button>
+                        {!blocking ? (
+                            <Button
+                                variant="outlined"
+                                color="inherit"
+                                onClick={onCancel}
+                                disabled={submitting || !recordControlAssessmentsComplete}
+                            >
+                                {t('cancel')}
+                            </Button>
+                        ) : null}
                         <Button
                             onClick={onSave}
                             variant="contained"
