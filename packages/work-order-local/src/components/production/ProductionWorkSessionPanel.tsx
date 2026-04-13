@@ -20,6 +20,7 @@ import {RecordGoodProductsDialog} from '../../modals/RecordGoodProductsDialog';
 import {ResolveHelpDialog} from '../../modals/ResolveHelpDialog';
 import {ToolChangeSetupDialog} from '../../modals/ToolChangeSetupDialog';
 import {ProcessTechnologyDialog} from '../../modals/ProcessTechnologyDialog';
+import {CloseWorkSessionConfirmDialog} from '../../modals/CloseWorkSessionConfirmDialog';
 import {workSessionProcessButtonSx} from '../../modals/workSessionDialogStyles';
 import {assessedMeasuredValueForApi, measuredValueToleranceHint} from '../../modals/workSessionMeasuringHelpers';
 import type {
@@ -153,6 +154,15 @@ function sessionIndicatesWorkOrderCompletedTarget(updated: WorkSessionResponseTO
     return false;
 }
 
+function parseSessionStart(value: string | undefined): Date | null {
+    if (!value) return null;
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+        return null;
+    }
+    return parsed;
+}
+
 export type ProductionWorkSessionPanelProps = {
     workOrder: ProductionWorkOrderTO;
     /** Called after session ended or aborted; parent should clear work order selection. */
@@ -221,6 +231,7 @@ export function ProductionWorkSessionPanel({
     const [submitting, setSubmitting] = useState(false);
     const [actionError, setActionError] = useState<string | null>(null);
     const [productionTargetReachedOpen, setProductionTargetReachedOpen] = useState(false);
+    const [closeSessionConfirmOpen, setCloseSessionConfirmOpen] = useState(false);
 
     const [qualityInfoModalOpen, setQualityInfoModalOpen] = useState(false);
     const [qualityInfoSteps, setQualityInfoSteps] = useState<QualityInfoStepTO[]>([]);
@@ -496,6 +507,21 @@ export function ProductionWorkSessionPanel({
 
     const sessionId = session?.id;
     const sessionIsClosed = Boolean(session?.sessionEnd);
+    const sessionStartDate = parseSessionStart(session?.sessionStart);
+    const elapsedDurationMinutes =
+        sessionStartDate == null
+            ? 0
+            : Math.max(0, Math.floor((Date.now() - sessionStartDate.getTime()) / 60_000));
+    const durationHours = Math.floor(elapsedDurationMinutes / 60);
+    const durationRemainingMinutes = elapsedDurationMinutes % 60;
+    const sessionStartDisplay =
+        sessionStartDate == null
+            ? t('workSessionCloseStartedAtUnknown')
+            : sessionStartDate.toLocaleString();
+    const sessionDurationDisplay = t('workSessionCloseDurationValue', {
+        hours: durationHours,
+        minutes: durationRemainingMinutes,
+    });
     const recordControlAssessmentsComplete = areControlAssessmentsComplete(
         session?.measuringFeaturePrototypes ?? [],
         rowsControl,
@@ -953,6 +979,7 @@ export function ProductionWorkSessionPanel({
         } catch {
             /* still clear */
         } finally {
+            setCloseSessionConfirmOpen(false);
             sessionStorage.removeItem(STORAGE_SESSION);
             sessionStorage.removeItem('selectedWorkOrderId');
             sessionStorage.removeItem('selectedWorkOrder');
@@ -1013,7 +1040,10 @@ export function ProductionWorkSessionPanel({
                         size="small"
                         variant="outlined"
                         color="primary"
-                        onClick={() => void endAndClearSelection()}
+                        onClick={() => {
+                            setActionError(null);
+                            setCloseSessionConfirmOpen(true);
+                        }}
                         disabled={submitting}
                         sx={{flexShrink: 0, borderWidth: 2}}
                     >
@@ -1280,6 +1310,18 @@ export function ProductionWorkSessionPanel({
                 goodDelta={goodDelta}
                 onGoodDeltaChange={setGoodDelta}
                 onSave={() => void handleSaveGood()}
+            />
+
+            <CloseWorkSessionConfirmDialog
+                open={closeSessionConfirmOpen}
+                submitting={submitting}
+                sessionStartedAtText={sessionStartDisplay}
+                sessionDurationText={sessionDurationDisplay}
+                goodProductsCount={session?.productCount ?? 0}
+                faultyProductsCount={session?.faultyProductCount ?? 0}
+                setupProductsCount={session?.setupProductCount ?? 0}
+                onConfirmClose={() => void endAndClearSelection()}
+                onContinueSession={() => setCloseSessionConfirmOpen(false)}
             />
         </Box>
     );
