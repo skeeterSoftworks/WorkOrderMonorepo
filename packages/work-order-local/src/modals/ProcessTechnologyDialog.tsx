@@ -83,8 +83,12 @@ export function ProcessTechnologyDialog({
                                     technology.cycleTime?.trim() || '—',
                                 )}
                                 {readOnlyField(
-                                    t('processTechnologyNormType'),
-                                    technology.normType?.trim() || '—',
+                                    t('processTechnologyNorm85'),
+                                    technology.norm85 != null ? String(technology.norm85) : '—',
+                                )}
+                                {readOnlyField(
+                                    t('processTechnologyNorm100'),
+                                    technology.norm100 != null ? String(technology.norm100) : '—',
                                 )}
                                 {readOnlyField(
                                     t('processTechnologyPiecesPerMaterial'),

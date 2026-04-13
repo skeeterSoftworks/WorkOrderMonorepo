@@ -161,7 +161,8 @@ export interface BoundMachineTechnologyToolTO {
 export interface BoundMachineTechnologyTO {
     id?: number;
     cycleTime?: string;
-    normType?: string;
+    norm85?: number;
+    norm100?: number;
     piecesPerMaterial?: number;
     tools?: BoundMachineTechnologyToolTO[];
 }

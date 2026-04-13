@@ -60,8 +60,6 @@ function withSequentialStepNumbers(steps: QualityInfoStepTO[]): QualityInfoStepT
 const DEFAULT_PROTO_CLASS_TYPE = 'CC';
 const DEFAULT_PROTO_CHECK_TYPE: 'MEASURED' = 'MEASURED';
 
-const TECHNOLOGY_NORM_TYPE_OPTIONS = ['85%', '100%'] as const;
-
 export function ProductsManagementPanel() {
     const { t } = useTranslation();
 
@@ -538,7 +536,8 @@ export function ProductsManagementPanel() {
         setTechnologyDraft({
             id: td?.id,
             cycleTime: td?.cycleTime ?? '',
-            normType: td?.normType ?? '',
+            norm85: td?.norm85,
+            norm100: td?.norm100,
             piecesPerMaterial: td?.piecesPerMaterial,
             tools: td?.tools?.length ? td.tools.map((x) => ({ ...x })) : [],
         });
@@ -604,6 +603,22 @@ export function ProductsManagementPanel() {
 
     const saveTechnologyFromModal = () => {
         if (!technologyModalProduct?.id) return;
+        const parsedNorm85 =
+            technologyDraft.norm85 === undefined || technologyDraft.norm85 === null
+                ? undefined
+                : Number(technologyDraft.norm85);
+        const parsedNorm100 =
+            technologyDraft.norm100 === undefined || technologyDraft.norm100 === null
+                ? undefined
+                : Number(technologyDraft.norm100);
+        if (
+            parsedNorm85 === undefined ||
+            !Number.isFinite(parsedNorm85) ||
+            parsedNorm100 === undefined ||
+            !Number.isFinite(parsedNorm100)
+        ) {
+            return;
+        }
         const parsedPieces =
             technologyDraft.piecesPerMaterial === undefined || technologyDraft.piecesPerMaterial === null
                 ? undefined
@@ -620,7 +635,8 @@ export function ProductsManagementPanel() {
             technologyData: {
                 id: technologyDraft.id,
                 cycleTime: technologyDraft.cycleTime?.trim() || undefined,
-                normType: technologyDraft.normType?.trim() || undefined,
+                norm85: Math.trunc(parsedNorm85),
+                norm100: Math.trunc(parsedNorm100),
                 piecesPerMaterial:
                     parsedPieces !== undefined && Number.isFinite(parsedPieces)
                         ? Math.trunc(parsedPieces)
@@ -1526,32 +1542,43 @@ export function ProductsManagementPanel() {
                             fullWidth
                         />
                         <TextField
-                            select
-                            label={t('technologyNormType')}
+                            required
+                            label={t('technologyNorm85')}
                             value={
-                                technologyDraft.normType === '85%' || technologyDraft.normType === '100%'
-                                    ? technologyDraft.normType
-                                    : ''
+                                technologyDraft.norm85 === undefined || technologyDraft.norm85 === null
+                                    ? ''
+                                    : String(technologyDraft.norm85)
                             }
                             onChange={(e) => {
-                                const v = e.target.value;
+                                const v = e.target.value.trim();
                                 setTechnologyDraft((d) => ({
                                     ...d,
-                                    normType: v ? v : undefined,
+                                    norm85: v === '' ? undefined : Math.trunc(Number(v)),
                                 }));
                             }}
                             size="small"
                             fullWidth
-                        >
-                            <MenuItem value="">
-                                <em>{t('none')}</em>
-                            </MenuItem>
-                            {TECHNOLOGY_NORM_TYPE_OPTIONS.map((opt) => (
-                                <MenuItem key={opt} value={opt}>
-                                    {opt}
-                                </MenuItem>
-                            ))}
-                        </TextField>
+                            inputProps={{ inputMode: 'numeric' }}
+                        />
+                        <TextField
+                            required
+                            label={t('technologyNorm100')}
+                            value={
+                                technologyDraft.norm100 === undefined || technologyDraft.norm100 === null
+                                    ? ''
+                                    : String(technologyDraft.norm100)
+                            }
+                            onChange={(e) => {
+                                const v = e.target.value.trim();
+                                setTechnologyDraft((d) => ({
+                                    ...d,
+                                    norm100: v === '' ? undefined : Math.trunc(Number(v)),
+                                }));
+                            }}
+                            size="small"
+                            fullWidth
+                            inputProps={{ inputMode: 'numeric' }}
+                        />
                         <TextField
                             label={t('technologyPiecesPerMaterial')}
                             value={
@@ -1683,7 +1710,17 @@ export function ProductsManagementPanel() {
                         </Table>
 
                         <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                            <Button variant="contained" color="primary" onClick={saveTechnologyFromModal}>
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                onClick={saveTechnologyFromModal}
+                                disabled={
+                                    technologyDraft.norm85 == null ||
+                                    !Number.isFinite(Number(technologyDraft.norm85)) ||
+                                    technologyDraft.norm100 == null ||
+                                    !Number.isFinite(Number(technologyDraft.norm100))
+                                }
+                            >
                                 {t('technologySave')}
                             </Button>
                             <Button variant="outlined" onClick={closeTechnologyModal}>
