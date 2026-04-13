@@ -20,6 +20,7 @@ import {RecordGoodProductsDialog} from '../../modals/RecordGoodProductsDialog';
 import {ResolveHelpDialog} from '../../modals/ResolveHelpDialog';
 import {ToolChangeSetupDialog} from '../../modals/ToolChangeSetupDialog';
 import {ProcessTechnologyDialog} from '../../modals/ProcessTechnologyDialog';
+import {ProductionPerformanceDialog} from '../../modals/ProductionPerformanceDialog';
 import {CloseWorkSessionConfirmDialog} from '../../modals/CloseWorkSessionConfirmDialog';
 import {workSessionProcessButtonSx} from '../../modals/workSessionDialogStyles';
 import {assessedMeasuredValueForApi, measuredValueToleranceHint} from '../../modals/workSessionMeasuringHelpers';
@@ -201,6 +202,9 @@ export function ProductionWorkSessionPanel({
     const [processOpen, setProcessOpen] = useState(false);
     const [processLoading, setProcessLoading] = useState(false);
     const [processTechnology, setProcessTechnology] = useState<BoundMachineTechnologyTO | null>(null);
+    const [performanceOpen, setPerformanceOpen] = useState(false);
+    const [performanceLoading, setPerformanceLoading] = useState(false);
+    const [performanceNorm100, setPerformanceNorm100] = useState<number | null>(null);
     const [setupModalProto, setSetupModalProto] = useState<SetupDataPrototypeTO | null>(null);
     const [setupModalLoading, setSetupModalLoading] = useState(false);
     const [setupHeightMeasured, setSetupHeightMeasured] = useState('');
@@ -352,6 +356,39 @@ export function ProductionWorkSessionPanel({
             cancelled = true;
         };
     }, [processOpen, workOrder.productReference]);
+
+    useEffect(() => {
+        if (!performanceOpen) {
+            setPerformanceNorm100(null);
+            setPerformanceLoading(false);
+            return;
+        }
+        const ref = workOrder.productReference?.trim();
+        if (!ref) {
+            setPerformanceNorm100(null);
+            setPerformanceLoading(false);
+            return;
+        }
+        let cancelled = false;
+        setPerformanceLoading(true);
+        setPerformanceNorm100(null);
+        void Server.getBoundMachineProducts()
+            .then((products) => {
+                if (cancelled) return;
+                const match = products.find((p) => (p.reference ?? '').trim() === ref);
+                const n = match?.technologyData?.norm100;
+                setPerformanceNorm100(n != null && Number.isFinite(Number(n)) ? Number(n) : null);
+            })
+            .catch(() => {
+                if (!cancelled) setPerformanceNorm100(null);
+            })
+            .finally(() => {
+                if (!cancelled) setPerformanceLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [performanceOpen, workOrder.productReference]);
 
     useEffect(() => {
         const woId = workOrder.id;
@@ -548,7 +585,14 @@ export function ProductionWorkSessionPanel({
         const intervalMs = controlDialogIntervalMinutes * 60_000;
         const remainingMs = intervalMs - (Date.now() - lastControlRecordedAt);
         const isAnotherModalOpen =
-            initialModalOpen || faultyOpen || toolOpen || processOpen || goodOpen || helpOpen || qualityInfoModalOpen;
+            initialModalOpen ||
+            faultyOpen ||
+            toolOpen ||
+            processOpen ||
+            performanceOpen ||
+            goodOpen ||
+            helpOpen ||
+            qualityInfoModalOpen;
         const timeout = window.setTimeout(
             () => {
                 if (isAnotherModalOpen || controlOpen || sessionIsClosed) {
@@ -574,6 +618,7 @@ export function ProductionWorkSessionPanel({
         faultyOpen,
         toolOpen,
         processOpen,
+        performanceOpen,
         goodOpen,
         helpOpen,
         qualityInfoModalOpen,
@@ -1171,6 +1216,17 @@ export function ProductionWorkSessionPanel({
                         >
                             {t('workSessionProcess')}
                         </Button>
+                        <Button
+                            size="medium"
+                            variant="outlined"
+                            color="primary"
+                            onClick={() => {
+                                setActionError(null);
+                                setPerformanceOpen(true);
+                            }}
+                        >
+                            {t('productionPerformanceOpenButton')}
+                        </Button>
                     </Stack>
                 </Box>
             )}
@@ -1271,6 +1327,19 @@ export function ProductionWorkSessionPanel({
                 onClose={() => setProcessOpen(false)}
                 loading={processLoading}
                 technology={processTechnology}
+                productHint={
+                    processProductHint
+                        ? t('processTechnologyProductHint', {hint: processProductHint})
+                        : undefined
+                }
+            />
+
+            <ProductionPerformanceDialog
+                open={performanceOpen}
+                onClose={() => setPerformanceOpen(false)}
+                loading={performanceLoading}
+                session={session}
+                norm100={performanceNorm100}
                 productHint={
                     processProductHint
                         ? t('processTechnologyProductHint', {hint: processProductHint})
