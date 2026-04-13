@@ -13,6 +13,7 @@ import {WorkOrdersManagementPage} from "./components/workOrders/WorkOrdersManage
 import {StockHome} from "./components/stock/StockHome.tsx";
 import {AdminHome} from "./components/admin/AdminHome.tsx";
 import {ProductionPage} from "./components/production/ProductionPage.tsx";
+import {MonitoringClientPanel} from "./components/monitoring/MonitoringClientPanel.tsx";
 
 
 const root = ReactDOM.createRoot(
@@ -38,6 +39,7 @@ root.render(
                         <Route path="/production" element={<ProductionPage/>}/>
                         <Route path="/stock" element={<StockHome/>}/>
                         <Route path="/admin" element={<AdminHome/>}/>
+                        <Route path="/monitoring-client" element={<MonitoringClientPanel/>}/>
                         <Route path="/mock-qr" element={<MockQr/>}/>
                     </Routes>
                 </HOC>

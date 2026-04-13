@@ -11,11 +11,13 @@ import {useTranslation} from 'react-i18next';
 import type {TFunction} from 'i18next';
 import {Server} from '../../api/Server';
 import {DeclareFaultyProductDialog} from '../../modals/DeclareFaultyProductDialog';
+import {HelpRequestDialog} from '../../modals/HelpRequestDialog';
 import {InitialControlProductDialog} from '../../modals/InitialControlProductDialog';
 import {ProductionTargetReachedDialog} from '../../modals/ProductionTargetReachedDialog';
 import {QualityInfoReviewDialog} from '../../modals/QualityInfoReviewDialog';
 import {RecordControlProductDialog} from '../../modals/RecordControlProductDialog';
 import {RecordGoodProductsDialog} from '../../modals/RecordGoodProductsDialog';
+import {ResolveHelpDialog} from '../../modals/ResolveHelpDialog';
 import {ToolChangeSetupDialog} from '../../modals/ToolChangeSetupDialog';
 import {ProcessTechnologyDialog} from '../../modals/ProcessTechnologyDialog';
 import {workSessionProcessButtonSx} from '../../modals/workSessionDialogStyles';
@@ -196,6 +198,11 @@ export function ProductionWorkSessionPanel({
     const [setupDiamMeasured, setSetupDiamMeasured] = useState('');
     const [setupDiamOkNok, setSetupDiamOkNok] = useState<'ok' | 'nok'>('ok');
     const [goodOpen, setGoodOpen] = useState(false);
+    const [helpOpen, setHelpOpen] = useState(false);
+    const [helpDetails, setHelpDetails] = useState('');
+    const [helpRequested, setHelpRequested] = useState(false);
+    const [resolveHelpOpen, setResolveHelpOpen] = useState(false);
+    const [resolveAdminQr, setResolveAdminQr] = useState('');
 
     const [rowsInitial, setRowsInitial] = useState<WorkSessionMeasuringFeatureInputTO[]>([]);
     const [rowsControl, setRowsControl] = useState<WorkSessionMeasuringFeatureInputTO[]>([]);
@@ -359,6 +366,11 @@ export function ProductionWorkSessionPanel({
             setControlGoodDelta('');
             setControlBlockingMode(false);
             setLastControlRecordedAt(null);
+            setHelpOpen(false);
+            setHelpDetails('');
+            setHelpRequested(false);
+            setResolveHelpOpen(false);
+            setResolveAdminQr('');
             setActionError(null);
             setQualityInfoModalOpen(false);
             setQualityInfoSteps([]);
@@ -510,7 +522,7 @@ export function ProductionWorkSessionPanel({
         const intervalMs = controlDialogIntervalMinutes * 60_000;
         const remainingMs = intervalMs - (Date.now() - lastControlRecordedAt);
         const isAnotherModalOpen =
-            initialModalOpen || faultyOpen || toolOpen || processOpen || goodOpen || qualityInfoModalOpen;
+            initialModalOpen || faultyOpen || toolOpen || processOpen || goodOpen || helpOpen || qualityInfoModalOpen;
         const timeout = window.setTimeout(
             () => {
                 if (isAnotherModalOpen || controlOpen || sessionIsClosed) {
@@ -537,6 +549,7 @@ export function ProductionWorkSessionPanel({
         toolOpen,
         processOpen,
         goodOpen,
+        helpOpen,
         qualityInfoModalOpen,
         controlOpen,
     ]);
@@ -621,7 +634,12 @@ export function ProductionWorkSessionPanel({
                 }
             }
         } catch (e) {
-            setActionError(extractError(e));
+            const msg = extractError(e);
+            if (msg.includes('OPERATOR_NOT_FOUND') || msg.includes('404') || msg.includes('NOT_FOUND')) {
+                setActionError(t('msg_userWithScannedQrNotExist'));
+            } else {
+                setActionError(msg);
+            }
         } finally {
             setSubmitting(false);
         }
@@ -852,6 +870,76 @@ export function ProductionWorkSessionPanel({
         }
     };
 
+    const openHelpModal = () => {
+        setActionError(null);
+        setHelpDetails('');
+        setHelpOpen(true);
+    };
+
+    const submitHelpDetails = async () => {
+        if (sessionId == null) return;
+        setSubmitting(true);
+        setActionError(null);
+        try {
+            await Server.postProductionHelpRequired(sessionId, {details: helpDetails.trim() || undefined});
+            setHelpOpen(false);
+            setHelpDetails('');
+            setHelpRequested(true);
+        } catch (e) {
+            setActionError(extractError(e));
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const openResolveHelpModal = () => {
+        setActionError(null);
+        setResolveAdminQr('');
+        setResolveHelpOpen(true);
+    };
+
+    const closeResolveHelpModal = () => {
+        setResolveHelpOpen(false);
+        setResolveAdminQr('');
+    };
+
+    const resolveHelpWithAdminAuth = async () => {
+        if (sessionId == null) return;
+        const adminQr = resolveAdminQr.trim();
+        if (!adminQr) {
+            setActionError(t('typeUserIdOrScanPersonalQr'));
+            return;
+        }
+        setSubmitting(true);
+        setActionError(null);
+        try {
+            const admin = await new Promise<{role?: string}>((resolve, reject) => {
+                Server.fetchOperatorData(
+                    adminQr,
+                    (response: {data?: {role?: string}}) => {
+                        if (response?.data) {
+                            resolve(response.data);
+                        } else {
+                            reject(new Error('OPERATOR_NOT_FOUND'));
+                        }
+                    },
+                    reject,
+                );
+            });
+            if (admin.role !== 'ADMIN') {
+                setActionError(t('helpResolveAdminOnly'));
+                return;
+            }
+            await Server.postProductionHelpResolved(sessionId);
+            setHelpRequested(false);
+            closeResolveHelpModal();
+        } catch (e) {
+            setActionError(extractError(e));
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
     const endAndClearSelection = async () => {
         if (sessionId == null) {
             sessionStorage.removeItem(STORAGE_SESSION);
@@ -904,7 +992,23 @@ export function ProductionWorkSessionPanel({
     return (
         <Box sx={{mt: 0, width: '100%', maxWidth: '100%'}}>
             {sessionId != null && !sessionIsClosed && (
-                <Stack direction="row" justifyContent="flex-start" alignItems="center" sx={{mb: 1}}>
+                <Stack direction="row" justifyContent="flex-start" alignItems="center" spacing={1} sx={{mb: 1}}>
+                    <Button
+                        size="small"
+                        variant="outlined"
+                        color={helpRequested ? 'success' : 'warning'}
+                        onClick={() => {
+                            if (helpRequested) {
+                                openResolveHelpModal();
+                            } else {
+                                openHelpModal();
+                            }
+                        }}
+                        disabled={submitting}
+                        sx={{flexShrink: 0, borderWidth: 2}}
+                    >
+                        {helpRequested ? t('resolveHelp') : t('helpNeeded')}
+                    </Button>
                     <Button
                         size="small"
                         variant="outlined"
@@ -1040,6 +1144,27 @@ export function ProductionWorkSessionPanel({
                     </Stack>
                 </Box>
             )}
+
+            <HelpRequestDialog
+                open={helpOpen}
+                details={helpDetails}
+                submitting={submitting}
+                onDetailsChange={setHelpDetails}
+                onClose={() => {
+                    setHelpOpen(false);
+                    setHelpDetails('');
+                }}
+                onSubmit={() => void submitHelpDetails()}
+            />
+
+            <ResolveHelpDialog
+                open={resolveHelpOpen}
+                adminQr={resolveAdminQr}
+                submitting={submitting}
+                onAdminQrChange={setResolveAdminQr}
+                onClose={closeResolveHelpModal}
+                onResolve={() => void resolveHelpWithAdminAuth()}
+            />
 
             <QualityInfoReviewDialog
                 open={qualityInfoModalOpen}

@@ -6,6 +6,7 @@ import type {
     WorkSessionControlProductCreateTO,
     WorkSessionFaultyProductCreateTO,
     WorkSessionGoodDeltaTO,
+    WorkSessionHelpSignalTO,
     WorkSessionOpenRequestTO,
     WorkSessionResponseTO,
     WorkSessionSetupProductCreateTO,
@@ -184,6 +185,14 @@ export class Server {
             body
         );
         return r.data;
+    }
+
+    static async postProductionHelpRequired(sessionId: number, body?: WorkSessionHelpSignalTO): Promise<void> {
+        await axios.post(`${getServerUrl()}/production/work-sessions/${sessionId}/help-required`, body ?? {});
+    }
+
+    static async postProductionHelpResolved(sessionId: number, body?: WorkSessionHelpSignalTO): Promise<void> {
+        await axios.post(`${getServerUrl()}/production/work-sessions/${sessionId}/help-resolved`, body ?? {});
     }
 
     static async postProductionControlProduct(sessionId: number, body: WorkSessionControlProductCreateTO): Promise<WorkSessionResponseTO> {

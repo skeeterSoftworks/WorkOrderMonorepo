@@ -56,6 +56,12 @@ export function Home() {
                                 {t("admin")}
                             </Button>
                         </Grid>}
+                    {userData && userData.role === "ADMIN" &&
+                        <Grid item xs="auto" sx={{ textAlign: "center" }}>
+                            <Button href="/monitoring-client" variant="contained" sx={homeButtonStyle}>
+                                {t("monitoringClient")}
+                            </Button>
+                        </Grid>}
 
                 </Grid>}
         </Grid>

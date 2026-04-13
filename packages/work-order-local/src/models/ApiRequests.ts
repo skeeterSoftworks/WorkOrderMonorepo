@@ -235,6 +235,10 @@ export interface WorkSessionGoodDeltaTO {
     productReferenceID?: string;
 }
 
+export interface WorkSessionHelpSignalTO {
+    details?: string;
+}
+
 /** Proxied from central for production (subset of fields). */
 export type ProductionWorkOrderState = 'INCOMPLETE' | 'COMPLETE';
 
