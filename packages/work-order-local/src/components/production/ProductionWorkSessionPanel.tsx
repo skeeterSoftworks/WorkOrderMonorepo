@@ -816,14 +816,20 @@ export function ProductionWorkSessionPanel({
 
     const handleSaveFaulty = async () => {
         if (sessionId == null) return;
+        const reason = faultyReason.trim();
+        const cause = faultyCause.trim();
+        if (!reason || !cause) {
+            setActionError(t('allFieldsRequired'));
+            return;
+        }
         const reopenControlKind = faultyModalReturnToControlRef.current;
         setSubmitting(true);
         setActionError(null);
         try {
             const updated = await Server.postProductionFaultyProduct(sessionId, {
-                rejectReason: faultyReason || undefined,
-                rejectCause: faultyCause || undefined,
-                rejectComment: faultyComment || undefined,
+                rejectReason: reason,
+                rejectCause: cause,
+                rejectComment: faultyComment.trim() || undefined,
             });
             setSession(updated);
             faultyModalReturnToControlRef.current = null;

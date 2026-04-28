@@ -4,7 +4,6 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import TextField from '@mui/material/TextField';
-import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import {useTranslation} from 'react-i18next';
 import {faultyProductDialogTitleSx} from './workSessionDialogStyles';
@@ -37,37 +36,38 @@ export function DeclareFaultyProductDialog({
     onSave,
 }: DeclareFaultyProductDialogProps) {
     const {t} = useTranslation();
+    const causeSuggestions = [...rejectCauseOptions];
+    if (faultyCause.trim() && !causeSuggestions.includes(faultyCause.trim())) {
+        causeSuggestions.push(faultyCause.trim());
+    }
+    const reasonMissing = faultyReason.trim().length === 0;
+    const causeMissing = faultyCause.trim().length === 0;
+
     return (
         <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
             <DialogTitle sx={faultyProductDialogTitleSx}>{t('workSessionDeclareFaulty')}</DialogTitle>
             <DialogContent>
                 <Stack spacing={1.5} sx={{mt: 1}}>
                     <TextField
+                        required
                         label={t('reason')}
                         value={faultyReason}
                         onChange={(e) => onFaultyReasonChange(e.target.value)}
                         fullWidth
                     />
                     <TextField
-                        select
+                        required
                         label={t('workSessionRejectCause')}
                         value={faultyCause}
                         onChange={(e) => onFaultyCauseChange(e.target.value)}
                         fullWidth
-                    >
-                        <MenuItem value="">{t('none')}</MenuItem>
-                        {(() => {
-                            const opts = [...rejectCauseOptions];
-                            if (faultyCause && !opts.includes(faultyCause)) {
-                                opts.push(faultyCause);
-                            }
-                            return opts.map((cause) => (
-                                <MenuItem key={cause} value={cause}>
-                                    {cause}
-                                </MenuItem>
-                            ));
-                        })()}
-                    </TextField>
+                        inputProps={{list: 'faulty-cause-suggestions'}}
+                    />
+                    <datalist id="faulty-cause-suggestions">
+                        {causeSuggestions.map((cause) => (
+                            <option key={cause} value={cause} />
+                        ))}
+                    </datalist>
                     <TextField
                         label={t('comment')}
                         value={faultyComment}
@@ -80,7 +80,11 @@ export function DeclareFaultyProductDialog({
             </DialogContent>
             <DialogActions>
                 <Button onClick={onClose}>{t('cancel')}</Button>
-                <Button onClick={onSave} variant="contained" disabled={submitting}>
+                <Button
+                    onClick={onSave}
+                    variant="contained"
+                    disabled={submitting || reasonMissing || causeMissing}
+                >
                     {t('save')}
                 </Button>
             </DialogActions>

@@ -37,7 +37,6 @@ export function InitialControlProductDialog({
     assessments,
     technicalDrawingBase64,
     onAssessmentChange,
-    onAbortSession,
     onSave,
 }: InitialControlProductDialogProps) {
     const {t} = useTranslation();
@@ -65,9 +64,6 @@ export function InitialControlProductDialog({
                         </Typography>
                     ) : null}
                     <Stack direction="row" justifyContent="flex-end" spacing={1} flexWrap="wrap" useFlexGap>
-                        <Button onClick={onAbortSession} color="inherit" disabled={submitting}>
-                            {t('workSessionAbortSession')}
-                        </Button>
                         <Button
                             onClick={onSave}
                             variant="contained"

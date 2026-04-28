@@ -45,7 +45,6 @@ export function RecordControlProductDialog({
     blocking = false,
     goodDelta = '',
     onGoodDeltaChange,
-    onCancel,
     onSave,
 }: RecordControlProductDialogProps) {
     const {t} = useTranslation();
@@ -99,16 +98,6 @@ export function RecordControlProductDialog({
                         </Typography>
                     ) : null}
                     <Stack direction="row" justifyContent="flex-end" spacing={1} flexWrap="wrap" useFlexGap>
-                        {!blocking ? (
-                            <Button
-                                variant="outlined"
-                                color="inherit"
-                                onClick={onCancel}
-                                disabled={submitting || !recordControlAssessmentsComplete}
-                            >
-                                {t('cancel')}
-                            </Button>
-                        ) : null}
                         <Button
                             onClick={onSave}
                             variant="contained"
