@@ -30,6 +30,7 @@ import {
     tableActionIconButtonSx,
 } from '../shared/tableActions';
 import {toastActionSuccess, toastServerError} from '../../util/actionToast';
+import {isInternalStockOrdererCustomer} from '../../util/internalStockOrderer';
 
 function parseProductsResponse(response: unknown): ProductTO[] {
     const r = response as {data?: ProductTO[] | {data?: ProductTO[]}};
@@ -61,6 +62,11 @@ export function CustomersManagementPanel() {
         }
         return s;
     }, [products]);
+
+    const customersForManagementTable = useMemo(
+        () => customers.filter((c) => !isInternalStockOrdererCustomer(c)),
+        [customers],
+    );
 
     useEffect(() => {
         loadCustomers();
@@ -181,7 +187,7 @@ export function CustomersManagementPanel() {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {customers.map((customer) => {
+                            {customersForManagementTable.map((customer) => {
                                 const cid = customer.id;
                                 const unlinked = cid != null && !linkedCustomerIds.has(cid);
                                 return (

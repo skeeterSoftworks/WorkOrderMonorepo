@@ -39,11 +39,13 @@ import {
     tableActionsTableCellSx,
     tableActionIconButtonSx,
 } from '../shared/tableActions';
+import { isInternalStockOrdererCustomer } from '../../util/internalStockOrderer';
 
 type LocalPurchaseOrder = PurchaseOrderTO;
 
 const PURCHASE_ORDER_CURRENCIES = ['RSD', 'EUR'] as const;
 type PurchaseOrderCurrency = (typeof PURCHASE_ORDER_CURRENCIES)[number];
+type PurchaseOrderCurrencyField = PurchaseOrderCurrency | '';
 
 function normalizePurchaseOrderCurrency(value: string | undefined | null): PurchaseOrderCurrency {
     const v = (value ?? '').trim().toUpperCase();
@@ -88,7 +90,7 @@ export function PurchaseOrdersManagementPanel() {
     const [products, setProducts] = useState<ProductTO[]>([]);
     const [selectedOrderId, setSelectedOrderId] = useState<number | undefined>(undefined);
     const [selectedCustomerId, setSelectedCustomerId] = useState<number | undefined>(undefined);
-    const [currency, setCurrency] = useState<PurchaseOrderCurrency>('RSD');
+    const [currency, setCurrency] = useState<PurchaseOrderCurrencyField>('');
     const [deliveryDate, setDeliveryDate] = useState<string>('');
     const [deliveryTerms, setDeliveryTerms] = useState('');
     const [shippingAddress, setShippingAddress] = useState('');
@@ -120,6 +122,28 @@ export function PurchaseOrdersManagementPanel() {
         );
     }, []);
 
+    const internalStockOrdererCustomerId = useMemo(() => {
+        const c = customers.find((x) => isInternalStockOrdererCustomer(x));
+        return c?.id;
+    }, [customers]);
+
+    const ordererCustomersSorted = useMemo(() => {
+        const list = [...customers];
+        const internalId = internalStockOrdererCustomerId;
+        list.sort((a, b) => {
+            if (internalId != null) {
+                if (a.id === internalId) {
+                    return -1;
+                }
+                if (b.id === internalId) {
+                    return 1;
+                }
+            }
+            return (a.companyName ?? '').localeCompare(b.companyName ?? '', undefined, { sensitivity: 'base' });
+        });
+        return list;
+    }, [customers, internalStockOrdererCustomerId]);
+
     const productsForSelectedCustomer = useMemo(() => {
         if (selectedCustomerId == null) {
             return [];
@@ -129,6 +153,18 @@ export function PurchaseOrdersManagementPanel() {
 
     const noProductsLinkedForCustomer =
         selectedCustomerId != null && productsForSelectedCustomer.length === 0;
+
+    const isEditingPurchaseOrder = selectedOrderId != null && selectedOrderId > 0;
+
+    const internalStockOrdererSelected = useMemo(
+        () =>
+            internalStockOrdererCustomerId != null &&
+            selectedCustomerId === internalStockOrdererCustomerId,
+        [internalStockOrdererCustomerId, selectedCustomerId],
+    );
+
+    /** Create flow: lock currency / delivery only when the preset internal orderer is selected. */
+    const lockCreateDeliveryFields = !isEditingPurchaseOrder && internalStockOrdererSelected;
 
     const loadCustomers = () => {
         Server.getAllCustomers(
@@ -169,7 +205,7 @@ export function PurchaseOrdersManagementPanel() {
     const resetForm = () => {
         setSelectedOrderId(undefined);
         setSelectedCustomerId(undefined);
-        setCurrency('RSD');
+        setCurrency('');
         setDeliveryDate('');
         setDeliveryTerms('');
         setShippingAddress('');
@@ -196,6 +232,9 @@ export function PurchaseOrdersManagementPanel() {
 
     const openFormModal = () => {
         resetForm();
+        if (internalStockOrdererCustomerId != null) {
+            setSelectedCustomerId(internalStockOrdererCustomerId);
+        }
         setFormModalOpen(true);
     };
 
@@ -217,12 +256,15 @@ export function PurchaseOrdersManagementPanel() {
         setDeliveryTerms(order.deliveryTerms || '');
         setShippingAddress(order.shippingAddress || '');
         setComment(order.comment || '');
+        const stripPricesInternalPo =
+            order.internalStockDemand === true ||
+            (order.customer != null && isInternalStockOrdererCustomer(order.customer));
         setProductOrderRows(
             (order.productOrderList || []).map((po) => ({
                 id: po.id,
                 productId: po.product?.id,
                 quantity: String(po.quantity ?? ''),
-                pricePerUnit: String(po.pricePerUnit ?? ''),
+                pricePerUnit: stripPricesInternalPo ? '' : String(po.pricePerUnit ?? ''),
                 catalogueReference: po.product?.reference ?? '',
             })),
         );
@@ -236,16 +278,19 @@ export function PurchaseOrdersManagementPanel() {
                 id: row.id,
                 product: { id: row.productId },
                 quantity: Number(row.quantity) || 0,
-                pricePerUnit: Number(row.pricePerUnit) || 0,
+                pricePerUnit: internalStockOrdererSelected ? 0 : Number(row.pricePerUnit) || 0,
             }));
         const customerId = selectedCustomerId && Number(selectedCustomerId);
+        const internalStockDemand = internalStockOrdererSelected;
+        const omitDeliveryFieldsForPayload = isEditingPurchaseOrder ? false : internalStockOrdererSelected;
         const payload: PurchaseOrderTO = {
             id: selectedOrderId,
-            currency,
-            deliveryDate: deliveryDate || undefined,
-            deliveryTerms: deliveryTerms || undefined,
-            shippingAddress: shippingAddress || undefined,
+            currency: omitDeliveryFieldsForPayload ? undefined : currency || undefined,
+            deliveryDate: omitDeliveryFieldsForPayload ? undefined : deliveryDate || undefined,
+            deliveryTerms: omitDeliveryFieldsForPayload ? undefined : deliveryTerms || undefined,
+            shippingAddress: omitDeliveryFieldsForPayload ? undefined : shippingAddress || undefined,
             comment,
+            internalStockDemand,
             customerId,
             customer: customerId != null ? { id: customerId } : undefined,
             productOrderList,
@@ -373,15 +418,40 @@ export function PurchaseOrdersManagementPanel() {
 
     const handleCustomerChange = (customerId: number | undefined) => {
         setSelectedCustomerId(customerId);
+        const nowInternal =
+            internalStockOrdererCustomerId != null && customerId === internalStockOrdererCustomerId;
+        if (!isEditingPurchaseOrder) {
+            if (nowInternal) {
+                setCurrency('');
+                setDeliveryDate('');
+                setDeliveryTerms('');
+                setShippingAddress('');
+            } else if (customerId != null) {
+                setCurrency((prev) => (prev === '' ? 'RSD' : prev));
+            }
+        }
         setProductOrderRows((rows) => {
             if (customerId == null) {
-                return rows.map((r) => ({ ...r, productId: undefined, catalogueReference: '' }));
+                return rows.map((r) => ({
+                    ...r,
+                    productId: undefined,
+                    catalogueReference: '',
+                    pricePerUnit: '',
+                }));
             }
             return rows.map((row) => {
-                if (row.productId == null) return row;
-                const p = products.find((pr) => pr.id === row.productId);
-                const ok = p && (p.customerIds ?? []).includes(customerId);
-                return ok ? row : { ...row, productId: undefined, catalogueReference: '' };
+                let next = row;
+                if (row.productId != null) {
+                    const p = products.find((pr) => pr.id === row.productId);
+                    const ok = p && (p.customerIds ?? []).includes(customerId);
+                    if (!ok) {
+                        next = { ...row, productId: undefined, catalogueReference: '' };
+                    }
+                }
+                if (nowInternal) {
+                    next = { ...next, pricePerUnit: '' };
+                }
+                return next;
             });
         });
     };
@@ -475,10 +545,10 @@ export function PurchaseOrdersManagementPanel() {
         setSelectedOrderId(undefined);
         const cid = resolveCustomerId(parsed.customerCompanyName);
         setSelectedCustomerId(cid);
-        setCurrency(normalizePurchaseOrderCurrency(parsed.currency));
-        setDeliveryDate(parsed.deliveryDate ? parsed.deliveryDate.substring(0, 10) : '');
-        setDeliveryTerms(parsed.deliveryTerms);
-        setShippingAddress(parsed.shippingAddress);
+        setCurrency('');
+        setDeliveryDate('');
+        setDeliveryTerms('');
+        setShippingAddress('');
         setComment(parsed.comment);
         setProductOrderRows(
             parsed.productRows
@@ -552,7 +622,7 @@ export function PurchaseOrdersManagementPanel() {
                     <Table size="small">
                         <TableHead>
                             <TableRow>
-                                <TableCell>{t('customer')}</TableCell>
+                                <TableCell>{t('purchaseOrderOrderer')}</TableCell>
                                 <TableCell>{t('catalogueId')}</TableCell>
                                 <TableCell>{t('currency')}</TableCell>
                                 <TableCell>{t('status')}</TableCell>
@@ -560,6 +630,7 @@ export function PurchaseOrdersManagementPanel() {
                                 <TableCell>{t('deliveryTerms')}</TableCell>
                                 <TableCell>{t('shippingAddress')}</TableCell>
                                 <TableCell>{t('comment')}</TableCell>
+                                <TableCell align="center">{t('purchaseOrderInternalStockColumn')}</TableCell>
                                 <TableCell align="right" sx={tableActionsTableCellSx}>
                                     {t('actions')}
                                 </TableCell>
@@ -576,6 +647,9 @@ export function PurchaseOrdersManagementPanel() {
                                     <TableCell>{order.deliveryTerms}</TableCell>
                                     <TableCell>{order.shippingAddress}</TableCell>
                                     <TableCell>{order.comment}</TableCell>
+                                    <TableCell align="center">
+                                        {order.internalStockDemand ? t('yes') : '—'}
+                                    </TableCell>
                                     <TableCell align="right" sx={tableActionsTableCellSx}>
                                         <TableActionsRow>
                                             <IconButton
@@ -622,7 +696,7 @@ export function PurchaseOrdersManagementPanel() {
                     <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
                         <TextField
                             select
-                            label={t('customer')}
+                            label={t('purchaseOrderOrderer')}
                             value={selectedCustomerId ?? ''}
                             onChange={(e) =>
                                 handleCustomerChange(e.target.value ? Number(e.target.value) : undefined)
@@ -631,63 +705,89 @@ export function PurchaseOrdersManagementPanel() {
                             fullWidth
                         >
                             <MenuItem value="">{t('none')}</MenuItem>
-                            {customers.map((c) => (
+                            {ordererCustomersSorted.map((c) => (
                                 <MenuItem key={c.id} value={c.id}>
                                     {c.companyName}
                                 </MenuItem>
                             ))}
                         </TextField>
+                        {internalStockOrdererCustomerId == null && (
+                            <Typography variant="caption" color="warning.main">
+                                {t('internalStockOrdererCustomerMissingHint')}
+                            </Typography>
+                        )}
                         <TextField
                             select
                             label={t('currency')}
-                            value={currency}
+                            value={lockCreateDeliveryFields ? '' : currency || 'RSD'}
                             onChange={(e) => setCurrency(e.target.value as PurchaseOrderCurrency)}
                             size="small"
                             fullWidth
+                            disabled={lockCreateDeliveryFields}
+                            SelectProps={{ displayEmpty: true }}
                         >
-                            {PURCHASE_ORDER_CURRENCIES.map((c) => (
-                                <MenuItem key={c} value={c}>
-                                    {c}
+                            {lockCreateDeliveryFields && (
+                                <MenuItem value="">
+                                    <em>—</em>
                                 </MenuItem>
-                            ))}
+                            )}
+                            {!lockCreateDeliveryFields &&
+                                PURCHASE_ORDER_CURRENCIES.map((c) => (
+                                    <MenuItem key={c} value={c}>
+                                        {c}
+                                    </MenuItem>
+                                ))}
                         </TextField>
                         <TextField
                             label={t('deliveryDate')}
                             type="date"
-                            value={deliveryDate}
+                            value={lockCreateDeliveryFields ? '' : deliveryDate}
                             onChange={(e) => setDeliveryDate(e.target.value)}
                             size="small"
                             fullWidth
+                            disabled={lockCreateDeliveryFields}
                             InputLabelProps={{ shrink: true }}
                         />
                         <TextField
                             select
                             label={t('deliveryTerms')}
-                            value={deliveryTerms}
+                            value={lockCreateDeliveryFields ? '' : deliveryTerms}
                             onChange={(e) => setDeliveryTerms(e.target.value)}
                             size="small"
                             fullWidth
+                            disabled={lockCreateDeliveryFields}
+                            SelectProps={{ displayEmpty: true }}
                         >
-                            <MenuItem value="">{t('none')}</MenuItem>
-                            {(() => {
-                                const v = deliveryTerms;
-                                const opts = [...deliveryTermsSelectOptions];
-                                if (v && !opts.includes(v)) opts.push(v);
-                                return opts.map((o) => (
-                                    <MenuItem key={o} value={o}>
-                                        {o}
-                                    </MenuItem>
-                                ));
-                            })()}
+                            {lockCreateDeliveryFields && (
+                                <MenuItem value="">
+                                    <em>—</em>
+                                </MenuItem>
+                            )}
+                            {!lockCreateDeliveryFields && (
+                                <>
+                                    <MenuItem value="">{t('none')}</MenuItem>
+                                    {(() => {
+                                        const v = deliveryTerms;
+                                        const opts = [...deliveryTermsSelectOptions];
+                                        if (v && !opts.includes(v)) opts.push(v);
+                                        return opts.map((o) => (
+                                            <MenuItem key={o} value={o}>
+                                                {o}
+                                            </MenuItem>
+                                        ));
+                                    })()}
+                                </>
+                            )}
                         </TextField>
                         <TextField
                             label={t('shippingAddress')}
-                            value={shippingAddress}
+                            value={lockCreateDeliveryFields ? '' : shippingAddress}
                             onChange={(e) => setShippingAddress(e.target.value)}
                             size="small"
                             fullWidth
                             multiline
                             minRows={2}
+                            disabled={lockCreateDeliveryFields}
                         />
                         <TextField
                             label={t('comment')}
@@ -698,7 +798,6 @@ export function PurchaseOrdersManagementPanel() {
                             multiline
                             minRows={2}
                         />
-
                         <Typography variant="subtitle2" sx={{ mt: 1 }}>{t('productOrders')}</Typography>
                         {noProductsLinkedForCustomer ? (
                             <Typography variant="body2" color="error" sx={{ mt: 0.5 }}>
@@ -768,10 +867,11 @@ export function PurchaseOrdersManagementPanel() {
                                 <TextField
                                     type="number"
                                     label={t('pricePerUnit')}
-                                    value={row.pricePerUnit}
+                                    value={internalStockOrdererSelected ? '' : row.pricePerUnit}
                                     onChange={(e) => updateProductOrderRow(index, 'pricePerUnit', e.target.value)}
                                     size="small"
                                     sx={{ width: 120 }}
+                                    disabled={internalStockOrdererSelected}
                                 />
                                 <IconButton
                                     size="small"
@@ -856,7 +956,7 @@ export function PurchaseOrdersManagementPanel() {
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                             <Box sx={{ display: 'flex', flexDirection: 'row', gap: 3, flexWrap: 'wrap' }}>
                                 <Box sx={{ flex: 1, minWidth: 160 }}>
-                                    <Typography variant="body2"><strong>{t('customer')}:</strong> {detailsOrder.customer?.companyName ?? '—'}</Typography>
+                                    <Typography variant="body2"><strong>{t('purchaseOrderOrderer')}:</strong> {detailsOrder.customer?.companyName ?? '—'}</Typography>
                                     <Typography variant="body2" sx={{ mt: 0.5 }}><strong>{t('currency')}:</strong> {detailsOrder.currency ?? '—'}</Typography>
                                 </Box>
                                 <Box sx={{ flex: 1, minWidth: 160 }}>
@@ -866,6 +966,10 @@ export function PurchaseOrdersManagementPanel() {
                                 <Box sx={{ flex: 1, minWidth: 160 }}>
                                     <Typography variant="body2"><strong>{t('shippingAddress')}:</strong> {detailsOrder.shippingAddress || '—'}</Typography>
                                     <Typography variant="body2" sx={{ mt: 0.5 }}><strong>{t('comment')}:</strong> {detailsOrder.comment || '—'}</Typography>
+                                    <Typography variant="body2" sx={{ mt: 0.5 }}>
+                                        <strong>{t('purchaseOrderInternalStockColumn')}:</strong>{' '}
+                                        {detailsOrder.internalStockDemand ? t('yes') : t('no')}
+                                    </Typography>
                                 </Box>
                             </Box>
                             <Typography variant="subtitle2" sx={{ mt: 1 }}>{t('productOrders')}</Typography>

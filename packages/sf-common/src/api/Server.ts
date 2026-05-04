@@ -9,6 +9,7 @@ import type {
     WorkOrderTO,
     MachineBookingTO,
     SampleDataGenerationResultTO,
+    ProductAvailableStockTO,
 } from "../models/ApiRequests";
 import axios from "axios";
 import { getServerUrl } from "../util/EnvUtils";
@@ -138,6 +139,15 @@ export class Server {
 
     static getAllWorkOrders(onSuccess: Function, onError: Function) {
         axios.get(`${getServerUrl()}/workorders/all`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static getProductStockAvailability(onSuccess: Function, onError: Function) {
+        axios.get<ProductAvailableStockTO[]>(`${getServerUrl()}/stock/products-availability`)
             .then(response => onSuccess(response))
             .catch(error => {
                 console.log(error);

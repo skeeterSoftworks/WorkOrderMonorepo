@@ -193,11 +193,21 @@ export interface PurchaseOrderTO {
     deliveryTerms?: string,
     shippingAddress?: string,
     comment?: string,
+    /** When true, linked work orders count fully toward finished-goods stock (internal demand). */
+    internalStockDemand?: boolean,
     createdAt?: string,
     confirmedAt?: string,
     inProductionAt?: string,
     completedAt?: string,
     deliveredAt?: string
+}
+
+/** Aggregated finished-good stock from work orders (external surplus + internal demand), per product. */
+export interface ProductAvailableStockTO {
+    productId?: number,
+    productReference?: string,
+    productName?: string,
+    availableQuantity?: number,
 }
 
 /** Work Order Central `EWorkOrderState` as returned by the API (Jackson default enum serialization). */
