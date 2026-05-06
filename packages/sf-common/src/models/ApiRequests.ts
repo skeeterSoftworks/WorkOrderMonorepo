@@ -32,6 +32,27 @@ export interface TechnologyTO {
     tools?: ToolTO[],
 }
 
+export interface MaterialProviderTO {
+    id?: number,
+    name?: string,
+    contactPerson?: string,
+    emailAddress?: string,
+    phoneNumber?: string,
+    grade?: number,
+}
+
+export interface MaterialTO {
+    id?: number,
+    name?: string,
+    code?: string,
+    productsPerUnit?: number,
+    diameter?: number,
+    weight?: number,
+    length?: number,
+    width?: number,
+    provider?: MaterialProviderTO,
+}
+
 export interface ProductTO {
     id?: number,
     name?: string,
@@ -46,6 +67,7 @@ export interface ProductTO {
     setupDataPrototype?: SetupDataPrototypeTO,
     measuringFeaturePrototypes?: MeasuringFeaturePrototypeTO[],
     qualityInfoSteps?: QualityInfoStepTO[],
+    materials?: MaterialTO[],
     /** Raw Base64 or data URL; omit while editing to keep existing; empty string clears */
     technicalDrawingBase64?: string,
 }

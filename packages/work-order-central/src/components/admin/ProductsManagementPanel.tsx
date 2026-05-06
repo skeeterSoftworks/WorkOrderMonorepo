@@ -33,6 +33,7 @@ import Tooltip from '@mui/material/Tooltip';
 import { alpha } from '@mui/material/styles';
 import type {
     ProductTO,
+    MaterialTO,
     MachineTO,
     CustomerTO,
     MeasuringFeaturePrototypeTO,
@@ -79,6 +80,21 @@ export function ProductsManagementPanel() {
     const [technologyModalOpen, setTechnologyModalOpen] = useState(false);
     const [technologyModalProduct, setTechnologyModalProduct] = useState<LocalProduct | null>(null);
     const [technologyDraft, setTechnologyDraft] = useState<TechnologyTO>({ tools: [] });
+    const [materialsModalOpen, setMaterialsModalOpen] = useState(false);
+    const [materialsModalProduct, setMaterialsModalProduct] = useState<LocalProduct | null>(null);
+    const [materialsDraft, setMaterialsDraft] = useState<MaterialTO[]>([]);
+    const [editingMaterialIndex, setEditingMaterialIndex] = useState<number | null>(null);
+    const [materialName, setMaterialName] = useState('');
+    const [materialCode, setMaterialCode] = useState('');
+    const [materialProductsPerUnit, setMaterialProductsPerUnit] = useState('');
+    const [materialDiameter, setMaterialDiameter] = useState('');
+    const [materialWeight, setMaterialWeight] = useState('');
+    const [materialLength, setMaterialLength] = useState('');
+    const [materialWidth, setMaterialWidth] = useState('');
+    const [materialProviderName, setMaterialProviderName] = useState('');
+    const [materialProviderContact, setMaterialProviderContact] = useState('');
+    const [materialProviderEmail, setMaterialProviderEmail] = useState('');
+    const [materialProviderPhone, setMaterialProviderPhone] = useState('');
 
     const [techToolName, setTechToolName] = useState('');
     const [techToolDescription, setTechToolDescription] = useState('');
@@ -528,6 +544,21 @@ export function ProductsManagementPanel() {
         setEditingTechnologyToolIndex(null);
     };
 
+    const resetMaterialInputs = () => {
+        setMaterialName('');
+        setMaterialCode('');
+        setMaterialProductsPerUnit('');
+        setMaterialDiameter('');
+        setMaterialWeight('');
+        setMaterialLength('');
+        setMaterialWidth('');
+        setMaterialProviderName('');
+        setMaterialProviderContact('');
+        setMaterialProviderEmail('');
+        setMaterialProviderPhone('');
+        setEditingMaterialIndex(null);
+    };
+
     const openTechnologyModal = (product: LocalProduct) => {
         if (!product.id) return;
         const latest = products.find((p) => p.id === product.id) ?? product;
@@ -549,6 +580,106 @@ export function ProductsManagementPanel() {
         setTechnologyModalProduct(null);
         setTechnologyDraft({ tools: [] });
         resetTechnologyToolInputs();
+    };
+
+    const openMaterialsModal = (product: LocalProduct) => {
+        if (!product.id) return;
+        const latest = products.find((p) => p.id === product.id) ?? product;
+        setMaterialsModalProduct(latest);
+        setMaterialsDraft(latest.materials?.map((m) => ({ ...m, provider: m.provider ? { ...m.provider } : undefined })) ?? []);
+        resetMaterialInputs();
+        setMaterialsModalOpen(true);
+    };
+
+    const closeMaterialsModal = () => {
+        setMaterialsModalOpen(false);
+        setMaterialsModalProduct(null);
+        setMaterialsDraft([]);
+        resetMaterialInputs();
+    };
+
+    const isMaterialFormValid = (): boolean =>
+        Boolean(materialName.trim()) &&
+        Boolean(materialCode.trim()) &&
+        Boolean(materialProductsPerUnit.trim()) &&
+        Boolean(materialProviderName.trim()) &&
+        Boolean(materialProviderContact.trim()) &&
+        Boolean(materialProviderEmail.trim()) &&
+        Boolean(materialProviderPhone.trim());
+
+    const addOrUpdateMaterial = () => {
+        if (!isMaterialFormValid()) return;
+        const productsPerUnit = materialProductsPerUnit.trim() === '' ? undefined : Number(materialProductsPerUnit);
+        const fallbackGrade = editingMaterialIndex !== null
+            ? (materialsDraft[editingMaterialIndex]?.provider?.grade ?? 0)
+            : 0;
+        const row: MaterialTO = {
+            id: editingMaterialIndex !== null ? materialsDraft[editingMaterialIndex]?.id : undefined,
+            name: materialName.trim(),
+            code: materialCode.trim() || undefined,
+            productsPerUnit: Number.isFinite(productsPerUnit) ? Math.trunc(productsPerUnit as number) : undefined,
+            diameter: parseDecimalNumericInputToNumber(materialDiameter),
+            weight: parseDecimalNumericInputToNumber(materialWeight),
+            length: parseDecimalNumericInputToNumber(materialLength),
+            width: parseDecimalNumericInputToNumber(materialWidth),
+            provider: {
+                id: editingMaterialIndex !== null ? materialsDraft[editingMaterialIndex]?.provider?.id : undefined,
+                name: materialProviderName.trim() || undefined,
+                contactPerson: materialProviderContact.trim() || undefined,
+                emailAddress: materialProviderEmail.trim() || undefined,
+                phoneNumber: materialProviderPhone.trim() || undefined,
+                grade: fallbackGrade,
+            },
+        };
+        setMaterialsDraft((prev) => {
+            const next = [...prev];
+            if (editingMaterialIndex !== null) next[editingMaterialIndex] = row;
+            else next.push(row);
+            return next;
+        });
+        resetMaterialInputs();
+    };
+
+    const beginEditMaterial = (index: number) => {
+        const row = materialsDraft[index];
+        if (!row) return;
+        setEditingMaterialIndex(index);
+        setMaterialName(row.name ?? '');
+        setMaterialCode(row.code ?? '');
+        setMaterialProductsPerUnit(row.productsPerUnit != null ? String(row.productsPerUnit) : '');
+        setMaterialDiameter(row.diameter != null ? String(row.diameter) : '');
+        setMaterialWeight(row.weight != null ? String(row.weight) : '');
+        setMaterialLength(row.length != null ? String(row.length) : '');
+        setMaterialWidth(row.width != null ? String(row.width) : '');
+        setMaterialProviderName(row.provider?.name ?? '');
+        setMaterialProviderContact(row.provider?.contactPerson ?? '');
+        setMaterialProviderEmail(row.provider?.emailAddress ?? '');
+        setMaterialProviderPhone(row.provider?.phoneNumber ?? '');
+    };
+
+    const removeMaterial = (index: number) => {
+        setMaterialsDraft((prev) => prev.filter((_, i) => i !== index));
+        if (editingMaterialIndex === index) resetMaterialInputs();
+        else if (editingMaterialIndex !== null && editingMaterialIndex > index) {
+            setEditingMaterialIndex(editingMaterialIndex - 1);
+        }
+    };
+
+    const saveMaterialsFromModal = () => {
+        if (!materialsModalProduct?.id) return;
+        const payload: ProductTO = {
+            ...materialsModalProduct,
+            materials: materialsDraft,
+        };
+        Server.editProduct(
+            payload,
+            () => {
+                loadProducts();
+                closeMaterialsModal();
+                toastActionSuccess(t('toastProductUpdated'));
+            },
+            (err: unknown) => toastServerError(err, t),
+        );
     };
 
     const isTechnologyToolFormValid = (): boolean => Boolean(techToolName.trim());
@@ -672,6 +803,7 @@ export function ProductsManagementPanel() {
                                 const noMeasuringFeatures =
                                     (product.measuringFeaturePrototypes?.length ?? 0) === 0;
                                 const noQualitySteps = (product.qualityInfoSteps?.length ?? 0) === 0;
+                                const noMaterials = (product.materials?.length ?? 0) === 0;
                                 const chipSx = {
                                     height: 22,
                                     '& .MuiChip-label': { px: 1, fontSize: '0.7rem' },
@@ -700,6 +832,17 @@ export function ProductsManagementPanel() {
                                                         <Chip
                                                             size="small"
                                                             label={t('productNoQualityStepsBadge')}
+                                                            color="warning"
+                                                            variant="outlined"
+                                                            sx={chipSx}
+                                                        />
+                                                    </Tooltip>
+                                                )}
+                                                {noMaterials && (
+                                                    <Tooltip title={t('productNoMaterialsHint')}>
+                                                        <Chip
+                                                            size="small"
+                                                            label={t('productNoMaterialsBadge')}
                                                             color="warning"
                                                             variant="outlined"
                                                             sx={chipSx}
@@ -737,6 +880,31 @@ export function ProductsManagementPanel() {
                                                     }}
                                                 >
                                                     T
+                                                </Typography>
+                                            </IconButton>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => openMaterialsModal(product)}
+                                                disabled={!product.id}
+                                                title={t('materialsEditTooltip')}
+                                                sx={(theme) => ({
+                                                    minWidth: 28,
+                                                    color: theme.palette.secondary.main,
+                                                    '&:hover': {
+                                                        backgroundColor: alpha(theme.palette.secondary.main, 0.12),
+                                                    },
+                                                })}
+                                            >
+                                                <Typography
+                                                    component="span"
+                                                    sx={{
+                                                        fontSize: '0.95rem',
+                                                        fontWeight: 800,
+                                                        color: 'secondary.main',
+                                                        lineHeight: 1,
+                                                    }}
+                                                >
+                                                    M
                                                 </Typography>
                                             </IconButton>
                                             <IconButton
@@ -1696,6 +1864,186 @@ export function ProductsManagementPanel() {
                                 {t('technologySave')}
                             </Button>
                             <Button variant="outlined" onClick={closeTechnologyModal}>
+                                {t('cancel')}
+                            </Button>
+                        </Box>
+                    </Box>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={materialsModalOpen} onClose={closeMaterialsModal} maxWidth="lg" fullWidth>
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    {t('materialsEditorTitle')}
+                    <IconButton size="small" onClick={closeMaterialsModal} aria-label={t('close')}>
+                        <CloseIcon />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent dividers>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                            <TextField
+                                required
+                                label={t('materialName')}
+                                value={materialName}
+                                onChange={(e) => setMaterialName(e.target.value)}
+                                size="small"
+                                sx={{ flex: '1 1 180px' }}
+                            />
+                            <TextField
+                                required
+                                label={t('materialCode')}
+                                value={materialCode}
+                                onChange={(e) => setMaterialCode(e.target.value)}
+                                size="small"
+                                sx={{ flex: '1 1 160px' }}
+                            />
+                            <TextField
+                                required
+                                label={t('materialProductsPerUnit')}
+                                value={materialProductsPerUnit}
+                                onChange={(e) => setMaterialProductsPerUnit(e.target.value.replace(/[^\d]/g, ''))}
+                                size="small"
+                                sx={{ width: 180 }}
+                                inputProps={{ inputMode: 'numeric' }}
+                            />
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                            <TextField
+                                label={t('diameterMeasurement')}
+                                value={materialDiameter}
+                                onChange={(e) => setMaterialDiameter(filterDecimalNumericInput(e.target.value))}
+                                size="small"
+                                sx={{ width: 130 }}
+                            />
+                            <TextField
+                                label={t('weight')}
+                                value={materialWeight}
+                                onChange={(e) => setMaterialWeight(filterDecimalNumericInput(e.target.value))}
+                                size="small"
+                                sx={{ width: 130 }}
+                            />
+                            <TextField
+                                label={t('length')}
+                                value={materialLength}
+                                onChange={(e) => setMaterialLength(filterDecimalNumericInput(e.target.value))}
+                                size="small"
+                                sx={{ width: 130 }}
+                            />
+                            <TextField
+                                label={t('width')}
+                                value={materialWidth}
+                                onChange={(e) => setMaterialWidth(filterDecimalNumericInput(e.target.value))}
+                                size="small"
+                                sx={{ width: 130 }}
+                            />
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                            <TextField
+                                required
+                                label={t('materialProviderName')}
+                                value={materialProviderName}
+                                onChange={(e) => setMaterialProviderName(e.target.value)}
+                                size="small"
+                                sx={{ flex: '1 1 180px' }}
+                            />
+                            <TextField
+                                required
+                                label={t('materialProviderContact')}
+                                value={materialProviderContact}
+                                onChange={(e) => setMaterialProviderContact(e.target.value)}
+                                size="small"
+                                sx={{ flex: '1 1 180px' }}
+                            />
+                            <TextField
+                                required
+                                label={t('materialProviderEmail')}
+                                value={materialProviderEmail}
+                                onChange={(e) => setMaterialProviderEmail(e.target.value)}
+                                size="small"
+                                sx={{ flex: '1 1 200px' }}
+                            />
+                            <TextField
+                                required
+                                label={t('materialProviderPhone')}
+                                value={materialProviderPhone}
+                                onChange={(e) => setMaterialProviderPhone(e.target.value)}
+                                size="small"
+                                sx={{ flex: '1 1 160px' }}
+                            />
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                            <Button
+                                variant="outlined"
+                                color="primary"
+                                startIcon={<AddIcon />}
+                                onClick={addOrUpdateMaterial}
+                                disabled={!isMaterialFormValid()}
+                            >
+                                {editingMaterialIndex !== null ? t('updateMaterial') : t('addMaterial')}
+                            </Button>
+                            {editingMaterialIndex !== null && (
+                                <Button variant="text" onClick={resetMaterialInputs}>
+                                    {t('cancel')}
+                                </Button>
+                            )}
+                        </Box>
+                        <Table size="small" sx={{ mt: 1 }}>
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell>{t('materialName')}</TableCell>
+                                    <TableCell>{t('materialCode')}</TableCell>
+                                    <TableCell>{t('materialProviderName')}</TableCell>
+                                    <TableCell align="right" sx={tableActionsTableCellSx}>
+                                        {t('actions')}
+                                    </TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {materialsDraft.length > 0 ? (
+                                    materialsDraft.map((m, idx) => (
+                                        <TableRow key={m.id ?? `new-material-${idx}`}>
+                                            <TableCell>{m.name ?? '—'}</TableCell>
+                                            <TableCell>{m.code ?? '—'}</TableCell>
+                                            <TableCell>{m.provider?.name ?? m.provider?.contactPerson ?? '—'}</TableCell>
+                                            <TableCell align="right" sx={tableActionsTableCellSx}>
+                                                <TableActionsRow>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => beginEditMaterial(idx)}
+                                                        sx={tableActionIconButtonSx.edit}
+                                                        title={t('edit')}
+                                                    >
+                                                        <EditIcon fontSize="small" />
+                                                    </IconButton>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => removeMaterial(idx)}
+                                                        sx={tableActionIconButtonSx.delete}
+                                                        title={t('remove')}
+                                                    >
+                                                        <DeleteIcon fontSize="small" />
+                                                    </IconButton>
+                                                </TableActionsRow>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={4}>
+                                            <Typography variant="body2" color="text.secondary">
+                                                {t('materialsEmpty')}
+                                            </Typography>
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+
+                        <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                            <Button variant="contained" color="primary" onClick={saveMaterialsFromModal}>
+                                {t('saveAction')}
+                            </Button>
+                            <Button variant="outlined" onClick={closeMaterialsModal}>
                                 {t('cancel')}
                             </Button>
                         </Box>
