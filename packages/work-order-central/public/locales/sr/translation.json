@@ -554,6 +554,7 @@
   "openSection": "Otvori sekciju",
   "productsWithoutProviders": "Proizvodi bez povezanih dobavljača",
   "materialsWithoutProviders": "Materijali bez povezanih dobavljača",
+  "activeProvider": "aktivan",
   "misc": "Ostalo",
   "licenseActivationTab": "Aktivacija licence",
   "licenseNotActivated": "Proizvod nije aktiviran. Kopirajte MAC adrese ispod i pošaljite ih dobavljaču softvera radi dobijanja aktivacionog ključa.",

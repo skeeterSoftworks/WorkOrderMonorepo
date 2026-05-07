@@ -177,6 +177,20 @@ export function ProductsManagementPanel() {
         }
         return Array.from(byKey.values()).sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
     }, [materialProviders, materialsDraft, products]);
+    const multiSelectMenuItemSx = (theme: any) => ({
+        py: 1,
+        '&.Mui-selected': {
+            backgroundColor: alpha(theme.palette.primary.main, 0.26),
+            fontWeight: 600,
+            borderLeft: `3px solid ${theme.palette.primary.main}`,
+        },
+        '&.Mui-selected.Mui-focusVisible': {
+            backgroundColor: alpha(theme.palette.primary.main, 0.32),
+        },
+        '&.Mui-selected:hover': {
+            backgroundColor: alpha(theme.palette.primary.main, 0.36),
+        },
+    });
 
     useEffect(() => {
         loadProducts();
@@ -1045,7 +1059,7 @@ export function ProductsManagementPanel() {
                                 sx={{ flex: 1.4, minWidth: 240 }}
                             >
                                 {machines.map((m) => (
-                                    <MenuItem key={m.id} value={m.id}>
+                                    <MenuItem key={m.id} value={m.id} sx={multiSelectMenuItemSx}>
                                         {m.machineName}
                                     </MenuItem>
                                 ))}
@@ -1084,20 +1098,7 @@ export function ProductsManagementPanel() {
                                 <MenuItem
                                     key={c.id}
                                     value={c.id}
-                                    sx={(theme) => ({
-                                        py: 1,
-                                        '&.Mui-selected': {
-                                            backgroundColor: alpha(theme.palette.primary.main, 0.16),
-                                            fontWeight: 600,
-                                            borderLeft: `3px solid ${theme.palette.primary.main}`,
-                                        },
-                                        '&.Mui-selected.Mui-focusVisible': {
-                                            backgroundColor: alpha(theme.palette.primary.main, 0.22),
-                                        },
-                                        '&.Mui-selected:hover': {
-                                            backgroundColor: alpha(theme.palette.primary.main, 0.24),
-                                        },
-                                    })}
+                                    sx={multiSelectMenuItemSx}
                                 >
                                     {c.companyName}
                                 </MenuItem>
@@ -2021,7 +2022,7 @@ export function ProductsManagementPanel() {
                                 sx={{ flex: '1 1 420px' }}
                             >
                                 {materialProviderOptions.map((p) => (
-                                    <MenuItem key={materialProviderKey(p)} value={materialProviderKey(p)}>
+                                    <MenuItem key={materialProviderKey(p)} value={materialProviderKey(p)} sx={multiSelectMenuItemSx}>
                                         {p.name || p.contactPerson || t('none')}
                                     </MenuItem>
                                 ))}
@@ -2143,7 +2144,7 @@ export function ProductsManagementPanel() {
                             {materialProviderOptions
                                 .filter((p) => p.id != null)
                                 .map((p) => (
-                                    <MenuItem key={p.id} value={p.id}>
+                                    <MenuItem key={p.id} value={p.id} sx={multiSelectMenuItemSx}>
                                         {p.name || p.contactPerson || p.id}
                                     </MenuItem>
                                 ))}

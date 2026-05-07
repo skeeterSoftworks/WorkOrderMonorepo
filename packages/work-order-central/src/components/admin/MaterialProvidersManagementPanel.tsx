@@ -11,6 +11,8 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
+import Chip from '@mui/material/Chip';
+import Stack from '@mui/material/Stack';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -19,6 +21,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import MenuItem from '@mui/material/MenuItem';
 import CloseIcon from '@mui/icons-material/Close';
+import { alpha } from '@mui/material/styles';
 import type { MaterialProviderTO, MaterialTO, ProductTO } from 'sf-common/src/models/ApiRequests';
 import { Server, ConfirmationModal } from 'sf-common';
 import { useTranslation } from 'react-i18next';
@@ -64,6 +67,7 @@ export function MaterialProvidersManagementPanel() {
     const [providerEmailAddress, setProviderEmailAddress] = useState('');
     const [providerPhoneNumber, setProviderPhoneNumber] = useState('');
     const [materialsDialogOpen, setMaterialsDialogOpen] = useState(false);
+    const [materialsDialogProvider, setMaterialsDialogProvider] = useState<MaterialProviderTO | null>(null);
     const [materialsCatalog, setMaterialsCatalog] = useState<MaterialTO[]>([]);
     const [editingMaterialIndex, setEditingMaterialIndex] = useState<number | null>(null);
     const [materialName, setMaterialName] = useState('');
@@ -79,6 +83,20 @@ export function MaterialProvidersManagementPanel() {
         () => [...providers].sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '')),
         [providers],
     );
+    const multiSelectMenuItemSx = (theme: any) => ({
+        py: 1,
+        '&.Mui-selected': {
+            backgroundColor: alpha(theme.palette.primary.main, 0.26),
+            fontWeight: 600,
+            borderLeft: `3px solid ${theme.palette.primary.main}`,
+        },
+        '&.Mui-selected.Mui-focusVisible': {
+            backgroundColor: alpha(theme.palette.primary.main, 0.32),
+        },
+        '&.Mui-selected:hover': {
+            backgroundColor: alpha(theme.palette.primary.main, 0.36),
+        },
+    });
 
     const loadProducts = () => {
         Server.getAllProducts(
@@ -243,9 +261,11 @@ export function MaterialProvidersManagementPanel() {
         setMaterialProviderKeysSelected([]);
     };
 
-    const openMaterialsDialog = () => {
+    const openMaterialsDialog = (provider: MaterialProviderTO) => {
+        setMaterialsDialogProvider(provider);
         setMaterialsCatalog(loadMaterialCatalog());
         resetMaterialForm();
+        setMaterialProviderKeysSelected([providerKey(provider)]);
         setMaterialsDialogOpen(true);
     };
 
@@ -351,7 +371,7 @@ export function MaterialProvidersManagementPanel() {
                                             <IconButton size="small" sx={tableActionIconButtonSx.edit} onClick={() => editProvider(p)} title={t('edit')}>
                                                 <EditIcon fontSize="small" />
                                             </IconButton>
-                                            <IconButton size="small" sx={tableActionIconButtonSx.edit} onClick={openMaterialsDialog} title={t('materialsEditTooltip')}>
+                                            <IconButton size="small" sx={tableActionIconButtonSx.edit} onClick={() => openMaterialsDialog(p)} title={t('materialsEditTooltip')}>
                                                 <Typography component="span" sx={{ fontSize: '0.95rem', fontWeight: 800, color: 'secondary.main', lineHeight: 1 }}>
                                                     M
                                                 </Typography>
@@ -381,10 +401,26 @@ export function MaterialProvidersManagementPanel() {
                 onModalClose={() => setProviderToDelete(null)}
             />
 
-            <Dialog open={materialsDialogOpen} onClose={() => setMaterialsDialogOpen(false)} maxWidth="lg" fullWidth>
+            <Dialog
+                open={materialsDialogOpen}
+                onClose={() => {
+                    setMaterialsDialogOpen(false);
+                    setMaterialsDialogProvider(null);
+                }}
+                maxWidth="lg"
+                fullWidth
+            >
                 <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     {t('materialsEditorTitle')}
-                    <IconButton size="small" onClick={() => setMaterialsDialogOpen(false)} aria-label={t('close')}>
+                    {materialsDialogProvider?.name ? ` - ${materialsDialogProvider.name}` : ''}
+                    <IconButton
+                        size="small"
+                        onClick={() => {
+                            setMaterialsDialogOpen(false);
+                            setMaterialsDialogProvider(null);
+                        }}
+                        aria-label={t('close')}
+                    >
                         <CloseIcon />
                     </IconButton>
                 </DialogTitle>
@@ -408,19 +444,44 @@ export function MaterialProvidersManagementPanel() {
                             SelectProps={{
                                 multiple: true,
                                 renderValue: (selected) =>
-                                    (selected as string[])
-                                        .map((key) => providers.find((p) => providerKey(p) === key)?.name ?? key)
-                                        .join(', '),
+                                    (
+                                        <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                                            {(selected as string[]).map((key) => {
+                                                const provider = providers.find((p) => providerKey(p) === key);
+                                                const isActive =
+                                                    !!materialsDialogProvider &&
+                                                    providerKey(materialsDialogProvider) === key;
+                                                return (
+                                                    <Chip
+                                                        key={key}
+                                                        size="small"
+                                                        label={
+                                                            isActive
+                                                                ? `${provider?.name ?? key} (${t('activeProvider')})`
+                                                                : (provider?.name ?? key)
+                                                        }
+                                                        color={isActive ? 'primary' : 'default'}
+                                                        variant="outlined"
+                                                    />
+                                                );
+                                            })}
+                                        </Stack>
+                                    ),
                             }}
                             value={materialProviderKeysSelected}
                             onChange={(e) => {
                                 const v = e.target.value;
-                                setMaterialProviderKeysSelected(Array.isArray(v) ? v.map(String) : [String(v)]);
+                                const next = Array.isArray(v) ? v.map(String) : [String(v)];
+                                setMaterialProviderKeysSelected(next);
                             }}
                             size="small"
                         >
                             {sortedProviders.map((p) => (
-                                <MenuItem key={providerKey(p)} value={providerKey(p)}>
+                                <MenuItem
+                                    key={providerKey(p)}
+                                    value={providerKey(p)}
+                                    sx={multiSelectMenuItemSx}
+                                >
                                     {p.name || p.contactPerson || t('none')}
                                 </MenuItem>
                             ))}
@@ -446,7 +507,21 @@ export function MaterialProvidersManagementPanel() {
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {materialsCatalog.length > 0 ? materialsCatalog.map((m, idx) => (
+                                {materialsCatalog
+                                    .map((m, idx) => ({ m, idx }))
+                                    .filter(({ m }) => {
+                                        if (!materialsDialogProvider) return true;
+                                        const key = providerKey(materialsDialogProvider);
+                                        return materialProvidersOf(m).some((p) => providerKey(p) === key);
+                                    })
+                                    .length > 0 ? materialsCatalog
+                                    .map((m, idx) => ({ m, idx }))
+                                    .filter(({ m }) => {
+                                        if (!materialsDialogProvider) return true;
+                                        const key = providerKey(materialsDialogProvider);
+                                        return materialProvidersOf(m).some((p) => providerKey(p) === key);
+                                    })
+                                    .map(({ m, idx }) => (
                                     <TableRow key={m.id ?? `${m.code}-${idx}`}>
                                         <TableCell>{m.name ?? '—'}</TableCell>
                                         <TableCell>{m.code ?? '—'}</TableCell>

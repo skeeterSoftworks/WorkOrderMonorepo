@@ -554,6 +554,7 @@
   "openSection": "Open section",
   "productsWithoutProviders": "Products without linked providers",
   "materialsWithoutProviders": "Materials without linked providers",
+  "activeProvider": "active",
   "misc": "Misc",
   "licenseActivationTab": "License activation",
   "licenseNotActivated": "This product is not activated. Copy the MAC address(es) below and send them to the software vendor to obtain an activation key.",
