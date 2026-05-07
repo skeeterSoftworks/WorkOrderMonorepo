@@ -65,7 +65,7 @@ export function AdminHome() {
                             <ListItemText primary={t('machines')} />
                         </ListItemButton>
                         <ListItemButton selected={activeSection === AdminSections.MATERIAL_PROVIDERS} onClick={() => setActiveSection(AdminSections.MATERIAL_PROVIDERS)}>
-                            <ListItemText primary={t('materialProviders')} />
+                            <ListItemText primary={t('providersAndMaterials')} />
                         </ListItemButton>
                         <ListItemButton selected={activeSection === AdminSections.PRODUCTS} onClick={() => setActiveSection(AdminSections.PRODUCTS)}>
                             <ListItemText primary={t('products')} />

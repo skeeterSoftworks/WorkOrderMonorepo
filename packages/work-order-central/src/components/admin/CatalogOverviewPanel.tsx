@@ -191,11 +191,16 @@ export function CatalogOverviewPanel({ onOpenSection }: { onOpenSection: (sectio
             : t('none')
     );
     const healthRow = (label: string, count: number, items: string[], subtle?: boolean) => {
+        const semanticColor = subtle
+            ? 'text.secondary'
+            : count > 0
+                ? 'error.dark'
+                : 'success.main';
         const content = (
             <Typography
                 variant="body2"
                 component="span"
-                color={subtle ? 'text.secondary' : undefined}
+                color={semanticColor}
                 sx={{ display: 'inline-block' }}
             >
                 {label}: {count}
