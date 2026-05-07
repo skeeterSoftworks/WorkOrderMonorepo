@@ -10,6 +10,7 @@ import type {
     MachineBookingTO,
     SampleDataGenerationResultTO,
     ProductAvailableStockTO,
+    MaterialProviderTO,
 } from "../models/ApiRequests";
 import axios from "axios";
 import { getServerUrl } from "../util/EnvUtils";
@@ -256,6 +257,42 @@ export class Server {
 
     static deleteProduct(id: number, onSuccess: Function, onError: Function) {
         axios.delete(`${getServerUrl()}/products/${id}`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static getAllMaterialProviders(onSuccess: Function, onError: Function) {
+        axios.get(`${getServerUrl()}/material-providers/all`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static addMaterialProvider(provider: MaterialProviderTO, onSuccess: Function, onError: Function) {
+        axios.post(`${getServerUrl()}/material-providers/add`, provider)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static editMaterialProvider(provider: MaterialProviderTO, onSuccess: Function, onError: Function) {
+        axios.post(`${getServerUrl()}/material-providers/update`, provider)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static deleteMaterialProvider(id: number, onSuccess: Function, onError: Function) {
+        axios.delete(`${getServerUrl()}/material-providers/${id}`)
             .then(response => onSuccess(response))
             .catch(error => {
                 console.log(error);

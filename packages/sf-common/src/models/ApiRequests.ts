@@ -50,6 +50,8 @@ export interface MaterialTO {
     weight?: number,
     length?: number,
     width?: number,
+    providers?: MaterialProviderTO[],
+    /** Backward compatibility for legacy payloads; prefer `providers`. */
     provider?: MaterialProviderTO,
 }
 
@@ -62,6 +64,8 @@ export interface ProductTO {
     machineIds?: number[],
     /** Customers this product may be sold to (purchase orders). */
     customerIds?: number[],
+    /** Material providers linked directly to this product. */
+    materialProviderIds?: number[],
     technologyData?: TechnologyTO,
     /** Single embedded setup template for the product (central). */
     setupDataPrototype?: SetupDataPrototypeTO,

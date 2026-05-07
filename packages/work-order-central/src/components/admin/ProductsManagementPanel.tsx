@@ -21,7 +21,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Divider from '@mui/material/Divider';
 import ListSubheader from '@mui/material/ListSubheader';
@@ -46,6 +46,7 @@ import { Server, ConfirmationModal } from 'sf-common';
 import { filterDecimalNumericInput, parseDecimalNumericInputToNumber } from 'sf-common/src/util/DataUtils';
 import { isPdfDataUrl, normalizeBinaryDataUrl } from 'sf-common/src/util/mediaDataUrl';
 import { toastActionSuccess, toastServerError } from '../../util/actionToast';
+import { isInternalStockOrdererCustomer } from '../../util/internalStockOrderer';
 import {
     TableActionsRow,
     tableActionsTableCellSx,
@@ -53,6 +54,17 @@ import {
 } from '../shared/tableActions';
 
 type LocalProduct = ProductTO;
+
+function materialProviderKey(p?: MaterialTO['provider']): string {
+    if (!p) return '';
+    if (p.id != null) return `id:${p.id}`;
+    return `name:${(p.name ?? '').trim().toLowerCase()}`;
+}
+
+function materialProvidersOf(material: MaterialTO): NonNullable<MaterialTO['providers']> {
+    if (Array.isArray(material.providers)) return material.providers;
+    return material.provider ? [material.provider] : [];
+}
 
 function withSequentialStepNumbers(steps: QualityInfoStepTO[]): QualityInfoStepTO[] {
     return steps.map((s, i) => ({ ...s, stepNumber: i + 1 }));
@@ -65,6 +77,7 @@ export function ProductsManagementPanel() {
     const { t } = useTranslation();
 
     const [products, setProducts] = useState<LocalProduct[]>([]);
+    const [materialProviders, setMaterialProviders] = useState<NonNullable<MaterialTO['provider']>[]>([]);
     const [machines, setMachines] = useState<MachineTO[]>([]);
     const [customers, setCustomers] = useState<CustomerTO[]>([]);
     const [selectedProductId, setSelectedProductId] = useState<number | undefined>(undefined);
@@ -91,10 +104,10 @@ export function ProductsManagementPanel() {
     const [materialWeight, setMaterialWeight] = useState('');
     const [materialLength, setMaterialLength] = useState('');
     const [materialWidth, setMaterialWidth] = useState('');
-    const [materialProviderName, setMaterialProviderName] = useState('');
-    const [materialProviderContact, setMaterialProviderContact] = useState('');
-    const [materialProviderEmail, setMaterialProviderEmail] = useState('');
-    const [materialProviderPhone, setMaterialProviderPhone] = useState('');
+    const [materialProviderKeysSelected, setMaterialProviderKeysSelected] = useState<string[]>([]);
+    const [providerLinkDialogOpen, setProviderLinkDialogOpen] = useState(false);
+    const [providerLinkProduct, setProviderLinkProduct] = useState<LocalProduct | null>(null);
+    const [selectedProductProviderIds, setSelectedProductProviderIds] = useState<number[]>([]);
 
     const [techToolName, setTechToolName] = useState('');
     const [techToolDescription, setTechToolDescription] = useState('');
@@ -142,8 +155,32 @@ export function ProductsManagementPanel() {
     const [technicalDrawingLoadedSrc, setTechnicalDrawingLoadedSrc] = useState<string | undefined>(undefined);
     const [technicalDrawingInputKey, setTechnicalDrawingInputKey] = useState(0);
 
+    const materialProviderOptions = useMemo(() => {
+        const byKey = new Map<string, NonNullable<MaterialTO['provider']>>();
+        for (const provider of materialProviders) {
+            const key = materialProviderKey(provider);
+            if (key) byKey.set(key, provider);
+        }
+        for (const product of products) {
+            for (const material of product.materials ?? []) {
+                for (const provider of materialProvidersOf(material)) {
+                    const key = materialProviderKey(provider);
+                    if (key) byKey.set(key, { ...provider });
+                }
+            }
+        }
+        for (const material of materialsDraft) {
+            for (const provider of materialProvidersOf(material)) {
+                const key = materialProviderKey(provider);
+                if (key) byKey.set(key, { ...provider });
+            }
+        }
+        return Array.from(byKey.values()).sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+    }, [materialProviders, materialsDraft, products]);
+
     useEffect(() => {
         loadProducts();
+        loadMaterialProviders();
         loadMachines();
         loadCustomers();
     }, []);
@@ -189,6 +226,18 @@ export function ProductsManagementPanel() {
                 if (Array.isArray(response?.data)) data = response.data;
                 else if (Array.isArray(response?.data?.data)) data = response.data.data;
                 setProducts(data);
+            },
+            () => {},
+        );
+    };
+
+    const loadMaterialProviders = () => {
+        Server.getAllMaterialProviders(
+            (response: any) => {
+                let data: NonNullable<MaterialTO['provider']>[] = [];
+                if (Array.isArray(response?.data)) data = response.data;
+                else if (Array.isArray(response?.data?.data)) data = response.data.data;
+                setMaterialProviders(data);
             },
             () => {},
         );
@@ -506,7 +555,12 @@ export function ProductsManagementPanel() {
         (machineIds ?? []).map((id) => machines.find((m) => m.id === id)?.machineName ?? id).filter(Boolean).join(', ') || '—';
 
     const getCustomerNames = (customerIds: number[] | undefined) =>
-        (customerIds ?? []).map((id) => customers.find((c) => c.id === id)?.companyName ?? id).filter(Boolean).join(', ') || '—';
+        (customerIds ?? [])
+            .map((id) => customers.find((c) => c.id === id))
+            .filter((c): c is CustomerTO => Boolean(c) && !isInternalStockOrdererCustomer(c))
+            .map((c) => c.companyName)
+            .filter(Boolean)
+            .join(', ') || '—';
 
     const handleDeleteClick = (product: LocalProduct) => {
         setProductToDelete(product);
@@ -552,10 +606,7 @@ export function ProductsManagementPanel() {
         setMaterialWeight('');
         setMaterialLength('');
         setMaterialWidth('');
-        setMaterialProviderName('');
-        setMaterialProviderContact('');
-        setMaterialProviderEmail('');
-        setMaterialProviderPhone('');
+        setMaterialProviderKeysSelected([]);
         setEditingMaterialIndex(null);
     };
 
@@ -582,15 +633,6 @@ export function ProductsManagementPanel() {
         resetTechnologyToolInputs();
     };
 
-    const openMaterialsModal = (product: LocalProduct) => {
-        if (!product.id) return;
-        const latest = products.find((p) => p.id === product.id) ?? product;
-        setMaterialsModalProduct(latest);
-        setMaterialsDraft(latest.materials?.map((m) => ({ ...m, provider: m.provider ? { ...m.provider } : undefined })) ?? []);
-        resetMaterialInputs();
-        setMaterialsModalOpen(true);
-    };
-
     const closeMaterialsModal = () => {
         setMaterialsModalOpen(false);
         setMaterialsModalProduct(null);
@@ -598,21 +640,51 @@ export function ProductsManagementPanel() {
         resetMaterialInputs();
     };
 
+    const openProviderLinkDialog = (product: LocalProduct) => {
+        if (!product.id) return;
+        const latest = products.find((p) => p.id === product.id) ?? product;
+        setProviderLinkProduct(latest);
+        setSelectedProductProviderIds((latest.materialProviderIds ?? []).filter((id): id is number => Number.isFinite(id)));
+        setProviderLinkDialogOpen(true);
+    };
+
+    const closeProviderLinkDialog = () => {
+        setProviderLinkDialogOpen(false);
+        setProviderLinkProduct(null);
+        setSelectedProductProviderIds([]);
+    };
+
+    const saveProductProviderLinks = () => {
+        if (!providerLinkProduct?.id) return;
+        const payload: ProductTO = {
+            ...providerLinkProduct,
+            materialProviderIds: selectedProductProviderIds,
+        };
+        Server.editProduct(
+            payload,
+            () => {
+                loadProducts();
+                closeProviderLinkDialog();
+                toastActionSuccess(t('toastProductUpdated'));
+            },
+            (err: unknown) => toastServerError(err, t),
+        );
+    };
+
     const isMaterialFormValid = (): boolean =>
         Boolean(materialName.trim()) &&
         Boolean(materialCode.trim()) &&
         Boolean(materialProductsPerUnit.trim()) &&
-        Boolean(materialProviderName.trim()) &&
-        Boolean(materialProviderContact.trim()) &&
-        Boolean(materialProviderEmail.trim()) &&
-        Boolean(materialProviderPhone.trim());
+        materialProviderKeysSelected.length > 0;
 
     const addOrUpdateMaterial = () => {
         if (!isMaterialFormValid()) return;
         const productsPerUnit = materialProductsPerUnit.trim() === '' ? undefined : Number(materialProductsPerUnit);
-        const fallbackGrade = editingMaterialIndex !== null
-            ? (materialsDraft[editingMaterialIndex]?.provider?.grade ?? 0)
-            : 0;
+        const selectedProviders = materialProviderKeysSelected
+            .map((k) => materialProviderOptions.find((p) => materialProviderKey(p) === k))
+            .filter((p): p is NonNullable<MaterialTO['provider']> => Boolean(p))
+            .map((p) => ({ ...p }));
+        if (selectedProviders.length === 0) return;
         const row: MaterialTO = {
             id: editingMaterialIndex !== null ? materialsDraft[editingMaterialIndex]?.id : undefined,
             name: materialName.trim(),
@@ -622,14 +694,8 @@ export function ProductsManagementPanel() {
             weight: parseDecimalNumericInputToNumber(materialWeight),
             length: parseDecimalNumericInputToNumber(materialLength),
             width: parseDecimalNumericInputToNumber(materialWidth),
-            provider: {
-                id: editingMaterialIndex !== null ? materialsDraft[editingMaterialIndex]?.provider?.id : undefined,
-                name: materialProviderName.trim() || undefined,
-                contactPerson: materialProviderContact.trim() || undefined,
-                emailAddress: materialProviderEmail.trim() || undefined,
-                phoneNumber: materialProviderPhone.trim() || undefined,
-                grade: fallbackGrade,
-            },
+            providers: selectedProviders,
+            provider: undefined,
         };
         setMaterialsDraft((prev) => {
             const next = [...prev];
@@ -651,10 +717,7 @@ export function ProductsManagementPanel() {
         setMaterialWeight(row.weight != null ? String(row.weight) : '');
         setMaterialLength(row.length != null ? String(row.length) : '');
         setMaterialWidth(row.width != null ? String(row.width) : '');
-        setMaterialProviderName(row.provider?.name ?? '');
-        setMaterialProviderContact(row.provider?.contactPerson ?? '');
-        setMaterialProviderEmail(row.provider?.emailAddress ?? '');
-        setMaterialProviderPhone(row.provider?.phoneNumber ?? '');
+        setMaterialProviderKeysSelected(materialProvidersOf(row).map((p) => materialProviderKey(p)));
     };
 
     const removeMaterial = (index: number) => {
@@ -803,7 +866,7 @@ export function ProductsManagementPanel() {
                                 const noMeasuringFeatures =
                                     (product.measuringFeaturePrototypes?.length ?? 0) === 0;
                                 const noQualitySteps = (product.qualityInfoSteps?.length ?? 0) === 0;
-                                const noMaterials = (product.materials?.length ?? 0) === 0;
+                                const noMaterialProviders = (product.materialProviderIds?.length ?? 0) === 0;
                                 const chipSx = {
                                     height: 22,
                                     '& .MuiChip-label': { px: 1, fontSize: '0.7rem' },
@@ -838,11 +901,11 @@ export function ProductsManagementPanel() {
                                                         />
                                                     </Tooltip>
                                                 )}
-                                                {noMaterials && (
-                                                    <Tooltip title={t('productNoMaterialsHint')}>
+                                                {noMaterialProviders && (
+                                                    <Tooltip title={t('productNoMaterialProvidersHint')}>
                                                         <Chip
                                                             size="small"
-                                                            label={t('productNoMaterialsBadge')}
+                                                            label={t('productNoMaterialProvidersBadge')}
                                                             color="warning"
                                                             variant="outlined"
                                                             sx={chipSx}
@@ -884,9 +947,9 @@ export function ProductsManagementPanel() {
                                             </IconButton>
                                             <IconButton
                                                 size="small"
-                                                onClick={() => openMaterialsModal(product)}
+                                                onClick={() => openProviderLinkDialog(product)}
                                                 disabled={!product.id}
-                                                title={t('materialsEditTooltip')}
+                                                title={t('productProviderLinkTooltip')}
                                                 sx={(theme) => ({
                                                     minWidth: 28,
                                                     color: theme.palette.secondary.main,
@@ -904,7 +967,7 @@ export function ProductsManagementPanel() {
                                                         lineHeight: 1,
                                                     }}
                                                 >
-                                                    M
+                                                    P
                                                 </Typography>
                                             </IconButton>
                                             <IconButton
@@ -1939,37 +2002,30 @@ export function ProductsManagementPanel() {
                         </Box>
                         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                             <TextField
+                                select
                                 required
                                 label={t('materialProviderName')}
-                                value={materialProviderName}
-                                onChange={(e) => setMaterialProviderName(e.target.value)}
+                                SelectProps={{
+                                    multiple: true,
+                                    renderValue: (selected) =>
+                                        (selected as string[])
+                                            .map((key) => materialProviderOptions.find((p) => materialProviderKey(p) === key)?.name ?? key)
+                                            .join(', '),
+                                }}
+                                value={materialProviderKeysSelected}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    setMaterialProviderKeysSelected(Array.isArray(value) ? value.map(String) : [String(value)]);
+                                }}
                                 size="small"
-                                sx={{ flex: '1 1 180px' }}
-                            />
-                            <TextField
-                                required
-                                label={t('materialProviderContact')}
-                                value={materialProviderContact}
-                                onChange={(e) => setMaterialProviderContact(e.target.value)}
-                                size="small"
-                                sx={{ flex: '1 1 180px' }}
-                            />
-                            <TextField
-                                required
-                                label={t('materialProviderEmail')}
-                                value={materialProviderEmail}
-                                onChange={(e) => setMaterialProviderEmail(e.target.value)}
-                                size="small"
-                                sx={{ flex: '1 1 200px' }}
-                            />
-                            <TextField
-                                required
-                                label={t('materialProviderPhone')}
-                                value={materialProviderPhone}
-                                onChange={(e) => setMaterialProviderPhone(e.target.value)}
-                                size="small"
-                                sx={{ flex: '1 1 160px' }}
-                            />
+                                sx={{ flex: '1 1 420px' }}
+                            >
+                                {materialProviderOptions.map((p) => (
+                                    <MenuItem key={materialProviderKey(p)} value={materialProviderKey(p)}>
+                                        {p.name || p.contactPerson || t('none')}
+                                    </MenuItem>
+                                ))}
+                            </TextField>
                         </Box>
                         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                             <Button
@@ -2004,7 +2060,9 @@ export function ProductsManagementPanel() {
                                         <TableRow key={m.id ?? `new-material-${idx}`}>
                                             <TableCell>{m.name ?? '—'}</TableCell>
                                             <TableCell>{m.code ?? '—'}</TableCell>
-                                            <TableCell>{m.provider?.name ?? m.provider?.contactPerson ?? '—'}</TableCell>
+                                            <TableCell>
+                                                {materialProvidersOf(m).map((p) => p.name || p.contactPerson).filter(Boolean).join(', ') || '—'}
+                                            </TableCell>
                                             <TableCell align="right" sx={tableActionsTableCellSx}>
                                                 <TableActionsRow>
                                                     <IconButton
@@ -2044,6 +2102,57 @@ export function ProductsManagementPanel() {
                                 {t('saveAction')}
                             </Button>
                             <Button variant="outlined" onClick={closeMaterialsModal}>
+                                {t('cancel')}
+                            </Button>
+                        </Box>
+                    </Box>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={providerLinkDialogOpen} onClose={closeProviderLinkDialog} maxWidth="sm" fullWidth>
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    {t('productProviderLinkTitle')}
+                    <IconButton size="small" onClick={closeProviderLinkDialog} aria-label={t('close')}>
+                        <CloseIcon />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent dividers>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pt: 1 }}>
+                        <Typography variant="body2" color="text.secondary">
+                            {providerLinkProduct?.name ?? '—'}
+                        </Typography>
+                        <TextField
+                            select
+                            label={t('materialProviders')}
+                            SelectProps={{
+                                multiple: true,
+                                renderValue: (selected) =>
+                                    (selected as number[])
+                                        .map((id) => materialProviderOptions.find((p) => p.id === id)?.name ?? id)
+                                        .join(', '),
+                            }}
+                            value={selectedProductProviderIds}
+                            onChange={(e) => {
+                                const value = e.target.value;
+                                const next = Array.isArray(value) ? value.map((v) => Number(v)) : [Number(value)];
+                                setSelectedProductProviderIds(next.filter((v) => Number.isFinite(v)));
+                            }}
+                            size="small"
+                            fullWidth
+                        >
+                            {materialProviderOptions
+                                .filter((p) => p.id != null)
+                                .map((p) => (
+                                    <MenuItem key={p.id} value={p.id}>
+                                        {p.name || p.contactPerson || p.id}
+                                    </MenuItem>
+                                ))}
+                        </TextField>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Button variant="contained" onClick={saveProductProviderLinks}>
+                                {t('saveAction')}
+                            </Button>
+                            <Button variant="outlined" onClick={closeProviderLinkDialog}>
                                 {t('cancel')}
                             </Button>
                         </Box>

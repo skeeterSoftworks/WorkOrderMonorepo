@@ -14,14 +14,16 @@ import { CustomersManagementPanel } from './CustomersManagementPanel';
 import { MachinesManagementPanel } from './MachinesManagementPanel';
 import { MiscManagementPanel } from './MiscManagementPanel';
 import { LicenseActivationPanel } from './LicenseActivationPanel';
+import { MaterialProvidersManagementPanel } from './MaterialProvidersManagementPanel';
 
 const AdminTabs = {
     CUSTOMERS: 0,
     MACHINES: 1,
     PRODUCTS: 2,
-    USERS: 3,
-    MISC: 4,
-    LICENSE: 5,
+    MATERIAL_PROVIDERS: 3,
+    USERS: 4,
+    MISC: 5,
+    LICENSE: 6,
 } as const;
 
 type AdminTabId = (typeof AdminTabs)[keyof typeof AdminTabs];
@@ -48,6 +50,7 @@ export function AdminHome() {
                 <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue as AdminTabId)}>
                     <Tab label={t('customers')} value={AdminTabs.CUSTOMERS} />
                     <Tab label={t('machines')} value={AdminTabs.MACHINES} />
+                    <Tab label={t('materialProviders')} value={AdminTabs.MATERIAL_PROVIDERS} />
                     <Tab label={t('products')} value={AdminTabs.PRODUCTS} />
                     <Tab label={t('users')} value={AdminTabs.USERS} />
                     <Tab label={t('misc')} value={AdminTabs.MISC} />
@@ -57,6 +60,7 @@ export function AdminHome() {
 
             {activeTab === AdminTabs.USERS && <UsersManagementPanel />}
             {activeTab === AdminTabs.PRODUCTS && <ProductsManagementPanel />}
+            {activeTab === AdminTabs.MATERIAL_PROVIDERS && <MaterialProvidersManagementPanel />}
             {activeTab === AdminTabs.CUSTOMERS && <CustomersManagementPanel />}
             {activeTab === AdminTabs.MACHINES && <MachinesManagementPanel />}
             {activeTab === AdminTabs.MISC && <MiscManagementPanel />}
