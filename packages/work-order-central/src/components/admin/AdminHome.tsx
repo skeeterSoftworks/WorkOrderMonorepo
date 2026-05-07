@@ -2,9 +2,12 @@ import Container from '@mui/material/Container';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
-import Tabs from '@mui/material/Tabs';
-import Tab from '@mui/material/Tab';
 import Box from '@mui/material/Box';
+import List from '@mui/material/List';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemText from '@mui/material/ListItemText';
+import Divider from '@mui/material/Divider';
+import Paper from '@mui/material/Paper';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LoggedUser } from 'work-order-local/src/models/Common.ts';
@@ -15,18 +18,20 @@ import { MachinesManagementPanel } from './MachinesManagementPanel';
 import { MiscManagementPanel } from './MiscManagementPanel';
 import { LicenseActivationPanel } from './LicenseActivationPanel';
 import { MaterialProvidersManagementPanel } from './MaterialProvidersManagementPanel';
+import { CatalogOverviewPanel } from './CatalogOverviewPanel';
 
-const AdminTabs = {
-    CUSTOMERS: 0,
-    MACHINES: 1,
-    PRODUCTS: 2,
-    MATERIAL_PROVIDERS: 3,
-    USERS: 4,
-    MISC: 5,
-    LICENSE: 6,
+const AdminSections = {
+    CATALOG_OVERVIEW: 'catalog-overview',
+    PRODUCTS: 'products',
+    CUSTOMERS: 'customers',
+    MACHINES: 'machines',
+    MATERIAL_PROVIDERS: 'material-providers',
+    USERS: 'users',
+    MISC: 'misc',
+    LICENSE: 'license',
 } as const;
 
-type AdminTabId = (typeof AdminTabs)[keyof typeof AdminTabs];
+type AdminSectionId = (typeof AdminSections)[keyof typeof AdminSections];
 
 export function AdminHome() {
     const { t } = useTranslation();
@@ -34,7 +39,7 @@ export function AdminHome() {
     const userDataString = sessionStorage.getItem('userData');
     const userData: LoggedUser = userDataString && JSON.parse(userDataString);
 
-    const [activeTab, setActiveTab] = useState<AdminTabId>(AdminTabs.CUSTOMERS);
+    const [activeSection, setActiveSection] = useState<AdminSectionId>(AdminSections.CATALOG_OVERVIEW);
 
     return (
         <Container>
@@ -46,25 +51,60 @@ export function AdminHome() {
                 </Toolbar>
             </AppBar>
 
-            <Box sx={{ borderBottom: 1, borderColor: 'divider', mt: 2 }}>
-                <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue as AdminTabId)}>
-                    <Tab label={t('customers')} value={AdminTabs.CUSTOMERS} />
-                    <Tab label={t('machines')} value={AdminTabs.MACHINES} />
-                    <Tab label={t('materialProviders')} value={AdminTabs.MATERIAL_PROVIDERS} />
-                    <Tab label={t('products')} value={AdminTabs.PRODUCTS} />
-                    <Tab label={t('users')} value={AdminTabs.USERS} />
-                    <Tab label={t('misc')} value={AdminTabs.MISC} />
-                    <Tab label={t('licenseActivationTab')} value={AdminTabs.LICENSE} />
-                </Tabs>
-            </Box>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '260px 1fr' }, gap: 2, mt: 2 }}>
+                <Paper variant="outlined" sx={{ p: 1 }}>
+                    <List dense>
+                        <ListItemText primary={t('productionCatalog')} sx={{ px: 1, py: 0.5 }} />
+                        <ListItemButton selected={activeSection === AdminSections.CATALOG_OVERVIEW} onClick={() => setActiveSection(AdminSections.CATALOG_OVERVIEW)}>
+                            <ListItemText primary={t('catalogOverview')} />
+                        </ListItemButton>
+                        <ListItemButton selected={activeSection === AdminSections.CUSTOMERS} onClick={() => setActiveSection(AdminSections.CUSTOMERS)}>
+                            <ListItemText primary={t('buyers')} />
+                        </ListItemButton>
+                        <ListItemButton selected={activeSection === AdminSections.MACHINES} onClick={() => setActiveSection(AdminSections.MACHINES)}>
+                            <ListItemText primary={t('machines')} />
+                        </ListItemButton>
+                        <ListItemButton selected={activeSection === AdminSections.MATERIAL_PROVIDERS} onClick={() => setActiveSection(AdminSections.MATERIAL_PROVIDERS)}>
+                            <ListItemText primary={t('materialProviders')} />
+                        </ListItemButton>
+                        <ListItemButton selected={activeSection === AdminSections.PRODUCTS} onClick={() => setActiveSection(AdminSections.PRODUCTS)}>
+                            <ListItemText primary={t('products')} />
+                        </ListItemButton>
+                        <Divider sx={{ my: 1 }} />
+                        <ListItemText primary={t('systemSection')} sx={{ px: 1, py: 0.5 }} />
+                        <ListItemButton selected={activeSection === AdminSections.USERS} onClick={() => setActiveSection(AdminSections.USERS)}>
+                            <ListItemText primary={t('users')} />
+                        </ListItemButton>
+                        <ListItemButton selected={activeSection === AdminSections.MISC} onClick={() => setActiveSection(AdminSections.MISC)}>
+                            <ListItemText primary={t('misc')} />
+                        </ListItemButton>
+                        <ListItemButton selected={activeSection === AdminSections.LICENSE} onClick={() => setActiveSection(AdminSections.LICENSE)}>
+                            <ListItemText primary={t('licenseActivationTab')} />
+                        </ListItemButton>
+                    </List>
+                </Paper>
 
-            {activeTab === AdminTabs.USERS && <UsersManagementPanel />}
-            {activeTab === AdminTabs.PRODUCTS && <ProductsManagementPanel />}
-            {activeTab === AdminTabs.MATERIAL_PROVIDERS && <MaterialProvidersManagementPanel />}
-            {activeTab === AdminTabs.CUSTOMERS && <CustomersManagementPanel />}
-            {activeTab === AdminTabs.MACHINES && <MachinesManagementPanel />}
-            {activeTab === AdminTabs.MISC && <MiscManagementPanel />}
-            {activeTab === AdminTabs.LICENSE && <LicenseActivationPanel />}
+                <Box>
+                    {activeSection === AdminSections.CATALOG_OVERVIEW && (
+                        <CatalogOverviewPanel
+                            onOpenSection={(section) => {
+                                if (section === 'buyers') setActiveSection(AdminSections.CUSTOMERS);
+                                else if (section === 'machines') setActiveSection(AdminSections.MACHINES);
+                                else if (section === 'products') setActiveSection(AdminSections.PRODUCTS);
+                                else if (section === 'materials') setActiveSection(AdminSections.MATERIAL_PROVIDERS);
+                                else if (section === 'providers') setActiveSection(AdminSections.MATERIAL_PROVIDERS);
+                            }}
+                        />
+                    )}
+                    {activeSection === AdminSections.USERS && <UsersManagementPanel />}
+                    {activeSection === AdminSections.PRODUCTS && <ProductsManagementPanel />}
+                    {activeSection === AdminSections.MATERIAL_PROVIDERS && <MaterialProvidersManagementPanel />}
+                    {activeSection === AdminSections.CUSTOMERS && <CustomersManagementPanel />}
+                    {activeSection === AdminSections.MACHINES && <MachinesManagementPanel />}
+                    {activeSection === AdminSections.MISC && <MiscManagementPanel />}
+                    {activeSection === AdminSections.LICENSE && <LicenseActivationPanel />}
+                </Box>
+            </Box>
         </Container>
     );
 }

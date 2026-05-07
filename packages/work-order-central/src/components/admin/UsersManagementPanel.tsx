@@ -11,8 +11,13 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
 import LinkIcon from '@mui/icons-material/Link';
 import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
+import CloseIcon from '@mui/icons-material/Close';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ApplicationUserTO } from 'sf-common/src/models/ApiRequests';
@@ -35,6 +40,7 @@ export function UsersManagementPanel() {
     const [qrCode, setQrCode] = useState('');
     const [role, setRole] = useState<'ADMIN' | 'OPERATOR'>('OPERATOR');
     const [userToDelete, setUserToDelete] = useState<ApplicationUserTO | null>(null);
+    const [formModalOpen, setFormModalOpen] = useState(false);
 
     const formatCreatedDate = (value: any): string => {
         if (!value) {
@@ -87,12 +93,23 @@ export function UsersManagementPanel() {
         setRole('OPERATOR');
     };
 
+    const openFormModal = () => {
+        resetForm();
+        setFormModalOpen(true);
+    };
+
+    const closeFormModal = () => {
+        setFormModalOpen(false);
+        resetForm();
+    };
+
     const handleEditClick = (user: ApplicationUserTO) => {
         setSelectedUserId(user.id);
         setName(user.name || '');
         setSurname(user.surname || '');
         setQrCode(user.qrCode || '');
         setRole(user.role || 'OPERATOR');
+        setFormModalOpen(true);
     };
 
     const handleSubmit = () => {
@@ -106,7 +123,7 @@ export function UsersManagementPanel() {
 
         const onSuccess = () => {
             loadUsers();
-            resetForm();
+            closeFormModal();
             toastActionSuccess(selectedUserId ? t('toastUserUpdated') : t('toastUserAdded'));
         };
 
@@ -142,58 +159,15 @@ export function UsersManagementPanel() {
     };
 
     return (
-        <Box sx={{ display: 'flex', gap: 3, mt: 3, flexWrap: 'wrap' }}>
-            <Paper sx={{ flex: 1, minWidth: 320, p: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                    {t('usersManagement')}
-                </Typography>
+        <Box sx={{ mt: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">{t('usersManagement')}</Typography>
+                <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={openFormModal}>
+                    {t('addUser')}
+                </Button>
+            </Box>
 
-                <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <TextField
-                        label={t('name')}
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        size="small"
-                        fullWidth
-                    />
-                    <TextField
-                        label={t('surname')}
-                        value={surname}
-                        onChange={(e) => setSurname(e.target.value)}
-                        size="small"
-                        fullWidth
-                    />
-                    <TextField
-                        label={t('qrCode')}
-                        value={qrCode}
-                        onChange={(e) => setQrCode(e.target.value)}
-                        size="small"
-                        fullWidth
-                    />
-                    <TextField
-                        select
-                        label={t('role')}
-                        value={role}
-                        onChange={(e) => setRole(e.target.value as 'ADMIN' | 'OPERATOR')}
-                        size="small"
-                        fullWidth
-                    >
-                        <MenuItem value="OPERATOR">{t('operator')}</MenuItem>
-                        <MenuItem value="ADMIN">{t('admin')}</MenuItem>
-                    </TextField>
-
-                    <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                        <Button variant="contained" color="primary" onClick={handleSubmit}>
-                            {selectedUserId ? t('editUser') : t('addUser')}
-                        </Button>
-                        <Button variant="outlined" onClick={resetForm}>
-                            {t('reset')}
-                        </Button>
-                    </Box>
-                </Box>
-            </Paper>
-
-            <Paper sx={{ flex: 2, minWidth: 400, p: 2 }}>
+            <Paper sx={{ p: 2 }}>
                 <Typography variant="h6" gutterBottom>
                     {t('usersList')}
                 </Typography>
@@ -246,6 +220,60 @@ export function UsersManagementPanel() {
                     </Table>
                 </TableContainer>
             </Paper>
+
+            <Dialog open={formModalOpen} onClose={closeFormModal} maxWidth="sm" fullWidth scroll="paper">
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    {selectedUserId ? t('editUser') : t('addUser')}
+                    <IconButton size="small" onClick={closeFormModal} aria-label={t('close')}>
+                        <CloseIcon />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent dividers>
+                    <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+                        <TextField
+                            label={t('name')}
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            size="small"
+                            fullWidth
+                        />
+                        <TextField
+                            label={t('surname')}
+                            value={surname}
+                            onChange={(e) => setSurname(e.target.value)}
+                            size="small"
+                            fullWidth
+                        />
+                        <TextField
+                            label={t('qrCode')}
+                            value={qrCode}
+                            onChange={(e) => setQrCode(e.target.value)}
+                            size="small"
+                            fullWidth
+                        />
+                        <TextField
+                            select
+                            label={t('role')}
+                            value={role}
+                            onChange={(e) => setRole(e.target.value as 'ADMIN' | 'OPERATOR')}
+                            size="small"
+                            fullWidth
+                        >
+                            <MenuItem value="OPERATOR">{t('operator')}</MenuItem>
+                            <MenuItem value="ADMIN">{t('admin')}</MenuItem>
+                        </TextField>
+
+                        <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                            <Button variant="contained" color="primary" onClick={handleSubmit}>
+                                {selectedUserId ? t('editUser') : t('addUser')}
+                            </Button>
+                            <Button variant="outlined" onClick={closeFormModal}>
+                                {t('cancel')}
+                            </Button>
+                        </Box>
+                    </Box>
+                </DialogContent>
+            </Dialog>
 
             <ConfirmationModal
                 open={!!userToDelete}
