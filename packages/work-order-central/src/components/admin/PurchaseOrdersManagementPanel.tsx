@@ -14,6 +14,7 @@ import MenuItem from '@mui/material/MenuItem';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
+import Autocomplete from '@mui/material/Autocomplete';
 import LinkIcon from '@mui/icons-material/Link';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
@@ -114,11 +115,15 @@ export function PurchaseOrdersManagementPanel() {
 
     useEffect(() => {
         Server.getSelectOptions(
-            (resp: { data?: { deliveryTerms?: string[] } }) => {
-                const list = resp?.data?.deliveryTerms;
-                if (Array.isArray(list)) setDeliveryTermsSelectOptions(list);
+            (resp: { data?: { deliveryTerms?: string[]; data?: { deliveryTerms?: string[] } } }) => {
+                const topLevel = resp?.data?.deliveryTerms;
+                const nested = resp?.data?.data?.deliveryTerms;
+                const list = Array.isArray(topLevel) ? topLevel : Array.isArray(nested) ? nested : [];
+                setDeliveryTermsSelectOptions(list);
             },
-            () => {},
+            () => {
+                setDeliveryTermsSelectOptions([]);
+            },
         );
     }, []);
 
@@ -153,6 +158,9 @@ export function PurchaseOrdersManagementPanel() {
 
     const noProductsLinkedForCustomer =
         selectedCustomerId != null && productsForSelectedCustomer.length === 0;
+    const hasAtLeastOneProductOrder = productOrderRows.some(
+        (row) => row.productId != null && Number(row.productId) > 0,
+    );
 
     const isEditingPurchaseOrder = selectedOrderId != null && selectedOrderId > 0;
 
@@ -272,6 +280,10 @@ export function PurchaseOrdersManagementPanel() {
     };
 
     const handleSubmit = () => {
+        if (!hasAtLeastOneProductOrder) {
+            toastActionError(t('purchaseOrderAtLeastOneProductOrderRequired'));
+            return;
+        }
         const productOrderList: ProductOrderTO[] = productOrderRows
             .filter((row) => row.productId != null && row.productId > 0)
             .map((row) => ({
@@ -747,38 +759,23 @@ export function PurchaseOrdersManagementPanel() {
                             fullWidth
                             disabled={lockCreateDeliveryFields}
                             InputLabelProps={{ shrink: true }}
+                            inputProps={{ lang: 'en-GB' }}
                         />
-                        <TextField
-                            select
-                            label={t('deliveryTerms')}
+                        <Autocomplete
+                            disablePortal
+                            options={[...new Set(deliveryTermsSelectOptions.map((x) => String(x).trim()).filter(Boolean))]}
                             value={lockCreateDeliveryFields ? '' : deliveryTerms}
-                            onChange={(e) => setDeliveryTerms(e.target.value)}
-                            size="small"
-                            fullWidth
+                            onChange={(_, value) => setDeliveryTerms(value ?? '')}
                             disabled={lockCreateDeliveryFields}
-                            SelectProps={{ displayEmpty: true }}
-                        >
-                            {lockCreateDeliveryFields && (
-                                <MenuItem value="">
-                                    <em>—</em>
-                                </MenuItem>
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    label={t('deliveryTerms')}
+                                    size="small"
+                                    fullWidth
+                                />
                             )}
-                            {!lockCreateDeliveryFields && (
-                                <>
-                                    <MenuItem value="">{t('none')}</MenuItem>
-                                    {(() => {
-                                        const v = deliveryTerms;
-                                        const opts = [...deliveryTermsSelectOptions];
-                                        if (v && !opts.includes(v)) opts.push(v);
-                                        return opts.map((o) => (
-                                            <MenuItem key={o} value={o}>
-                                                {o}
-                                            </MenuItem>
-                                        ));
-                                    })()}
-                                </>
-                            )}
-                        </TextField>
+                        />
                         <TextField
                             label={t('shippingAddress')}
                             value={lockCreateDeliveryFields ? '' : shippingAddress}
@@ -894,7 +891,12 @@ export function PurchaseOrdersManagementPanel() {
                         </Button>
 
                         <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
-                            <Button variant="contained" color="primary" onClick={handleSubmit}>
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                onClick={handleSubmit}
+                                disabled={!hasAtLeastOneProductOrder}
+                            >
                                 {selectedOrderId ? t('editPurchaseOrder') : t('addPurchaseOrder')}
                             </Button>
                             <Button variant="outlined" onClick={() => { resetForm(); setFormModalOpen(false); }}>

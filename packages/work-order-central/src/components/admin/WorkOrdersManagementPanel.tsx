@@ -715,6 +715,7 @@ export function WorkOrdersManagementPanel() {
                             fullWidth
                             InputLabelProps={{shrink: true}}
                             InputProps={selectedId ? undefined : {readOnly: true}}
+                            inputProps={{ lang: 'en-GB' }}
                             helperText={!selectedId ? t('dueDateFromPurchaseOrderDelivery') : undefined}
                         />
                         <TextField
@@ -725,6 +726,7 @@ export function WorkOrdersManagementPanel() {
                             size="small"
                             fullWidth
                             InputLabelProps={{shrink: true}}
+                            inputProps={{ lang: 'en-GB' }}
                         />
                         <TextField
                             label={t('endDate')}
@@ -734,6 +736,7 @@ export function WorkOrdersManagementPanel() {
                             size="small"
                             fullWidth
                             InputLabelProps={{shrink: true}}
+                            inputProps={{ lang: 'en-GB' }}
                         />
                         <TextField
                             label={t('comment')}
@@ -942,6 +945,7 @@ export function WorkOrdersManagementPanel() {
                             size="small"
                             fullWidth
                             InputLabelProps={{shrink: true}}
+                            inputProps={{ lang: 'en-GB' }}
                         />
                         <TextField
                             label={t('endDateTime')}
@@ -951,6 +955,7 @@ export function WorkOrdersManagementPanel() {
                             size="small"
                             fullWidth
                             InputLabelProps={{shrink: true}}
+                            inputProps={{ lang: 'en-GB' }}
                         />
                         <TextField
                             select

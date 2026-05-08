@@ -7,7 +7,13 @@ import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { MachineBookingTO, MachineTO, WorkOrderTO } from 'sf-common/src/models/ApiRequests';
+import type {
+    MachineBookingTO,
+    MachineTO,
+    ProductOrderTO,
+    PurchaseOrderTO,
+    WorkOrderTO,
+} from 'sf-common/src/models/ApiRequests';
 import { Server } from 'sf-common';
 
 function unwrapArray<T>(response: unknown): T[] {
@@ -22,6 +28,15 @@ function getAllWorkOrdersAsync(): Promise<WorkOrderTO[]> {
         Server.getAllWorkOrders(
             (response: unknown) => resolve(unwrapArray(response)),
             () => reject(new Error('workOrders')),
+        );
+    });
+}
+
+function getAllPurchaseOrdersAsync(): Promise<PurchaseOrderTO[]> {
+    return new Promise((resolve, reject) => {
+        Server.getAllPurchaseOrders(
+            (response: unknown) => resolve(unwrapArray(response)),
+            () => reject(new Error('purchaseOrders')),
         );
     });
 }
@@ -122,6 +137,11 @@ function machineLabel(m: MachineTO): string {
     return m.machineName?.trim() || `#${m.id ?? '?'}`;
 }
 
+function productOrderLabel(po: PurchaseOrderTO, line: ProductOrderTO): string {
+    const productLabel = line.product?.reference?.trim() || line.product?.name?.trim() || `#${line.id ?? '?'}`;
+    return `PO #${po.id ?? '?'} - ${productLabel}`;
+}
+
 export function WorkOrdersHealthPanel() {
     const { t } = useTranslation();
     const [loading, setLoading] = useState(true);
@@ -132,6 +152,8 @@ export function WorkOrdersHealthPanel() {
     const [machinesIdleLabels, setMachinesIdleLabels] = useState<string[]>([]);
     const [overdueIncomplete, setOverdueIncomplete] = useState(0);
     const [overdueLabels, setOverdueLabels] = useState<string[]>([]);
+    const [productOrdersWithoutWorkOrder, setProductOrdersWithoutWorkOrder] = useState(0);
+    const [productOrdersWithoutWorkOrderLabels, setProductOrdersWithoutWorkOrderLabels] = useState<string[]>([]);
 
     useEffect(() => {
         let cancelled = false;
@@ -140,11 +162,31 @@ export function WorkOrdersHealthPanel() {
             setLoading(true);
             setError(null);
             try {
-                const [workOrders, machines] = await Promise.all([
+                const [workOrders, purchaseOrders, machines] = await Promise.all([
                     getAllWorkOrdersAsync(),
+                    getAllPurchaseOrdersAsync(),
                     getAllMachinesAsync(),
                 ]);
                 if (cancelled) return;
+
+                const assignedProductOrderIds = new Set<number>(
+                    workOrders
+                        .map((wo) => wo.productOrderId)
+                        .filter((id): id is number => id != null && Number.isFinite(id)),
+                );
+                const productOrdersWithoutWoLabels: string[] = [];
+                for (const po of purchaseOrders) {
+                    for (const line of po.productOrderList ?? []) {
+                        if (line.id == null || !Number.isFinite(line.id)) {
+                            continue;
+                        }
+                        if (!assignedProductOrderIds.has(line.id)) {
+                            productOrdersWithoutWoLabels.push(productOrderLabel(po, line));
+                        }
+                    }
+                }
+                setProductOrdersWithoutWorkOrder(productOrdersWithoutWoLabels.length);
+                setProductOrdersWithoutWorkOrderLabels(productOrdersWithoutWoLabels);
 
                 const today = todayYyyyMmDd();
                 const overdueList = workOrders.filter(
@@ -282,6 +324,11 @@ export function WorkOrdersHealthPanel() {
         <Paper sx={{ p: 2 }}>
             <Typography variant="subtitle1">{t('operationsHealth')}</Typography>
             <Stack spacing={0.5} sx={{ mt: 1, alignItems: 'flex-start' }}>
+                {healthRow(
+                    t('healthProductOrdersWithoutAssignedWorkOrders'),
+                    productOrdersWithoutWorkOrder,
+                    productOrdersWithoutWorkOrderLabels,
+                )}
                 {healthRow(
                     t('healthWorkOrdersWithoutProductionBooking'),
                     workOrdersWithoutBooking,
