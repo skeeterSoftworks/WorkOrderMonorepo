@@ -9,7 +9,7 @@ import {HOC} from "./containers/HOC.tsx";
 import {Home} from "./components/home/Home.tsx";
 import {MockQr} from "./containers/MockQr.tsx";
 import {PurchaseOrdersManagementPage} from "./components/purchaseOrders/PurchaseOrdersManagementPage.tsx";
-import {WorkOrdersManagementPage} from "./components/workOrders/WorkOrdersManagementPage.tsx";
+import {WorkOrdersHome} from "./components/workOrders/WorkOrdersHome.tsx";
 import {StockHome} from "./components/stock/StockHome.tsx";
 import {AdminHome} from "./components/admin/AdminHome.tsx";
 import {ProductionPage} from "./components/production/ProductionPage.tsx";
@@ -37,7 +37,7 @@ root.render(
                         <Route path="/" element={<Home/>}/>
                         <Route path="/purchase-orders" element={<PurchaseOrdersManagementPage/>}/>
                         <Route path="/purchasing" element={<PurchasingPage/>}/>
-                        <Route path="/work-orders" element={<WorkOrdersManagementPage/>}/>
+                        <Route path="/work-orders" element={<WorkOrdersHome/>}/>
                         <Route path="/production" element={<ProductionPage/>}/>
                         <Route path="/stock" element={<StockHome/>}/>
                         <Route path="/admin" element={<AdminHome/>}/>

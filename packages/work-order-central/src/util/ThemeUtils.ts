@@ -40,6 +40,11 @@ export function getCentralTheme() {
 		},
 		components: {
 			...muiTableHeaderThemeComponents,
+			MuiContainer: {
+				defaultProps: {
+					maxWidth: 'xl',
+				},
+			},
 		},
 	})
 
