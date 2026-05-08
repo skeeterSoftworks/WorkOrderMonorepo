@@ -74,7 +74,7 @@ export function CatalogOverviewPanel({ onOpenSection }: { onOpenSection: (sectio
         const linkedCustomerIds = new Set<number>();
         const linkedMachineIds = new Set<number>();
         for (const p of products) {
-            if ((p.materialProviderIds?.length ?? 0) === 0) withoutProviders += 1;
+            if ((p.materials?.length ?? 0) === 0) withoutProviders += 1;
             if ((p.measuringFeaturePrototypes?.length ?? 0) === 0) withoutMeasuringFeatures += 1;
             if ((p.qualityInfoSteps?.length ?? 0) === 0) withoutQualitySteps += 1;
             for (const cid of p.customerIds ?? []) {
@@ -122,7 +122,7 @@ export function CatalogOverviewPanel({ onOpenSection }: { onOpenSection: (sectio
         const productsNoQuality: string[] = [];
         for (const p of products) {
             const label = p.name || p.reference || `#${p.id ?? '?'}`;
-            if ((p.materialProviderIds?.length ?? 0) === 0) productsNoProviders.push(label);
+            if ((p.materials?.length ?? 0) === 0) productsNoProviders.push(label);
             if ((p.measuringFeaturePrototypes?.length ?? 0) === 0) productsNoMeasuring.push(label);
             if ((p.qualityInfoSteps?.length ?? 0) === 0) productsNoQuality.push(label);
         }

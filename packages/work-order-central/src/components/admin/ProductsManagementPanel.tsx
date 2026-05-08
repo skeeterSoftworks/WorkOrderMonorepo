@@ -15,7 +15,6 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DeleteIcon from '@mui/icons-material/Delete';
-import LinkIcon from '@mui/icons-material/Link';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
@@ -105,9 +104,6 @@ export function ProductsManagementPanel() {
     const [materialLength, setMaterialLength] = useState('');
     const [materialWidth, setMaterialWidth] = useState('');
     const [materialProviderKeysSelected, setMaterialProviderKeysSelected] = useState<string[]>([]);
-    const [providerLinkDialogOpen, setProviderLinkDialogOpen] = useState(false);
-    const [providerLinkProduct, setProviderLinkProduct] = useState<LocalProduct | null>(null);
-    const [selectedProductProviderIds, setSelectedProductProviderIds] = useState<number[]>([]);
 
     const [techToolName, setTechToolName] = useState('');
     const [techToolDescription, setTechToolDescription] = useState('');
@@ -654,35 +650,19 @@ export function ProductsManagementPanel() {
         resetMaterialInputs();
     };
 
-    const openProviderLinkDialog = (product: LocalProduct) => {
+    const openMaterialsModal = (product: LocalProduct) => {
         if (!product.id) return;
         const latest = products.find((p) => p.id === product.id) ?? product;
-        setProviderLinkProduct(latest);
-        setSelectedProductProviderIds((latest.materialProviderIds ?? []).filter((id): id is number => Number.isFinite(id)));
-        setProviderLinkDialogOpen(true);
-    };
-
-    const closeProviderLinkDialog = () => {
-        setProviderLinkDialogOpen(false);
-        setProviderLinkProduct(null);
-        setSelectedProductProviderIds([]);
-    };
-
-    const saveProductProviderLinks = () => {
-        if (!providerLinkProduct?.id) return;
-        const payload: ProductTO = {
-            ...providerLinkProduct,
-            materialProviderIds: selectedProductProviderIds,
-        };
-        Server.editProduct(
-            payload,
-            () => {
-                loadProducts();
-                closeProviderLinkDialog();
-                toastActionSuccess(t('toastProductUpdated'));
-            },
-            (err: unknown) => toastServerError(err, t),
+        setMaterialsModalProduct(latest);
+        setMaterialsDraft(
+            (latest.materials ?? []).map((m) => ({
+                ...m,
+                providers: materialProvidersOf(m).map((p) => ({ ...p })),
+                provider: undefined,
+            })),
         );
+        resetMaterialInputs();
+        setMaterialsModalOpen(true);
     };
 
     const isMaterialFormValid = (): boolean =>
@@ -880,7 +860,7 @@ export function ProductsManagementPanel() {
                                 const noMeasuringFeatures =
                                     (product.measuringFeaturePrototypes?.length ?? 0) === 0;
                                 const noQualitySteps = (product.qualityInfoSteps?.length ?? 0) === 0;
-                                const noMaterialProviders = (product.materialProviderIds?.length ?? 0) === 0;
+                                const noMaterials = (product.materials?.length ?? 0) === 0;
                                 const chipSx = {
                                     height: 22,
                                     '& .MuiChip-label': { px: 1, fontSize: '0.7rem' },
@@ -915,7 +895,7 @@ export function ProductsManagementPanel() {
                                                         />
                                                     </Tooltip>
                                                 )}
-                                                {noMaterialProviders && (
+                                                {noMaterials && (
                                                     <Tooltip title={t('productNoMaterialProvidersHint')}>
                                                         <Chip
                                                             size="small"
@@ -961,9 +941,9 @@ export function ProductsManagementPanel() {
                                             </IconButton>
                                             <IconButton
                                                 size="small"
-                                                onClick={() => openProviderLinkDialog(product)}
+                                                onClick={() => openMaterialsModal(product)}
                                                 disabled={!product.id}
-                                                title={t('productProviderLinkTooltip')}
+                                                title={t('materialsEditTooltip')}
                                                 sx={(theme) => ({
                                                     minWidth: 28,
                                                     color: theme.palette.secondary.main,
@@ -981,7 +961,7 @@ export function ProductsManagementPanel() {
                                                         lineHeight: 1,
                                                     }}
                                                 >
-                                                    P
+                                                    M
                                                 </Typography>
                                             </IconButton>
                                             <IconButton
@@ -990,7 +970,7 @@ export function ProductsManagementPanel() {
                                                 sx={tableActionIconButtonSx.edit}
                                                 title={t('editProduct')}
                                             >
-                                                <LinkIcon fontSize="small" />
+                                                <EditIcon fontSize="small" />
                                             </IconButton>
                                             <IconButton
                                                 size="small"
@@ -2103,57 +2083,6 @@ export function ProductsManagementPanel() {
                                 {t('saveAction')}
                             </Button>
                             <Button variant="outlined" onClick={closeMaterialsModal}>
-                                {t('cancel')}
-                            </Button>
-                        </Box>
-                    </Box>
-                </DialogContent>
-            </Dialog>
-
-            <Dialog open={providerLinkDialogOpen} onClose={closeProviderLinkDialog} maxWidth="sm" fullWidth>
-                <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    {t('productProviderLinkTitle')}
-                    <IconButton size="small" onClick={closeProviderLinkDialog} aria-label={t('close')}>
-                        <CloseIcon />
-                    </IconButton>
-                </DialogTitle>
-                <DialogContent dividers>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pt: 1 }}>
-                        <Typography variant="body2" color="text.secondary">
-                            {providerLinkProduct?.name ?? '—'}
-                        </Typography>
-                        <TextField
-                            select
-                            label={t('materialProviders')}
-                            SelectProps={{
-                                multiple: true,
-                                renderValue: (selected) =>
-                                    (selected as number[])
-                                        .map((id) => materialProviderOptions.find((p) => p.id === id)?.name ?? id)
-                                        .join(', '),
-                            }}
-                            value={selectedProductProviderIds}
-                            onChange={(e) => {
-                                const value = e.target.value;
-                                const next = Array.isArray(value) ? value.map((v) => Number(v)) : [Number(value)];
-                                setSelectedProductProviderIds(next.filter((v) => Number.isFinite(v)));
-                            }}
-                            size="small"
-                            fullWidth
-                        >
-                            {materialProviderOptions
-                                .filter((p) => p.id != null)
-                                .map((p) => (
-                                    <MenuItem key={p.id} value={p.id} sx={multiSelectMenuItemSx}>
-                                        {p.name || p.contactPerson || p.id}
-                                    </MenuItem>
-                                ))}
-                        </TextField>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Button variant="contained" onClick={saveProductProviderLinks}>
-                                {t('saveAction')}
-                            </Button>
-                            <Button variant="outlined" onClick={closeProviderLinkDialog}>
                                 {t('cancel')}
                             </Button>
                         </Box>

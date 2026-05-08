@@ -64,14 +64,13 @@ export interface ProductTO {
     machineIds?: number[],
     /** Customers this product may be sold to (purchase orders). */
     customerIds?: number[],
-    /** Material providers linked directly to this product. */
-    materialProviderIds?: number[],
+    /** Materials linked to this product. */
+    materials?: MaterialTO[],
     technologyData?: TechnologyTO,
     /** Single embedded setup template for the product (central). */
     setupDataPrototype?: SetupDataPrototypeTO,
     measuringFeaturePrototypes?: MeasuringFeaturePrototypeTO[],
     qualityInfoSteps?: QualityInfoStepTO[],
-    materials?: MaterialTO[],
     /** Raw Base64 or data URL; omit while editing to keep existing; empty string clears */
     technicalDrawingBase64?: string,
 }

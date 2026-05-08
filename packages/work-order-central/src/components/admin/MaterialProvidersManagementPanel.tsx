@@ -142,8 +142,7 @@ export function MaterialProvidersManagementPanel() {
 
     const saveAllUpdatedProducts = (items: ProductTO[], onSuccess: () => void) => {
         const changed = items.filter((p, i) =>
-            JSON.stringify(p.materials ?? []) !== JSON.stringify(products[i]?.materials ?? []) ||
-            JSON.stringify(p.materialProviderIds ?? []) !== JSON.stringify(products[i]?.materialProviderIds ?? []),
+            JSON.stringify(p.materials ?? []) !== JSON.stringify(products[i]?.materials ?? []),
         );
         if (changed.length === 0) {
             onSuccess();
