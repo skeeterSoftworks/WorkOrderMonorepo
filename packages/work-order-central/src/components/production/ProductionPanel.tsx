@@ -204,7 +204,7 @@ export function ProductionPanel() {
                         size="small"
                         InputLabelProps={{ shrink: true }}
                         inputProps={{
-                            lang: 'en-GB',
+                            lang: 'sr-RS',
                             max: toDate || undefined,
                             ...(toDate
                                 ? { min: addCalendarDaysToYmd(toDate, -(MAX_CALENDAR_RANGE_DAYS_INCLUSIVE - 1)) }

@@ -472,6 +472,7 @@
   "scheduleModalLineNotFound": "Could not find this order line in loaded purchase orders. Refresh the page or reopen Work orders.",
   "scheduleModalMissingProductLine": "This work order has no product line; scheduling is not available.",
   "selectAllowedMachineForProduct": "Choose one of the machines allowed for this product.",
+  "scheduleDateTimePastNotAllowed": "Start and end date/time cannot be in the past.",
   "startDateTime": "Start date and time",
   "endDateTime": "End date and time",
   "bookingType": "Booking type",

@@ -472,6 +472,7 @@
   "scheduleModalLineNotFound": "Stavka narudžbenice nije pronađena u učitanim podacima. Osvežite stranicu ili ponovo otvorite radne naloge.",
   "scheduleModalMissingProductLine": "Radni nalog nema stavku proizvoda; zakazivanje nije moguće.",
   "selectAllowedMachineForProduct": "Izaberite jednu od mašina dozvoljenih za ovaj proizvod.",
+  "scheduleDateTimePastNotAllowed": "Početak i kraj ne mogu biti u prošlosti.",
   "startDateTime": "Vreme početka",
   "endDateTime": "Vreme završetka",
   "bookingType": "Vrsta zakazivanja",

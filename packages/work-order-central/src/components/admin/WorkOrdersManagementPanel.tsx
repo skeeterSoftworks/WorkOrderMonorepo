@@ -57,6 +57,13 @@ function purchaseOrderDeliveryToDueDateInput(
     return '';
 }
 
+function nowLocalDateTimeForInput(): string {
+    const now = new Date();
+    now.setSeconds(0, 0);
+    const tzOffsetMs = now.getTimezoneOffset() * 60_000;
+    return new Date(now.getTime() - tzOffsetMs).toISOString().slice(0, 16);
+}
+
 function productOrderLineLabel(line: ProductOrderTO): string {
     const ref = line.product?.reference?.trim();
     const name = line.product?.name?.trim();
@@ -403,6 +410,17 @@ export function WorkOrdersManagementPanel() {
             setScheduleError(t('allFieldsRequired'));
             return;
         }
+        const now = new Date();
+        const start = new Date(scheduleStart);
+        const end = new Date(scheduleEnd);
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+            setScheduleError(t('allFieldsRequired'));
+            return;
+        }
+        if (start.getTime() < now.getTime() || end.getTime() < now.getTime()) {
+            setScheduleError(t('scheduleDateTimePastNotAllowed'));
+            return;
+        }
         const { ids: allowedIds, lineFound } = getProductMachineIdsForSchedule(
             scheduleWorkOrder,
             purchaseOrders
@@ -493,6 +511,7 @@ export function WorkOrdersManagementPanel() {
         if (allowed.size === 0) return [];
         return machines.filter((m) => m.id != null && allowed.has(m.id));
     }, [machines, scheduleProductMachines.ids]);
+    const scheduleMinDateTime = nowLocalDateTimeForInput();
 
     const scheduleMachineHelperText = (() => {
         if (!scheduleWorkOrder) return '';
@@ -945,7 +964,7 @@ export function WorkOrdersManagementPanel() {
                             size="small"
                             fullWidth
                             InputLabelProps={{shrink: true}}
-                            inputProps={{ lang: 'en-GB' }}
+                            inputProps={{ lang: 'en-GB', min: scheduleMinDateTime }}
                         />
                         <TextField
                             label={t('endDateTime')}
@@ -955,7 +974,7 @@ export function WorkOrdersManagementPanel() {
                             size="small"
                             fullWidth
                             InputLabelProps={{shrink: true}}
-                            inputProps={{ lang: 'en-GB' }}
+                            inputProps={{ lang: 'en-GB', min: scheduleMinDateTime }}
                         />
                         <TextField
                             select
