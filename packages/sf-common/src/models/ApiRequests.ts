@@ -55,6 +55,29 @@ export interface MaterialTO {
     provider?: MaterialProviderTO,
 }
 
+export type MaterialOrderStatus =
+    | 'ORDER_CREATED'
+    | 'ORDER_SENT'
+    | 'ORDER_ACKNOWLEDGED'
+    | 'ORDER_ACCEPTED'
+    | 'IN_TRANSPORT'
+    | 'RECEIVED_IN_STOCK'
+    | 'VALIDATED'
+
+export interface MaterialOrderTO {
+    id?: number,
+    quantity?: number,
+    materialId?: number,
+    materialName?: string,
+    materialCode?: string,
+    materialProviderId?: number,
+    materialProviderName?: string,
+    status?: MaterialOrderStatus,
+    /** Raw Base64 or data URL for upload. */
+    certificateBase64?: string,
+    certificatePresent?: boolean,
+}
+
 export interface ProductTO {
     id?: number,
     name?: string,

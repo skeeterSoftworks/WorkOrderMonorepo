@@ -11,6 +11,7 @@ import type {
     SampleDataGenerationResultTO,
     ProductAvailableStockTO,
     MaterialProviderTO,
+    MaterialOrderTO,
 } from "../models/ApiRequests";
 import axios from "axios";
 import { getServerUrl } from "../util/EnvUtils";
@@ -266,6 +267,33 @@ export class Server {
 
     static getAllMaterialProviders(onSuccess: Function, onError: Function) {
         axios.get(`${getServerUrl()}/material-providers/all`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static getAllMaterials(onSuccess: Function, onError: Function) {
+        axios.get(`${getServerUrl()}/materials/all`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static getAllMaterialOrders(onSuccess: Function, onError: Function) {
+        axios.get(`${getServerUrl()}/material-orders/all`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static addMaterialOrder(materialOrder: MaterialOrderTO, onSuccess: Function, onError: Function) {
+        axios.post(`${getServerUrl()}/material-orders/add`, materialOrder)
             .then(response => onSuccess(response))
             .catch(error => {
                 console.log(error);
