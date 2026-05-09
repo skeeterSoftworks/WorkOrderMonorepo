@@ -17,10 +17,11 @@ import DialogContent from '@mui/material/DialogContent';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
+import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import { useTranslation } from 'react-i18next';
 import { Server } from 'sf-common';
 import type { MaterialOrderTO, MaterialProviderTO, MaterialTO } from 'sf-common/src/models/ApiRequests';
-import { toastActionSuccess, toastServerError } from '../../util/actionToast';
+import { toastActionError, toastActionSuccess, toastServerError } from '../../util/actionToast';
 
 export function PurchasingPage() {
     const { t } = useTranslation();
@@ -92,6 +93,35 @@ export function PurchasingPage() {
         setCreateOpen(false);
     };
 
+    const findProviderForOrder = (order: MaterialOrderTO): MaterialProviderTO | undefined => {
+        if (order.materialId == null || order.materialProviderId == null) return undefined;
+        const material = materials.find((m) => m.id === order.materialId);
+        return material?.providers?.find((p) => p.id === order.materialProviderId);
+    };
+
+    const openEmailDraft = (order: MaterialOrderTO, provider?: MaterialProviderTO) => {
+        const email = provider?.emailAddress?.trim();
+        if (!email) {
+            toastActionError(t('materialProviderEmailMissing'));
+            return;
+        }
+        const materialLabel = order.materialName || order.materialCode || t('materialName');
+        const qty = order.quantity ?? 0;
+        const providerLabel = provider?.name || provider?.contactPerson || '—';
+        const subject = `${t('materialOrderEmailSubjectPrefix')} ${materialLabel}`;
+        const body = [
+            `${t('materialOrderEmailGreeting')} ${providerLabel},`,
+            '',
+            `${t('materialOrderEmailBodyLineMaterial')}: ${materialLabel}`,
+            `${t('materialOrderEmailBodyLineQuantity')}: ${qty}`,
+            `${t('materialOrderEmailBodyLineProvider')}: ${providerLabel}`,
+            '',
+            t('materialOrderEmailClosing'),
+        ].join('\n');
+        const mailto = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.location.href = mailto;
+    };
+
     const handleCreate = () => {
         if (!canCreate) return;
         const payload = {
@@ -101,10 +131,21 @@ export function PurchasingPage() {
         };
         Server.addMaterialOrder(
             payload,
-            () => {
+            (response: any) => {
+                let saved: MaterialOrderTO | undefined;
+                if (response?.data && typeof response.data === 'object' && !Array.isArray(response.data)) {
+                    saved = response.data as MaterialOrderTO;
+                }
                 loadOrders();
                 closeCreateDialog();
                 toastActionSuccess(t('toastMaterialOrderAdded'));
+                const effectiveOrder: MaterialOrderTO = saved ?? {
+                    ...payload,
+                    materialName: selectedMaterial?.name,
+                    materialCode: selectedMaterial?.code,
+                };
+                const provider = providerOptions.find((p) => p.id === materialProviderId);
+                openEmailDraft(effectiveOrder, provider);
             },
             (err: unknown) => toastServerError(err, t),
         );
@@ -129,6 +170,7 @@ export function PurchasingPage() {
                                 <TableCell>{t('quantity')}</TableCell>
                                 <TableCell>{t('status')}</TableCell>
                                 <TableCell>{t('certificate')}</TableCell>
+                                <TableCell align="right">{t('actions')}</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -140,11 +182,20 @@ export function PurchasingPage() {
                                         <TableCell>{o.quantity ?? 0}</TableCell>
                                         <TableCell>{o.status ? t(`materialOrderStatus_${o.status}`) : '—'}</TableCell>
                                         <TableCell>{o.certificatePresent ? t('yes') : t('no')}</TableCell>
+                                        <TableCell align="right">
+                                            <IconButton
+                                                size="small"
+                                                title={t('emailMaterialOrder')}
+                                                onClick={() => openEmailDraft(o, findProviderForOrder(o))}
+                                            >
+                                                <EmailOutlinedIcon fontSize="small" />
+                                            </IconButton>
+                                        </TableCell>
                                     </TableRow>
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={5}>
+                                    <TableCell colSpan={6}>
                                         <Typography variant="body2" color="text.secondary">
                                             {t('noMaterialOrders')}
                                         </Typography>
