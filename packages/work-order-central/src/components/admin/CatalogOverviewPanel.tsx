@@ -208,19 +208,7 @@ export function CatalogOverviewPanel({ onOpenSection }: { onOpenSection: (sectio
         );
         if (count <= 0) return <Box>{content}</Box>;
         return (
-            <Tooltip
-                title={listTooltip(items)}
-                arrow
-                placement="right-start"
-                slotProps={{
-                    popper: {
-                        modifiers: [
-                            { name: 'flip', enabled: false },
-                            { name: 'preventOverflow', options: { padding: 8, altAxis: false } },
-                        ],
-                    },
-                }}
-            >
+            <Tooltip title={listTooltip(items)} arrow placement="right-start">
                 {content}
             </Tooltip>
         );

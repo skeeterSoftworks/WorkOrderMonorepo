@@ -1,7 +1,6 @@
 import {useSelector} from 'react-redux';
-import {ThemeProvider} from '@emotion/react';
 import {getCentralTheme} from '../util/ThemeUtils';
-import {Container, CssBaseline, Grid, LinearProgress} from '@mui/material';
+import {Container, CssBaseline, Grid, LinearProgress, ThemeProvider} from '@mui/material';
 import {LoginForm} from '../components/shared/LoginForm';
 import {AppBarHeader} from '../components/shared/AppBarHeader';
 import "../i18n/I18n"

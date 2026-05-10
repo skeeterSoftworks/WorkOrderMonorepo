@@ -18,10 +18,31 @@ import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
+import PublishedWithChangesOutlinedIcon from '@mui/icons-material/PublishedWithChangesOutlined';
 import { useTranslation } from 'react-i18next';
 import { Server } from 'sf-common';
-import type { MaterialOrderTO, MaterialProviderTO, MaterialTO } from 'sf-common/src/models/ApiRequests';
+import type {
+    MaterialOrderStatus,
+    MaterialOrderTO,
+    MaterialProviderTO,
+    MaterialTO,
+} from 'sf-common/src/models/ApiRequests';
 import { toastActionError, toastActionSuccess, toastServerError } from '../../util/actionToast';
+import {
+    isMaterialOrderStaleForMonitoring,
+    MATERIAL_ORDER_MANUAL_TRANSITION_STATUSES,
+} from '../../util/materialOrderStale';
+
+function formatMaterialOrderLastChanged(iso?: string): string {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (!Number.isFinite(d.getTime())) return '—';
+    return d.toLocaleString();
+}
+
+function materialOrderStatusLocked(order: MaterialOrderTO): boolean {
+    return order.status === 'RECEIVED_IN_STOCK' || order.status === 'VALIDATED';
+}
 
 export function PurchasingPage() {
     const { t } = useTranslation();
@@ -32,6 +53,8 @@ export function PurchasingPage() {
     const [quantity, setQuantity] = useState('');
     const [materialId, setMaterialId] = useState<number | undefined>(undefined);
     const [materialProviderId, setMaterialProviderId] = useState<number | undefined>(undefined);
+    const [statusDialogOrder, setStatusDialogOrder] = useState<MaterialOrderTO | null>(null);
+    const [pendingStatus, setPendingStatus] = useState<MaterialOrderStatus>('ORDER_SENT');
 
     const selectedMaterial = useMemo(
         () => materials.find((m) => m.id === materialId),
@@ -114,12 +137,37 @@ export function PurchasingPage() {
             '',
             `${t('materialOrderEmailBodyLineMaterial')}: ${materialLabel}`,
             `${t('materialOrderEmailBodyLineQuantity')}: ${qty}`,
-            `${t('materialOrderEmailBodyLineProvider')}: ${providerLabel}`,
             '',
             t('materialOrderEmailClosing'),
         ].join('\n');
         const mailto = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
         window.location.href = mailto;
+    };
+
+    const openStatusDialog = (order: MaterialOrderTO) => {
+        const initial =
+            order.status && MATERIAL_ORDER_MANUAL_TRANSITION_STATUSES.includes(order.status)
+                ? order.status
+                : 'ORDER_SENT';
+        setPendingStatus(initial);
+        setStatusDialogOrder(order);
+    };
+
+    const closeStatusDialog = () => setStatusDialogOrder(null);
+
+    const submitStatusTransition = () => {
+        const id = statusDialogOrder?.id;
+        if (id == null || !Number.isFinite(id)) return;
+        Server.transitionMaterialOrderStatus(
+            id,
+            pendingStatus,
+            () => {
+                loadOrders();
+                closeStatusDialog();
+                toastActionSuccess(t('toastMaterialOrderStatusUpdated'));
+            },
+            (err: unknown) => toastServerError(err, t),
+        );
     };
 
     const handleCreate = () => {
@@ -169,6 +217,7 @@ export function PurchasingPage() {
                                 <TableCell>{t('materialProviderName')}</TableCell>
                                 <TableCell>{t('quantity')}</TableCell>
                                 <TableCell>{t('status')}</TableCell>
+                                <TableCell>{t('purchasingLastChanged')}</TableCell>
                                 <TableCell>{t('certificate')}</TableCell>
                                 <TableCell align="right">{t('actions')}</TableCell>
                             </TableRow>
@@ -176,11 +225,19 @@ export function PurchasingPage() {
                         <TableBody>
                             {orders.length > 0 ? (
                                 orders.map((o) => (
-                                    <TableRow key={o.id ?? `${o.materialId}-${o.materialProviderId}-${o.quantity}`}>
+                                    <TableRow
+                                        key={o.id ?? `${o.materialId}-${o.materialProviderId}-${o.quantity}`}
+                                        sx={{
+                                            ...(isMaterialOrderStaleForMonitoring(o)
+                                                ? { backgroundColor: 'rgba(239, 68, 68, 0.12)' }
+                                                : {}),
+                                        }}
+                                    >
                                         <TableCell>{o.materialName || o.materialCode || '—'}</TableCell>
                                         <TableCell>{o.materialProviderName || '—'}</TableCell>
                                         <TableCell>{o.quantity ?? 0}</TableCell>
                                         <TableCell>{o.status ? t(`materialOrderStatus_${o.status}`) : '—'}</TableCell>
+                                        <TableCell>{formatMaterialOrderLastChanged(o.lastChanged)}</TableCell>
                                         <TableCell>{o.certificatePresent ? t('yes') : t('no')}</TableCell>
                                         <TableCell align="right">
                                             <IconButton
@@ -190,12 +247,24 @@ export function PurchasingPage() {
                                             >
                                                 <EmailOutlinedIcon fontSize="small" />
                                             </IconButton>
+                                            <IconButton
+                                                size="small"
+                                                title={t('materialOrderChangeStatus')}
+                                                disabled={
+                                                    o.id == null ||
+                                                    !Number.isFinite(o.id) ||
+                                                    materialOrderStatusLocked(o)
+                                                }
+                                                onClick={() => openStatusDialog(o)}
+                                            >
+                                                <PublishedWithChangesOutlinedIcon fontSize="small" />
+                                            </IconButton>
                                         </TableCell>
                                     </TableRow>
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={6}>
+                                    <TableCell colSpan={7}>
                                         <Typography variant="body2" color="text.secondary">
                                             {t('noMaterialOrders')}
                                         </Typography>
@@ -271,6 +340,41 @@ export function PurchasingPage() {
                                 {t('saveAction')}
                             </Button>
                             <Button variant="outlined" onClick={closeCreateDialog}>
+                                {t('cancel')}
+                            </Button>
+                        </Box>
+                    </Box>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={statusDialogOrder != null} onClose={closeStatusDialog} maxWidth="xs" fullWidth>
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    {t('materialOrderStatusTransitionTitle')}
+                    <IconButton size="small" onClick={closeStatusDialog} aria-label={t('close')}>
+                        <CloseIcon />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent dividers>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pt: 1 }}>
+                        <TextField
+                            select
+                            label={t('status')}
+                            value={pendingStatus}
+                            onChange={(e) => setPendingStatus(e.target.value as MaterialOrderStatus)}
+                            size="small"
+                            fullWidth
+                        >
+                            {MATERIAL_ORDER_MANUAL_TRANSITION_STATUSES.map((s) => (
+                                <MenuItem key={s} value={s}>
+                                    {t(`materialOrderStatus_${s}`)}
+                                </MenuItem>
+                            ))}
+                        </TextField>
+                        <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                            <Button variant="contained" onClick={submitStatusTransition}>
+                                {t('saveAction')}
+                            </Button>
+                            <Button variant="outlined" onClick={closeStatusDialog}>
                                 {t('cancel')}
                             </Button>
                         </Box>

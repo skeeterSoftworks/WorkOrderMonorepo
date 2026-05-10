@@ -19,5 +19,9 @@
     "date-fns": "2.27.0",
     "react-datepicker": "6.1.0",
     "react-cookie": "7.1.4"
+  },
+  "overrides": {
+    "@mui/material": "5.16.14",
+    "@mui/icons-material": "5.16.14"
   }
 }

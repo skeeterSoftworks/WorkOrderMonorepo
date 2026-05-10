@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import type {
     MachineBookingTO,
     MachineTO,
+    MaterialOrderTO,
     ProductOrderTO,
     PurchaseOrderTO,
     WorkOrderTO,
@@ -56,6 +57,15 @@ function getMachineBookingsForWorkOrderAsync(workOrderId: number): Promise<Machi
             workOrderId,
             (response: unknown) => resolve(unwrapArray(response)),
             () => reject(new Error('bookings')),
+        );
+    });
+}
+
+function getStaleMonitoringMaterialOrdersAsync(): Promise<MaterialOrderTO[]> {
+    return new Promise((resolve, reject) => {
+        Server.getStaleMonitoringMaterialOrders(
+            (response: unknown) => resolve(unwrapArray(response)),
+            () => reject(new Error('staleMaterialOrders')),
         );
     });
 }
@@ -142,6 +152,14 @@ function productOrderLabel(po: PurchaseOrderTO, line: ProductOrderTO): string {
     return `PO #${po.id ?? '?'} - ${productLabel}`;
 }
 
+function staleMaterialOrderLabel(o: MaterialOrderTO): string {
+    const material =
+        o.materialName?.trim() || o.materialCode?.trim() || `#${o.materialId ?? '?'}`;
+    const provider =
+        o.materialProviderName?.trim() || `#${o.materialProviderId ?? '?'}`;
+    return `${material} · ${provider}`;
+}
+
 export function WorkOrdersHealthPanel() {
     const { t } = useTranslation();
     const [loading, setLoading] = useState(true);
@@ -154,6 +172,8 @@ export function WorkOrdersHealthPanel() {
     const [overdueLabels, setOverdueLabels] = useState<string[]>([]);
     const [productOrdersWithoutWorkOrder, setProductOrdersWithoutWorkOrder] = useState(0);
     const [productOrdersWithoutWorkOrderLabels, setProductOrdersWithoutWorkOrderLabels] = useState<string[]>([]);
+    const [staleMaterialOrders, setStaleMaterialOrders] = useState(0);
+    const [staleMaterialOrderLabels, setStaleMaterialOrderLabels] = useState<string[]>([]);
 
     useEffect(() => {
         let cancelled = false;
@@ -162,12 +182,17 @@ export function WorkOrdersHealthPanel() {
             setLoading(true);
             setError(null);
             try {
-                const [workOrders, purchaseOrders, machines] = await Promise.all([
+                const [workOrders, purchaseOrders, machines, staleOrders] = await Promise.all([
                     getAllWorkOrdersAsync(),
                     getAllPurchaseOrdersAsync(),
                     getAllMachinesAsync(),
+                    getStaleMonitoringMaterialOrdersAsync(),
                 ]);
                 if (cancelled) return;
+
+                const staleLabels = staleOrders.map(staleMaterialOrderLabel);
+                setStaleMaterialOrders(staleOrders.length);
+                setStaleMaterialOrderLabels(staleLabels);
 
                 const assignedProductOrderIds = new Set<number>(
                     workOrders
@@ -286,19 +311,7 @@ export function WorkOrdersHealthPanel() {
         );
         if (count <= 0) return <Box>{content}</Box>;
         return (
-            <Tooltip
-                title={listTooltip(items)}
-                arrow
-                placement="right-start"
-                slotProps={{
-                    popper: {
-                        modifiers: [
-                            { name: 'flip', enabled: false },
-                            { name: 'preventOverflow', options: { padding: 8, altAxis: false } },
-                        ],
-                    },
-                }}
-            >
+            <Tooltip title={listTooltip(items)} arrow placement="right-start">
                 {content}
             </Tooltip>
         );
@@ -329,6 +342,7 @@ export function WorkOrdersHealthPanel() {
                     productOrdersWithoutWorkOrder,
                     productOrdersWithoutWorkOrderLabels,
                 )}
+                {healthRow(t('healthStaleMaterialOrders'), staleMaterialOrders, staleMaterialOrderLabels)}
                 {healthRow(
                     t('healthWorkOrdersWithoutProductionBooking'),
                     workOrdersWithoutBooking,

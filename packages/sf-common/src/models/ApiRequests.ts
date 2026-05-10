@@ -73,6 +73,8 @@ export interface MaterialOrderTO {
     materialProviderId?: number,
     materialProviderName?: string,
     status?: MaterialOrderStatus,
+    /** ISO-8601 server timestamp when status was last changed. */
+    lastChanged?: string,
     /** Raw Base64 or data URL for upload. */
     certificateBase64?: string,
     certificatePresent?: boolean,

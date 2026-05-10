@@ -12,6 +12,7 @@ import type {
     ProductAvailableStockTO,
     MaterialProviderTO,
     MaterialOrderTO,
+    MaterialOrderStatus,
 } from "../models/ApiRequests";
 import axios from "axios";
 import { getServerUrl } from "../util/EnvUtils";
@@ -294,6 +295,29 @@ export class Server {
 
     static addMaterialOrder(materialOrder: MaterialOrderTO, onSuccess: Function, onError: Function) {
         axios.post(`${getServerUrl()}/material-orders/add`, materialOrder)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static getStaleMonitoringMaterialOrders(onSuccess: Function, onError: Function) {
+        axios.get(`${getServerUrl()}/material-orders/stale-monitoring`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static transitionMaterialOrderStatus(
+        id: number,
+        status: MaterialOrderStatus,
+        onSuccess: Function,
+        onError: Function,
+    ) {
+        axios.post(`${getServerUrl()}/material-orders/${id}/transition-status`, { status })
             .then(response => onSuccess(response))
             .catch(error => {
                 console.log(error);
