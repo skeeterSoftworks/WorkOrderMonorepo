@@ -13,6 +13,9 @@ import type {
     MaterialProviderTO,
     MaterialOrderTO,
     MaterialOrderStatus,
+    EmailTemplateTO,
+    EmailTemplateCode,
+    RenderedEmailTO,
 } from "../models/ApiRequests";
 import axios from "axios";
 import { getServerUrl } from "../util/EnvUtils";
@@ -318,6 +321,38 @@ export class Server {
         onError: Function,
     ) {
         axios.post(`${getServerUrl()}/material-orders/${id}/transition-status`, { status })
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static getEmailTemplates(onSuccess: Function, onError: Function) {
+        axios.get(`${getServerUrl()}/email-templates/all`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static saveEmailTemplate(template: EmailTemplateTO, onSuccess: Function, onError: Function) {
+        axios.post(`${getServerUrl()}/email-templates/save`, template)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static renderMaterialOrderEmail(
+        code: EmailTemplateCode,
+        materialOrderId: number,
+        onSuccess: (response: { data: RenderedEmailTO }) => void,
+        onError: Function,
+    ) {
+        axios.post(`${getServerUrl()}/email-templates/render-material-order`, { code, materialOrderId })
             .then(response => onSuccess(response))
             .catch(error => {
                 console.log(error);

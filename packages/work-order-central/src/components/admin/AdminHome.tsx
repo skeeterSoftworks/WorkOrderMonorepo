@@ -19,6 +19,7 @@ import { MiscManagementPanel } from './MiscManagementPanel';
 import { LicenseActivationPanel } from './LicenseActivationPanel';
 import { MaterialProvidersManagementPanel } from './MaterialProvidersManagementPanel';
 import { CatalogOverviewPanel } from './CatalogOverviewPanel';
+import { EmailTemplatesManagementPanel } from './EmailTemplatesManagementPanel';
 
 const AdminSections = {
     CATALOG_OVERVIEW: 'catalog-overview',
@@ -28,6 +29,7 @@ const AdminSections = {
     MATERIAL_PROVIDERS: 'material-providers',
     USERS: 'users',
     MISC: 'misc',
+    EMAIL_TEMPLATES: 'email-templates',
     LICENSE: 'license',
 } as const;
 
@@ -78,6 +80,12 @@ export function AdminHome() {
                         <ListItemButton selected={activeSection === AdminSections.MISC} onClick={() => setActiveSection(AdminSections.MISC)}>
                             <ListItemText primary={t('misc')} />
                         </ListItemButton>
+                        <ListItemButton
+                            selected={activeSection === AdminSections.EMAIL_TEMPLATES}
+                            onClick={() => setActiveSection(AdminSections.EMAIL_TEMPLATES)}
+                        >
+                            <ListItemText primary={t('emailTemplates')} />
+                        </ListItemButton>
                         <ListItemButton selected={activeSection === AdminSections.LICENSE} onClick={() => setActiveSection(AdminSections.LICENSE)}>
                             <ListItemText primary={t('licenseActivationTab')} />
                         </ListItemButton>
@@ -102,6 +110,7 @@ export function AdminHome() {
                     {activeSection === AdminSections.CUSTOMERS && <CustomersManagementPanel />}
                     {activeSection === AdminSections.MACHINES && <MachinesManagementPanel />}
                     {activeSection === AdminSections.MISC && <MiscManagementPanel />}
+                    {activeSection === AdminSections.EMAIL_TEMPLATES && <EmailTemplatesManagementPanel />}
                     {activeSection === AdminSections.LICENSE && <LicenseActivationPanel />}
                 </Box>
             </Box>

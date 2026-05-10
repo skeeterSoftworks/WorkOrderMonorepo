@@ -11,6 +11,11 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import FormLabel from '@mui/material/FormLabel';
+import Radio from '@mui/material/Radio';
+import RadioGroup from '@mui/material/RadioGroup';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -22,6 +27,7 @@ import PublishedWithChangesOutlinedIcon from '@mui/icons-material/PublishedWithC
 import { useTranslation } from 'react-i18next';
 import { Server } from 'sf-common';
 import type {
+    EmailTemplateCode,
     MaterialOrderStatus,
     MaterialOrderTO,
     MaterialProviderTO,
@@ -44,6 +50,12 @@ function materialOrderStatusLocked(order: MaterialOrderTO): boolean {
     return order.status === 'RECEIVED_IN_STOCK' || order.status === 'VALIDATED';
 }
 
+const MATERIAL_ORDER_EMAIL_TEMPLATE_CODES: EmailTemplateCode[] = [
+    'MATERIAL_ORDER_INQUIRY',
+    'MATERIAL_ORDER_REMINDER',
+    'MATERIAL_DELIVERY_LATE',
+];
+
 export function PurchasingPage() {
     const { t } = useTranslation();
     const [orders, setOrders] = useState<MaterialOrderTO[]>([]);
@@ -55,6 +67,11 @@ export function PurchasingPage() {
     const [materialProviderId, setMaterialProviderId] = useState<number | undefined>(undefined);
     const [statusDialogOrder, setStatusDialogOrder] = useState<MaterialOrderTO | null>(null);
     const [pendingStatus, setPendingStatus] = useState<MaterialOrderStatus>('ORDER_SENT');
+    const [emailPickOpen, setEmailPickOpen] = useState(false);
+    const [emailPickOrder, setEmailPickOrder] = useState<MaterialOrderTO | null>(null);
+    const [emailPickProvider, setEmailPickProvider] = useState<MaterialProviderTO | undefined>(undefined);
+    const [selectedEmailTemplate, setSelectedEmailTemplate] =
+        useState<EmailTemplateCode>('MATERIAL_ORDER_INQUIRY');
 
     const selectedMaterial = useMemo(
         () => materials.find((m) => m.id === materialId),
@@ -122,26 +139,45 @@ export function PurchasingPage() {
         return material?.providers?.find((p) => p.id === order.materialProviderId);
     };
 
-    const openEmailDraft = (order: MaterialOrderTO, provider?: MaterialProviderTO) => {
+    const openMaterialOrderEmailDialog = (order: MaterialOrderTO, provider?: MaterialProviderTO) => {
         const email = provider?.emailAddress?.trim();
         if (!email) {
             toastActionError(t('materialProviderEmailMissing'));
             return;
         }
-        const materialLabel = order.materialName || order.materialCode || t('materialName');
-        const qty = order.quantity ?? 0;
-        const providerLabel = provider?.name || provider?.contactPerson || '—';
-        const subject = `${t('materialOrderEmailSubjectPrefix')} ${materialLabel}`;
-        const body = [
-            `${t('materialOrderEmailGreeting')} ${providerLabel},`,
-            '',
-            `${t('materialOrderEmailBodyLineMaterial')}: ${materialLabel}`,
-            `${t('materialOrderEmailBodyLineQuantity')}: ${qty}`,
-            '',
-            t('materialOrderEmailClosing'),
-        ].join('\n');
-        const mailto = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        window.location.href = mailto;
+        if (order.id == null || !Number.isFinite(order.id)) {
+            toastActionError(t('materialOrderEmailNeedsSavedOrder'));
+            return;
+        }
+        setEmailPickOrder(order);
+        setEmailPickProvider(provider);
+        setSelectedEmailTemplate('MATERIAL_ORDER_INQUIRY');
+        setEmailPickOpen(true);
+    };
+
+    const closeMaterialOrderEmailDialog = () => {
+        setEmailPickOpen(false);
+        setEmailPickOrder(null);
+        setEmailPickProvider(undefined);
+    };
+
+    const confirmMaterialOrderEmail = () => {
+        const order = emailPickOrder;
+        const provider = emailPickProvider;
+        const email = provider?.emailAddress?.trim();
+        if (!order?.id || !email) return;
+        Server.renderMaterialOrderEmail(
+            selectedEmailTemplate,
+            order.id,
+            (resp) => {
+                const subject = resp.data.subject ?? '';
+                const body = resp.data.body ?? '';
+                const mailto = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                window.location.href = mailto;
+                closeMaterialOrderEmailDialog();
+            },
+            (err: unknown) => toastServerError(err, t),
+        );
     };
 
     const openStatusDialog = (order: MaterialOrderTO) => {
@@ -193,7 +229,7 @@ export function PurchasingPage() {
                     materialCode: selectedMaterial?.code,
                 };
                 const provider = providerOptions.find((p) => p.id === materialProviderId);
-                openEmailDraft(effectiveOrder, provider);
+                openMaterialOrderEmailDialog(effectiveOrder, provider);
             },
             (err: unknown) => toastServerError(err, t),
         );
@@ -243,7 +279,9 @@ export function PurchasingPage() {
                                             <IconButton
                                                 size="small"
                                                 title={t('emailMaterialOrder')}
-                                                onClick={() => openEmailDraft(o, findProviderForOrder(o))}
+                                                onClick={() =>
+                                                    openMaterialOrderEmailDialog(o, findProviderForOrder(o))
+                                                }
                                             >
                                                 <EmailOutlinedIcon fontSize="small" />
                                             </IconButton>
@@ -343,6 +381,50 @@ export function PurchasingPage() {
                                 {t('cancel')}
                             </Button>
                         </Box>
+                    </Box>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={emailPickOpen} onClose={closeMaterialOrderEmailDialog} maxWidth="sm" fullWidth>
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    {t('emailTemplatePickerTitle')}
+                    <IconButton
+                        size="small"
+                        onClick={closeMaterialOrderEmailDialog}
+                        aria-label={t('close')}
+                    >
+                        <CloseIcon />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent dividers>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        {t('emailTemplatePlaceholdersHint')}
+                    </Typography>
+                    <FormControl component="fieldset" sx={{ width: '100%' }}>
+                        <FormLabel component="legend">{t('emailTemplatePickerChooseLabel')}</FormLabel>
+                        <RadioGroup
+                            value={selectedEmailTemplate}
+                            onChange={(e) =>
+                                setSelectedEmailTemplate(e.target.value as EmailTemplateCode)
+                            }
+                        >
+                            {MATERIAL_ORDER_EMAIL_TEMPLATE_CODES.map((code) => (
+                                <FormControlLabel
+                                    key={code}
+                                    value={code}
+                                    control={<Radio size="small" />}
+                                    label={t(`emailTemplate_${code}`)}
+                                />
+                            ))}
+                        </RadioGroup>
+                    </FormControl>
+                    <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                        <Button variant="contained" onClick={confirmMaterialOrderEmail}>
+                            {t('emailTemplatePickerOpenMailto')}
+                        </Button>
+                        <Button variant="outlined" onClick={closeMaterialOrderEmailDialog}>
+                            {t('cancel')}
+                        </Button>
                     </Box>
                 </DialogContent>
             </Dialog>

@@ -80,6 +80,22 @@ export interface MaterialOrderTO {
     certificatePresent?: boolean,
 }
 
+export type EmailTemplateCode =
+    | 'MATERIAL_ORDER_INQUIRY'
+    | 'MATERIAL_ORDER_REMINDER'
+    | 'MATERIAL_DELIVERY_LATE'
+
+export interface EmailTemplateTO {
+    code?: EmailTemplateCode,
+    subjectTemplate?: string,
+    bodyTemplate?: string,
+}
+
+export interface RenderedEmailTO {
+    subject?: string,
+    body?: string,
+}
+
 export interface ProductTO {
     id?: number,
     name?: string,
