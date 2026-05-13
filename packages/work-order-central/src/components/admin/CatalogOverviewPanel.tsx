@@ -9,6 +9,7 @@ import Tooltip from '@mui/material/Tooltip';
 import { useTranslation } from 'react-i18next';
 import type { CustomerTO, MachineTO, MaterialTO, MaterialProviderTO, ProductTO } from 'sf-common/src/models/ApiRequests';
 import { Server } from 'sf-common';
+import { isInternalStockOrdererCustomer } from '../../util/internalStockOrderer';
 
 type CatalogSectionId = 'products' | 'buyers' | 'machines' | 'materials' | 'providers';
 
@@ -22,12 +23,30 @@ function providerKey(provider: MaterialProviderTO): string {
     return `name:${(provider.name ?? '').trim().toLowerCase()}`;
 }
 
+function collectProviderKeysLinkedToMaterials(materials: MaterialTO[]): Set<string> {
+    const keys = new Set<string>();
+    for (const m of materials) {
+        for (const provider of providersOf(m)) {
+            keys.add(providerKey(provider));
+        }
+    }
+    return keys;
+}
+
+function parseMaterialsListResponse(response: unknown): MaterialTO[] {
+    const r = response as { data?: MaterialTO[] | { data?: MaterialTO[] } };
+    if (Array.isArray(r?.data)) return r.data;
+    if (Array.isArray(r?.data?.data)) return r.data.data;
+    return [];
+}
+
 export function CatalogOverviewPanel({ onOpenSection }: { onOpenSection: (section: CatalogSectionId) => void }) {
     const { t } = useTranslation();
     const [products, setProducts] = useState<ProductTO[]>([]);
     const [buyers, setBuyers] = useState<CustomerTO[]>([]);
     const [machines, setMachines] = useState<MachineTO[]>([]);
     const [providers, setProviders] = useState<MaterialProviderTO[]>([]);
+    const [centralMaterials, setCentralMaterials] = useState<MaterialTO[]>([]);
 
     useEffect(() => {
         Server.getAllProducts(
@@ -58,7 +77,18 @@ export function CatalogOverviewPanel({ onOpenSection }: { onOpenSection: (sectio
             },
             () => {},
         );
+        Server.getAllMaterials(
+            (response: unknown) => {
+                setCentralMaterials(parseMaterialsListResponse(response));
+            },
+            () => {},
+        );
     }, []);
+
+    const buyersExcludingInternal = useMemo(
+        () => buyers.filter((b) => !isInternalStockOrdererCustomer(b)),
+        [buyers],
+    );
 
     const {
         productsWithoutProviders,
@@ -88,7 +118,9 @@ export function CatalogOverviewPanel({ onOpenSection }: { onOpenSection: (sectio
                 if (!byMaterial.has(key)) byMaterial.set(key, m);
             }
         }
-        const buyersWithoutProducts = buyers.filter((b) => b.id != null && !linkedCustomerIds.has(Number(b.id))).length;
+        const buyersWithoutProducts = buyersExcludingInternal.filter(
+            (b) => b.id != null && !linkedCustomerIds.has(Number(b.id)),
+        ).length;
         const machinesWithoutProducts = machines.filter((m) => m.id != null && !linkedMachineIds.has(Number(m.id))).length;
         return {
             productsWithoutProviders: withoutProviders,
@@ -97,7 +129,7 @@ export function CatalogOverviewPanel({ onOpenSection }: { onOpenSection: (sectio
             unlinkedBuyers: buyersWithoutProducts,
             unlinkedMachines: machinesWithoutProducts,
         };
-    }, [products, buyers, machines]);
+    }, [products, buyersExcludingInternal, machines]);
 
     const providersWithoutMaterials = useMemo(() => {
         const providersLinkedToAnyMaterial = new Set<string>();
@@ -108,8 +140,11 @@ export function CatalogOverviewPanel({ onOpenSection }: { onOpenSection: (sectio
                 }
             }
         }
+        for (const key of collectProviderKeysLinkedToMaterials(centralMaterials)) {
+            providersLinkedToAnyMaterial.add(key);
+        }
         return providers.filter((p) => !providersLinkedToAnyMaterial.has(providerKey(p))).length;
-    }, [products, providers]);
+    }, [products, providers, centralMaterials]);
 
     const machinesWithoutImages = useMemo(
         () => machines.filter((m: any) => !m.machineImageBase64?.trim()).length,
@@ -137,7 +172,7 @@ export function CatalogOverviewPanel({ onOpenSection }: { onOpenSection: (sectio
                 if (typeof mid === 'number' && Number.isFinite(mid)) linkedMachineIds.add(mid);
             }
         }
-        const customersNoProducts = buyers
+        const customersNoProducts = buyersExcludingInternal
             .filter((b) => b.id != null && !linkedCustomerIds.has(Number(b.id)))
             .map((b) => b.companyName || `#${b.id ?? '?'}`);
 
@@ -152,6 +187,9 @@ export function CatalogOverviewPanel({ onOpenSection }: { onOpenSection: (sectio
                     providersLinkedToAnyMaterial.add(providerKey(provider));
                 }
             }
+        }
+        for (const key of collectProviderKeysLinkedToMaterials(centralMaterials)) {
+            providersLinkedToAnyMaterial.add(key);
         }
         const providersNoMaterials = providers
             .filter((p) => !providersLinkedToAnyMaterial.has(providerKey(p)))
@@ -170,7 +208,7 @@ export function CatalogOverviewPanel({ onOpenSection }: { onOpenSection: (sectio
             providersNoMaterials,
             machinesNoImages,
         };
-    }, [products, buyers, machines, providers]);
+    }, [products, buyersExcludingInternal, machines, providers, centralMaterials]);
 
     const listTooltip = (items: string[]) => (
         items.length > 0
@@ -216,7 +254,7 @@ export function CatalogOverviewPanel({ onOpenSection }: { onOpenSection: (sectio
 
     const cards = [
         { label: t('products'), value: products.length, section: 'products' as const },
-        { label: t('buyers'), value: buyers.length, section: 'buyers' as const },
+        { label: t('buyers'), value: buyersExcludingInternal.length, section: 'buyers' as const },
         { label: t('machines'), value: machines.length, section: 'machines' as const },
         { label: t('materialProviders'), value: providers.length, section: 'providers' as const },
     ];

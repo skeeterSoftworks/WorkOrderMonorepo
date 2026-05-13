@@ -13,7 +13,6 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
-import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import Dialog from '@mui/material/Dialog';
@@ -29,8 +28,6 @@ import { toastActionSuccess, toastServerError } from '../../util/actionToast';
 import { TableActionsRow, tableActionsTableCellSx, tableActionIconButtonSx } from '../shared/tableActions';
 import { filterDecimalNumericInput, parseDecimalNumericInputToNumber } from 'sf-common/src/util/DataUtils';
 
-const MATERIAL_CATALOG_STORAGE_KEY = 'workOrderCentral.materialCatalog';
-
 function providerKey(p: MaterialProviderTO): string {
     if (p.id != null) return `id:${p.id}`;
     return `name:${(p.name ?? '').trim().toLowerCase()}`;
@@ -39,21 +36,6 @@ function providerKey(p: MaterialProviderTO): string {
 function materialProvidersOf(m: MaterialTO): MaterialProviderTO[] {
     if (Array.isArray(m.providers)) return m.providers;
     return m.provider ? [m.provider] : [];
-}
-
-function loadMaterialCatalog(): MaterialTO[] {
-    try {
-        const raw = localStorage.getItem(MATERIAL_CATALOG_STORAGE_KEY);
-        if (!raw) return [];
-        const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? parsed : [];
-    } catch {
-        return [];
-    }
-}
-
-function saveMaterialCatalog(list: MaterialTO[]) {
-    localStorage.setItem(MATERIAL_CATALOG_STORAGE_KEY, JSON.stringify(list));
 }
 
 export function MaterialProvidersManagementPanel() {
@@ -120,8 +102,20 @@ export function MaterialProvidersManagementPanel() {
         );
     };
 
+    const loadMaterialsCatalog = (onDone?: () => void) => {
+        Server.getAllMaterials(
+            (response: unknown) => {
+                const r = response as { data?: MaterialTO[] | { data?: MaterialTO[] } };
+                const data = Array.isArray(r?.data) ? r.data : Array.isArray(r?.data?.data) ? r.data.data : [];
+                setMaterialsCatalog(data);
+                onDone?.();
+            },
+            (err: unknown) => toastServerError(err, t),
+        );
+    };
+
     useEffect(() => {
-        setMaterialsCatalog(loadMaterialCatalog());
+        loadMaterialsCatalog();
         loadProviders();
         loadProducts();
     }, []);
@@ -261,11 +255,12 @@ export function MaterialProvidersManagementPanel() {
     };
 
     const openMaterialsDialog = (provider: MaterialProviderTO) => {
-        setMaterialsDialogProvider(provider);
-        setMaterialsCatalog(loadMaterialCatalog());
-        resetMaterialForm();
-        setMaterialProviderKeysSelected([providerKey(provider)]);
-        setMaterialsDialogOpen(true);
+        loadMaterialsCatalog(() => {
+            setMaterialsDialogProvider(provider);
+            resetMaterialForm();
+            setMaterialProviderKeysSelected([providerKey(provider)]);
+            setMaterialsDialogOpen(true);
+        });
     };
 
     const addOrUpdateMaterial = () => {
@@ -289,12 +284,15 @@ export function MaterialProvidersManagementPanel() {
             providers: selectedProviders,
             provider: undefined,
         };
-        const next = [...materialsCatalog];
-        if (editingMaterialIndex !== null) next[editingMaterialIndex] = row;
-        else next.push(row);
-        setMaterialsCatalog(next);
-        saveMaterialCatalog(next);
-        resetMaterialForm();
+        Server.saveMaterial(
+            row,
+            () => {
+                loadMaterialsCatalog();
+                resetMaterialForm();
+                toastActionSuccess(t('toastMaterialSaved'));
+            },
+            (err: unknown) => toastServerError(err, t),
+        );
     };
 
     const beginEditMaterial = (idx: number) => {
@@ -312,20 +310,24 @@ export function MaterialProvidersManagementPanel() {
     };
 
     const removeMaterial = (idx: number) => {
-        const next = materialsCatalog.filter((_, i) => i !== idx);
-        setMaterialsCatalog(next);
-        saveMaterialCatalog(next);
-        if (editingMaterialIndex === idx) resetMaterialForm();
+        const row = materialsCatalog[idx];
+        if (row?.id == null) return;
+        Server.deleteMaterial(
+            row.id,
+            () => {
+                loadMaterialsCatalog();
+                resetMaterialForm();
+                toastActionSuccess(t('toastMaterialDeleted'));
+            },
+            (err: unknown) => toastServerError(err, t),
+        );
     };
 
     return (
         <Box sx={{ mt: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">{t('materialProvidersManagement')}</Typography>
-                <Button variant="outlined" startIcon={<AddIcon />} onClick={resetForm}>
-                    {t('addProvider')}
-                </Button>
-            </Box>
+            <Typography variant="h6" sx={{ mb: 2 }}>
+                {t('materialProvidersManagement')}
+            </Typography>
 
             <Paper sx={{ p: 2 }}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 2 }}>

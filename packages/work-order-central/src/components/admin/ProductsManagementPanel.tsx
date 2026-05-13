@@ -20,7 +20,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Divider from '@mui/material/Divider';
 import ListSubheader from '@mui/material/ListSubheader';
@@ -54,10 +54,27 @@ import {
 
 type LocalProduct = ProductTO;
 
-function materialProviderKey(p?: MaterialTO['provider']): string {
-    if (!p) return '';
-    if (p.id != null) return `id:${p.id}`;
-    return `name:${(p.name ?? '').trim().toLowerCase()}`;
+/** Stable row keys for server materials (handles duplicate code/name without id). */
+function assignCatalogRowKeys(materials: MaterialTO[]): { key: string; material: MaterialTO }[] {
+    const used = new Map<string, number>();
+    return materials.map((m) => {
+        const base = m.id != null ? `id:${m.id}` : `code:${(m.code ?? '').trim()}|name:${(m.name ?? '').trim()}`;
+        const n = (used.get(base) ?? 0) + 1;
+        used.set(base, n);
+        const key = n === 1 ? base : `${base}#${n}`;
+        return { key, material: m };
+    });
+}
+
+function productMaterialMatchesCatalogRow(pm: MaterialTO, c: MaterialTO): boolean {
+    if (pm.id != null && c.id != null && pm.id === c.id) return true;
+    const pc = (pm.code ?? '').trim();
+    const pn = (pm.name ?? '').trim();
+    const cc = (c.code ?? '').trim();
+    const cn = (c.name ?? '').trim();
+    if (pc !== '' && pc === cc && pn === cn) return true;
+    if (pc === '' && cc === '' && pn !== '' && pn === cn) return true;
+    return false;
 }
 
 function materialProvidersOf(material: MaterialTO): NonNullable<MaterialTO['providers']> {
@@ -76,7 +93,6 @@ export function ProductsManagementPanel() {
     const { t } = useTranslation();
 
     const [products, setProducts] = useState<LocalProduct[]>([]);
-    const [materialProviders, setMaterialProviders] = useState<NonNullable<MaterialTO['provider']>[]>([]);
     const [machines, setMachines] = useState<MachineTO[]>([]);
     const [customers, setCustomers] = useState<CustomerTO[]>([]);
     const [selectedProductId, setSelectedProductId] = useState<number | undefined>(undefined);
@@ -94,16 +110,8 @@ export function ProductsManagementPanel() {
     const [technologyDraft, setTechnologyDraft] = useState<TechnologyTO>({ tools: [] });
     const [materialsModalOpen, setMaterialsModalOpen] = useState(false);
     const [materialsModalProduct, setMaterialsModalProduct] = useState<LocalProduct | null>(null);
-    const [materialsDraft, setMaterialsDraft] = useState<MaterialTO[]>([]);
-    const [editingMaterialIndex, setEditingMaterialIndex] = useState<number | null>(null);
-    const [materialName, setMaterialName] = useState('');
-    const [materialCode, setMaterialCode] = useState('');
-    const [materialProductsPerUnit, setMaterialProductsPerUnit] = useState('');
-    const [materialDiameter, setMaterialDiameter] = useState('');
-    const [materialWeight, setMaterialWeight] = useState('');
-    const [materialLength, setMaterialLength] = useState('');
-    const [materialWidth, setMaterialWidth] = useState('');
-    const [materialProviderKeysSelected, setMaterialProviderKeysSelected] = useState<string[]>([]);
+    const [catalogMaterialRows, setCatalogMaterialRows] = useState<{ key: string; material: MaterialTO }[]>([]);
+    const [selectedCatalogMaterialKeys, setSelectedCatalogMaterialKeys] = useState<string[]>([]);
 
     const [techToolName, setTechToolName] = useState('');
     const [techToolDescription, setTechToolDescription] = useState('');
@@ -151,28 +159,6 @@ export function ProductsManagementPanel() {
     const [technicalDrawingLoadedSrc, setTechnicalDrawingLoadedSrc] = useState<string | undefined>(undefined);
     const [technicalDrawingInputKey, setTechnicalDrawingInputKey] = useState(0);
 
-    const materialProviderOptions = useMemo(() => {
-        const byKey = new Map<string, NonNullable<MaterialTO['provider']>>();
-        for (const provider of materialProviders) {
-            const key = materialProviderKey(provider);
-            if (key) byKey.set(key, provider);
-        }
-        for (const product of products) {
-            for (const material of product.materials ?? []) {
-                for (const provider of materialProvidersOf(material)) {
-                    const key = materialProviderKey(provider);
-                    if (key) byKey.set(key, { ...provider });
-                }
-            }
-        }
-        for (const material of materialsDraft) {
-            for (const provider of materialProvidersOf(material)) {
-                const key = materialProviderKey(provider);
-                if (key) byKey.set(key, { ...provider });
-            }
-        }
-        return Array.from(byKey.values()).sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
-    }, [materialProviders, materialsDraft, products]);
     const multiSelectMenuItemSx = (theme: any) => ({
         py: 1,
         '&.Mui-selected': {
@@ -190,7 +176,6 @@ export function ProductsManagementPanel() {
 
     useEffect(() => {
         loadProducts();
-        loadMaterialProviders();
         loadMachines();
         loadCustomers();
     }, []);
@@ -236,18 +221,6 @@ export function ProductsManagementPanel() {
                 if (Array.isArray(response?.data)) data = response.data;
                 else if (Array.isArray(response?.data?.data)) data = response.data.data;
                 setProducts(data);
-            },
-            () => {},
-        );
-    };
-
-    const loadMaterialProviders = () => {
-        Server.getAllMaterialProviders(
-            (response: any) => {
-                let data: NonNullable<MaterialTO['provider']>[] = [];
-                if (Array.isArray(response?.data)) data = response.data;
-                else if (Array.isArray(response?.data?.data)) data = response.data.data;
-                setMaterialProviders(data);
             },
             () => {},
         );
@@ -608,16 +581,66 @@ export function ProductsManagementPanel() {
         setEditingTechnologyToolIndex(null);
     };
 
-    const resetMaterialInputs = () => {
-        setMaterialName('');
-        setMaterialCode('');
-        setMaterialProductsPerUnit('');
-        setMaterialDiameter('');
-        setMaterialWeight('');
-        setMaterialLength('');
-        setMaterialWidth('');
-        setMaterialProviderKeysSelected([]);
-        setEditingMaterialIndex(null);
+    const closeMaterialsModal = () => {
+        setMaterialsModalOpen(false);
+        setMaterialsModalProduct(null);
+        setCatalogMaterialRows([]);
+        setSelectedCatalogMaterialKeys([]);
+    };
+
+    const openMaterialsModal = (product: LocalProduct) => {
+        if (!product.id) return;
+        const latest = products.find((p) => p.id === product.id) ?? product;
+        Server.getAllMaterials(
+            (response: unknown) => {
+                const r = response as { data?: MaterialTO[] | { data?: MaterialTO[] } };
+                const data = Array.isArray(r?.data) ? r.data : Array.isArray(r?.data?.data) ? r.data.data : [];
+                const linked = data.filter((m) => materialProvidersOf(m).length > 0);
+                const rows = assignCatalogRowKeys(linked);
+                setCatalogMaterialRows(rows);
+                const initial: string[] = [];
+                const seen = new Set<string>();
+                for (const pm of latest.materials ?? []) {
+                    const row = rows.find(({ material: c }) => productMaterialMatchesCatalogRow(pm, c));
+                    if (row && !seen.has(row.key)) {
+                        seen.add(row.key);
+                        initial.push(row.key);
+                    }
+                }
+                setSelectedCatalogMaterialKeys(initial);
+                setMaterialsModalProduct(latest);
+                setMaterialsModalOpen(true);
+            },
+            (err: unknown) => toastServerError(err, t),
+        );
+    };
+
+    const saveMaterialsFromModal = () => {
+        if (!materialsModalProduct?.id) return;
+        const byKey = new Map(catalogMaterialRows.map((r) => [r.key, r.material]));
+        const materials: MaterialTO[] = selectedCatalogMaterialKeys.flatMap((k) => {
+            const src = byKey.get(k);
+            if (!src) return [];
+            const row: MaterialTO = {
+                ...src,
+                providers: materialProvidersOf(src).map((p) => ({ ...p })),
+                provider: undefined,
+            };
+            return [row];
+        });
+        const payload: ProductTO = {
+            ...materialsModalProduct,
+            materials,
+        };
+        Server.editProduct(
+            payload,
+            () => {
+                loadProducts();
+                closeMaterialsModal();
+                toastActionSuccess(t('toastProductUpdated'));
+            },
+            (err: unknown) => toastServerError(err, t),
+        );
     };
 
     const openTechnologyModal = (product: LocalProduct) => {
@@ -641,102 +664,6 @@ export function ProductsManagementPanel() {
         setTechnologyModalProduct(null);
         setTechnologyDraft({ tools: [] });
         resetTechnologyToolInputs();
-    };
-
-    const closeMaterialsModal = () => {
-        setMaterialsModalOpen(false);
-        setMaterialsModalProduct(null);
-        setMaterialsDraft([]);
-        resetMaterialInputs();
-    };
-
-    const openMaterialsModal = (product: LocalProduct) => {
-        if (!product.id) return;
-        const latest = products.find((p) => p.id === product.id) ?? product;
-        setMaterialsModalProduct(latest);
-        setMaterialsDraft(
-            (latest.materials ?? []).map((m) => ({
-                ...m,
-                providers: materialProvidersOf(m).map((p) => ({ ...p })),
-                provider: undefined,
-            })),
-        );
-        resetMaterialInputs();
-        setMaterialsModalOpen(true);
-    };
-
-    const isMaterialFormValid = (): boolean =>
-        Boolean(materialName.trim()) &&
-        Boolean(materialCode.trim()) &&
-        Boolean(materialProductsPerUnit.trim()) &&
-        materialProviderKeysSelected.length > 0;
-
-    const addOrUpdateMaterial = () => {
-        if (!isMaterialFormValid()) return;
-        const productsPerUnit = materialProductsPerUnit.trim() === '' ? undefined : Number(materialProductsPerUnit);
-        const selectedProviders = materialProviderKeysSelected
-            .map((k) => materialProviderOptions.find((p) => materialProviderKey(p) === k))
-            .filter((p): p is NonNullable<MaterialTO['provider']> => Boolean(p))
-            .map((p) => ({ ...p }));
-        if (selectedProviders.length === 0) return;
-        const row: MaterialTO = {
-            id: editingMaterialIndex !== null ? materialsDraft[editingMaterialIndex]?.id : undefined,
-            name: materialName.trim(),
-            code: materialCode.trim() || undefined,
-            productsPerUnit: Number.isFinite(productsPerUnit) ? Math.trunc(productsPerUnit as number) : undefined,
-            diameter: parseDecimalNumericInputToNumber(materialDiameter),
-            weight: parseDecimalNumericInputToNumber(materialWeight),
-            length: parseDecimalNumericInputToNumber(materialLength),
-            width: parseDecimalNumericInputToNumber(materialWidth),
-            providers: selectedProviders,
-            provider: undefined,
-        };
-        setMaterialsDraft((prev) => {
-            const next = [...prev];
-            if (editingMaterialIndex !== null) next[editingMaterialIndex] = row;
-            else next.push(row);
-            return next;
-        });
-        resetMaterialInputs();
-    };
-
-    const beginEditMaterial = (index: number) => {
-        const row = materialsDraft[index];
-        if (!row) return;
-        setEditingMaterialIndex(index);
-        setMaterialName(row.name ?? '');
-        setMaterialCode(row.code ?? '');
-        setMaterialProductsPerUnit(row.productsPerUnit != null ? String(row.productsPerUnit) : '');
-        setMaterialDiameter(row.diameter != null ? String(row.diameter) : '');
-        setMaterialWeight(row.weight != null ? String(row.weight) : '');
-        setMaterialLength(row.length != null ? String(row.length) : '');
-        setMaterialWidth(row.width != null ? String(row.width) : '');
-        setMaterialProviderKeysSelected(materialProvidersOf(row).map((p) => materialProviderKey(p)));
-    };
-
-    const removeMaterial = (index: number) => {
-        setMaterialsDraft((prev) => prev.filter((_, i) => i !== index));
-        if (editingMaterialIndex === index) resetMaterialInputs();
-        else if (editingMaterialIndex !== null && editingMaterialIndex > index) {
-            setEditingMaterialIndex(editingMaterialIndex - 1);
-        }
-    };
-
-    const saveMaterialsFromModal = () => {
-        if (!materialsModalProduct?.id) return;
-        const payload: ProductTO = {
-            ...materialsModalProduct,
-            materials: materialsDraft,
-        };
-        Server.editProduct(
-            payload,
-            () => {
-                loadProducts();
-                closeMaterialsModal();
-                toastActionSuccess(t('toastProductUpdated'));
-            },
-            (err: unknown) => toastServerError(err, t),
-        );
     };
 
     const isTechnologyToolFormValid = (): boolean => Boolean(techToolName.trim());
@@ -896,10 +823,10 @@ export function ProductsManagementPanel() {
                                                     </Tooltip>
                                                 )}
                                                 {noMaterials && (
-                                                    <Tooltip title={t('productNoMaterialProvidersHint')}>
+                                                    <Tooltip title={t('productNoMaterialsHint')}>
                                                         <Chip
                                                             size="small"
-                                                            label={t('productNoMaterialProvidersBadge')}
+                                                            label={t('productNoMaterialsBadge')}
                                                             color="warning"
                                                             variant="outlined"
                                                             sx={chipSx}
@@ -1915,168 +1842,76 @@ export function ProductsManagementPanel() {
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={materialsModalOpen} onClose={closeMaterialsModal} maxWidth="lg" fullWidth>
+            <Dialog open={materialsModalOpen} onClose={closeMaterialsModal} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    {t('materialsEditorTitle')}
+                    <Box component="span" sx={{ pr: 1 }}>
+                        {t('materialsEditorTitle')}
+                        {materialsModalProduct?.name ? ` — ${materialsModalProduct.name}` : ''}
+                    </Box>
                     <IconButton size="small" onClick={closeMaterialsModal} aria-label={t('close')}>
                         <CloseIcon />
                     </IconButton>
                 </DialogTitle>
                 <DialogContent dividers>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                            <TextField
-                                required
-                                label={t('materialName')}
-                                value={materialName}
-                                onChange={(e) => setMaterialName(e.target.value)}
-                                size="small"
-                                sx={{ flex: '1 1 180px' }}
-                            />
-                            <TextField
-                                required
-                                label={t('materialCode')}
-                                value={materialCode}
-                                onChange={(e) => setMaterialCode(e.target.value)}
-                                size="small"
-                                sx={{ flex: '1 1 160px' }}
-                            />
-                            <TextField
-                                required
-                                label={t('materialProductsPerUnit')}
-                                value={materialProductsPerUnit}
-                                onChange={(e) => setMaterialProductsPerUnit(e.target.value.replace(/[^\d]/g, ''))}
-                                size="small"
-                                sx={{ width: 180 }}
-                                inputProps={{ inputMode: 'numeric' }}
-                            />
-                        </Box>
-                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                            <TextField
-                                label={t('diameterMeasurement')}
-                                value={materialDiameter}
-                                onChange={(e) => setMaterialDiameter(filterDecimalNumericInput(e.target.value))}
-                                size="small"
-                                sx={{ width: 130 }}
-                            />
-                            <TextField
-                                label={t('weight')}
-                                value={materialWeight}
-                                onChange={(e) => setMaterialWeight(filterDecimalNumericInput(e.target.value))}
-                                size="small"
-                                sx={{ width: 130 }}
-                            />
-                            <TextField
-                                label={t('length')}
-                                value={materialLength}
-                                onChange={(e) => setMaterialLength(filterDecimalNumericInput(e.target.value))}
-                                size="small"
-                                sx={{ width: 130 }}
-                            />
-                            <TextField
-                                label={t('width')}
-                                value={materialWidth}
-                                onChange={(e) => setMaterialWidth(filterDecimalNumericInput(e.target.value))}
-                                size="small"
-                                sx={{ width: 130 }}
-                            />
-                        </Box>
-                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                            <TextField
-                                select
-                                required
-                                label={t('materialProviderName')}
-                                SelectProps={{
-                                    multiple: true,
-                                    renderValue: (selected) =>
-                                        (selected as string[])
-                                            .map((key) => materialProviderOptions.find((p) => materialProviderKey(p) === key)?.name ?? key)
-                                            .join(', '),
-                                }}
-                                value={materialProviderKeysSelected}
-                                onChange={(e) => {
-                                    const value = e.target.value;
-                                    setMaterialProviderKeysSelected(Array.isArray(value) ? value.map(String) : [String(value)]);
-                                }}
-                                size="small"
-                                sx={{ flex: '1 1 420px' }}
-                            >
-                                {materialProviderOptions.map((p) => (
-                                    <MenuItem key={materialProviderKey(p)} value={materialProviderKey(p)} sx={multiSelectMenuItemSx}>
-                                        {p.name || p.contactPerson || t('none')}
-                                    </MenuItem>
-                                ))}
-                            </TextField>
-                        </Box>
-                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                            <Button
-                                variant="outlined"
-                                color="primary"
-                                startIcon={<AddIcon />}
-                                onClick={addOrUpdateMaterial}
-                                disabled={!isMaterialFormValid()}
-                            >
-                                {editingMaterialIndex !== null ? t('updateMaterial') : t('addMaterial')}
-                            </Button>
-                            {editingMaterialIndex !== null && (
-                                <Button variant="text" onClick={resetMaterialInputs}>
-                                    {t('cancel')}
-                                </Button>
-                            )}
-                        </Box>
-                        <Table size="small" sx={{ mt: 1 }}>
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell>{t('materialName')}</TableCell>
-                                    <TableCell>{t('materialCode')}</TableCell>
-                                    <TableCell>{t('materialProviderName')}</TableCell>
-                                    <TableCell align="right" sx={tableActionsTableCellSx}>
-                                        {t('actions')}
-                                    </TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {materialsDraft.length > 0 ? (
-                                    materialsDraft.map((m, idx) => (
-                                        <TableRow key={m.id ?? `new-material-${idx}`}>
-                                            <TableCell>{m.name ?? '—'}</TableCell>
-                                            <TableCell>{m.code ?? '—'}</TableCell>
-                                            <TableCell>
-                                                {materialProvidersOf(m).map((p) => p.name || p.contactPerson).filter(Boolean).join(', ') || '—'}
-                                            </TableCell>
-                                            <TableCell align="right" sx={tableActionsTableCellSx}>
-                                                <TableActionsRow>
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={() => beginEditMaterial(idx)}
-                                                        sx={tableActionIconButtonSx.edit}
-                                                        title={t('edit')}
-                                                    >
-                                                        <EditIcon fontSize="small" />
-                                                    </IconButton>
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={() => removeMaterial(idx)}
-                                                        sx={tableActionIconButtonSx.delete}
-                                                        title={t('remove')}
-                                                    >
-                                                        <DeleteIcon fontSize="small" />
-                                                    </IconButton>
-                                                </TableActionsRow>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
-                                ) : (
-                                    <TableRow>
-                                        <TableCell colSpan={4}>
+                        <TextField
+                            select
+                            label={t('productMaterialsCatalogSelectLabel')}
+                            SelectProps={{
+                                multiple: true,
+                                displayEmpty: true,
+                                renderValue: (selected) => {
+                                    const keys = selected as string[];
+                                    if (keys.length === 0) {
+                                        return (
                                             <Typography variant="body2" color="text.secondary">
-                                                {t('materialsEmpty')}
+                                                {t('productMaterialsCatalogPlaceholder')}
                                             </Typography>
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
+                                        );
+                                    }
+                                    return (
+                                        <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                                            {keys.map((key) => {
+                                                const row = catalogMaterialRows.find((r) => r.key === key);
+                                                const m = row?.material;
+                                                const label = m
+                                                    ? [m.name, m.code].filter((x) => (x ?? '').toString().trim()).join(' · ') || key
+                                                    : key;
+                                                return <Chip key={key} size="small" label={label} variant="outlined" />;
+                                            })}
+                                        </Stack>
+                                    );
+                                },
+                            }}
+                            value={selectedCatalogMaterialKeys}
+                            onChange={(e) => {
+                                const value = e.target.value;
+                                setSelectedCatalogMaterialKeys(Array.isArray(value) ? value.map(String) : [String(value)]);
+                            }}
+                            fullWidth
+                            disabled={catalogMaterialRows.length === 0}
+                            helperText={
+                                catalogMaterialRows.length === 0
+                                    ? t('productMaterialsCatalogEmpty')
+                                    : t('productMaterialsCatalogHint')
+                            }
+                        >
+                            {catalogMaterialRows.map(({ key, material: m }) => (
+                                <MenuItem key={key} value={key} sx={multiSelectMenuItemSx}>
+                                    <Stack direction="column" spacing={0.25} sx={{ alignItems: 'flex-start' }}>
+                                        <Typography variant="body2">
+                                            {[m.name, m.code].filter((x) => (x ?? '').toString().trim()).join(' · ') || '—'}
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            {materialProvidersOf(m)
+                                                .map((p) => p.name || p.contactPerson)
+                                                .filter(Boolean)
+                                                .join(', ') || '—'}
+                                        </Typography>
+                                    </Stack>
+                                </MenuItem>
+                            ))}
+                        </TextField>
 
                         <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
                             <Button variant="contained" color="primary" onClick={saveMaterialsFromModal}>

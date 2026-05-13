@@ -11,6 +11,7 @@ import type {
     SampleDataGenerationResultTO,
     ProductAvailableStockTO,
     MaterialProviderTO,
+    MaterialTO,
     MaterialOrderTO,
     MaterialOrderStatus,
     EmailTemplateTO,
@@ -280,6 +281,24 @@ export class Server {
 
     static getAllMaterials(onSuccess: Function, onError: Function) {
         axios.get(`${getServerUrl()}/materials/all`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static saveMaterial(material: MaterialTO, onSuccess: Function, onError: Function) {
+        axios.post(`${getServerUrl()}/materials/save`, material)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static deleteMaterial(id: number, onSuccess: Function, onError: Function) {
+        axios.delete(`${getServerUrl()}/materials/${id}`)
             .then(response => onSuccess(response))
             .catch(error => {
                 console.log(error);
