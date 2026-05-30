@@ -12,7 +12,8 @@
   "workspaces": [
     "packages/sf-common",
     "packages/work-order-central",
-    "packages/work-order-local"
+    "packages/work-order-local",
+    "packages/stock-local"
   ],
   "dependencies": {
     "@stomp/stompjs": "7.0.0",
