@@ -1,32 +1,54 @@
-import {Box, Button, Grid} from '@mui/material';
+import {Box, Grid, IconButton, Tooltip} from '@mui/material';
 import {Link} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
+import MoveToInboxIcon from '@mui/icons-material/MoveToInbox';
+import WarehouseIcon from '@mui/icons-material/Warehouse';
 
 export function Home() {
     const {t} = useTranslation();
 
-    const homeButtonStyle: Record<string, unknown> = {
+    const homeIconButtonStyle = {
         height: '18vh',
         width: '18vh',
         borderRadius: '20px',
-        textTransform: 'none',
-        fontSize: '1.1rem',
-        fontWeight: 600,
         boxShadow: 4,
+        bgcolor: 'primary.main',
+        color: 'primary.contrastText',
+        '&:hover': {
+            bgcolor: 'primary.dark',
+        },
     };
 
     return (
         <Box sx={{position: 'relative', width: '100%', minHeight: '60vh'}}>
-            <Grid container sx={{minHeight: '60vh', alignItems: 'center', justifyContent: 'center'}}>
+            <Grid
+                container
+                spacing={4}
+                sx={{minHeight: '60vh', alignItems: 'center', justifyContent: 'center'}}
+            >
                 <Grid item xs="auto" sx={{textAlign: 'center'}}>
-                    <Button
-                        component={Link}
-                        to="/materials-stock"
-                        variant="contained"
-                        sx={homeButtonStyle}
-                    >
-                        {t('materialsStock')}
-                    </Button>
+                    <Tooltip title={t('incomingMaterialReception')}>
+                        <IconButton
+                            component={Link}
+                            to="/incoming-material"
+                            aria-label={t('incomingMaterialReception')}
+                            sx={homeIconButtonStyle}
+                        >
+                            <MoveToInboxIcon sx={{fontSize: '4.5rem'}} />
+                        </IconButton>
+                    </Tooltip>
+                </Grid>
+                <Grid item xs="auto" sx={{textAlign: 'center'}}>
+                    <Tooltip title={t('stockByLocation')}>
+                        <IconButton
+                            component={Link}
+                            to="/stock-by-location"
+                            aria-label={t('stockByLocation')}
+                            sx={homeIconButtonStyle}
+                        >
+                            <WarehouseIcon sx={{fontSize: '4.5rem'}} />
+                        </IconButton>
+                    </Tooltip>
                 </Grid>
             </Grid>
         </Box>

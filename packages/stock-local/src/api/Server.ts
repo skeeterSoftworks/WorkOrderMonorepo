@@ -1,4 +1,9 @@
 import type {
+    MaterialOrderReceptionTO,
+    MaterialOrderTO,
+    StockLocationTO,
+} from "sf-common/src/models/ApiRequests";
+import type {
     BoundMachineProductTO,
     CentralMachineTO,
     ProductionWorkSessionConfigTO,
@@ -242,6 +247,46 @@ export class Server {
             .catch(error => {
                 console.error(error)
                 onError && onError(error)
+            });
+    }
+
+    static getMaterialOrdersOpenForReception(onSuccess: Function, onError?: Function) {
+        axios.get<MaterialOrderTO[]>(`${getServerUrl()}/material-orders/open-for-reception`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError && onError(error);
+            });
+    }
+
+    static recordMaterialOrderReception(
+        body: MaterialOrderReceptionTO,
+        onSuccess: Function,
+        onError?: Function,
+    ) {
+        axios.post<MaterialOrderReceptionTO>(`${getServerUrl()}/material-order-receptions/record`, body)
+            .then(response => {
+                toast.success(i18n.t("toastMaterialOrderReceptionRecorded"));
+                onSuccess(response);
+            })
+            .catch(error => {
+                console.log(error);
+                const msg = error?.response?.data;
+                if (typeof msg === "string" && msg.length > 0) {
+                    toast.error(i18n.t(msg, { defaultValue: msg }));
+                } else {
+                    toast.error(i18n.t("toastMaterialOrderReceptionError"));
+                }
+                onError && onError(error);
+            });
+    }
+
+    static getAllStockLocations(onSuccess: Function, onError?: Function) {
+        axios.get<StockLocationTO[]>(`${getServerUrl()}/stock-locations/all`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError && onError(error);
             });
     }
 

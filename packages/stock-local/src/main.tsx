@@ -6,7 +6,8 @@ import {ErrorModal, WebsocketListener} from "sf-common";
 import {BrowserRouter, Route, Routes} from "react-router-dom";
 import {HOC} from "./containers/HOC.tsx";
 import {Home} from "./components/home/Home.tsx";
-import {MaterialsStockPage} from "./components/materials/MaterialsStockPage.tsx";
+import {IncomingMaterialReceptionPage} from "./components/incoming/IncomingMaterialReceptionPage.tsx";
+import {StockByLocationPage} from "./components/stock/StockByLocationPage.tsx";
 
 
 const root = ReactDOM.createRoot(
@@ -26,7 +27,8 @@ root.render(
                 <HOC>
                     <Routes>
                         <Route path="/" element={<Home/>}/>
-                        <Route path="/materials-stock" element={<MaterialsStockPage/>}/>
+                        <Route path="/incoming-material" element={<IncomingMaterialReceptionPage/>}/>
+                        <Route path="/stock-by-location" element={<StockByLocationPage/>}/>
                     </Routes>
                 </HOC>
             </BrowserRouter>
