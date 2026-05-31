@@ -3,15 +3,12 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import HomeIcon from '@mui/icons-material/Home';
 import cubeLogo from "../../res/CubeLogo.png"
 import type {LoggedUser} from '../../models/Common';
-import type { WorkstationMachineConfigTO } from '../../models/ApiRequests';
 import englishFlag from "../../res/england-flag-icon.png"
 import serbianFlag from "../../res/serbia-flag-icon.png"
 import { useTranslation } from 'react-i18next';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useCookies } from 'react-cookie';
 import QrCodeIcon from '@mui/icons-material/QrCode';
-import { Server } from '../../api/Server';
-
 
 
 export function AppBarHeader() {
@@ -22,11 +19,6 @@ export function AppBarHeader() {
     const { i18n, t } = useTranslation();
 
     const [cookies, setCookie] = useCookies(['locale'])
-
-    const [workstationMachine, setWorkstationMachine] = useState<{ loaded: boolean; name: string }>({
-        loaded: false,
-        name: '',
-    });
 
     function onLogout() {
         sessionStorage.removeItem("userData")
@@ -42,52 +34,12 @@ export function AppBarHeader() {
         setCookie('locale', lang, { path: '/' })
     }
 
-    useEffect(() => {
-        const load = () => {
-            Server.getWorkstationMachine(
-                (resp: { data?: WorkstationMachineConfigTO }) => {
-                    const raw = resp?.data?.machineName;
-                    const trimmed = typeof raw === 'string' ? raw.trim() : '';
-                    setWorkstationMachine({ loaded: true, name: trimmed });
-                },
-                () => setWorkstationMachine({ loaded: true, name: '' }),
-            );
-        };
-        load();
-        const onUpdated = () => load();
-        window.addEventListener('workstationMachineUpdated', onUpdated);
-        return () => window.removeEventListener('workstationMachineUpdated', onUpdated);
-    }, []);
-
-    const machineHeaderText = !workstationMachine.loaded
-        ? '…'
-        : workstationMachine.name.length > 0
-          ? workstationMachine.name
-          : t('configureMachineNamePlaceholder');
-
     return (
         <AppBar position="static">
             <Toolbar variant="dense" sx={{ flexWrap: 'wrap', gap: 1 }}>
                 <img src={cubeLogo} style={{ height: "auto", width: "3%", marginRight: "5vh" }} alt="" />
                 <Typography variant="h6" color="inherit" component="div" sx={{ mr: 1 }}>
                     {userData ? `${userData.role}: ${userData.name} ${userData.surname}` : t("notLoggedIn")}
-                </Typography>
-                <Typography
-                    variant="subtitle2"
-                    color="inherit"
-                    component="div"
-                    sx={{
-                        mr: 2,
-                        maxWidth: { xs: '100%', sm: 360 },
-                        opacity: workstationMachine.loaded && workstationMachine.name.length > 0 ? 1 : 0.85,
-                        fontStyle: workstationMachine.loaded && workstationMachine.name.length > 0 ? 'normal' : 'italic',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                    }}
-                    title={machineHeaderText}
-                >
-                    {t('headerWorkstationMachine')}: {machineHeaderText}
                 </Typography>
 
                 <Box sx={{ flexGrow: 1, minWidth: 8 }} />
@@ -132,5 +84,3 @@ export function AppBarHeader() {
 
     );
 }
-
-
