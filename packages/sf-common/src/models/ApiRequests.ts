@@ -55,6 +55,18 @@ export interface MaterialTO {
     provider?: MaterialProviderTO,
 }
 
+export interface StockedMaterialTO {
+    id?: number,
+    quantity?: number,
+    material?: MaterialTO,
+}
+
+export interface StockLocationTO {
+    id?: number,
+    stockLocationCode?: string,
+    stockedMaterials?: StockedMaterialTO[],
+}
+
 export type MaterialOrderStatus =
     | 'ORDER_CREATED'
     | 'ORDER_SENT'

@@ -20,6 +20,7 @@ import { LicenseActivationPanel } from './LicenseActivationPanel';
 import { MaterialProvidersManagementPanel } from './MaterialProvidersManagementPanel';
 import { CatalogOverviewPanel } from './CatalogOverviewPanel';
 import { EmailTemplatesManagementPanel } from './EmailTemplatesManagementPanel';
+import { StockLocationsManagementPanel } from './StockLocationsManagementPanel';
 
 const AdminSections = {
     CATALOG_OVERVIEW: 'catalog-overview',
@@ -27,6 +28,7 @@ const AdminSections = {
     CUSTOMERS: 'customers',
     MACHINES: 'machines',
     MATERIAL_PROVIDERS: 'material-providers',
+    STOCK_LOCATIONS: 'stock-locations',
     USERS: 'users',
     MISC: 'misc',
     EMAIL_TEMPLATES: 'email-templates',
@@ -72,6 +74,9 @@ export function AdminHome() {
                         <ListItemButton selected={activeSection === AdminSections.PRODUCTS} onClick={() => setActiveSection(AdminSections.PRODUCTS)}>
                             <ListItemText primary={t('products')} />
                         </ListItemButton>
+                        <ListItemButton selected={activeSection === AdminSections.STOCK_LOCATIONS} onClick={() => setActiveSection(AdminSections.STOCK_LOCATIONS)}>
+                            <ListItemText primary={t('stockLocations')} />
+                        </ListItemButton>
                         <Divider sx={{ my: 1 }} />
                         <ListItemText primary={t('systemSection')} sx={{ px: 1, py: 0.5 }} />
                         <ListItemButton selected={activeSection === AdminSections.USERS} onClick={() => setActiveSection(AdminSections.USERS)}>
@@ -107,6 +112,7 @@ export function AdminHome() {
                     {activeSection === AdminSections.USERS && <UsersManagementPanel />}
                     {activeSection === AdminSections.PRODUCTS && <ProductsManagementPanel />}
                     {activeSection === AdminSections.MATERIAL_PROVIDERS && <MaterialProvidersManagementPanel />}
+                    {activeSection === AdminSections.STOCK_LOCATIONS && <StockLocationsManagementPanel />}
                     {activeSection === AdminSections.CUSTOMERS && <CustomersManagementPanel />}
                     {activeSection === AdminSections.MACHINES && <MachinesManagementPanel />}
                     {activeSection === AdminSections.MISC && <MiscManagementPanel />}

@@ -12,6 +12,7 @@ import type {
     ProductAvailableStockTO,
     MaterialProviderTO,
     MaterialTO,
+    StockLocationTO,
     MaterialOrderTO,
     MaterialOrderStatus,
     EmailTemplateTO,
@@ -399,6 +400,42 @@ export class Server {
 
     static deleteMaterialProvider(id: number, onSuccess: Function, onError: Function) {
         axios.delete(`${getServerUrl()}/material-providers/${id}`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static getAllStockLocations(onSuccess: Function, onError: Function) {
+        axios.get(`${getServerUrl()}/stock-locations/all`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static addStockLocation(stockLocation: StockLocationTO, onSuccess: Function, onError: Function) {
+        axios.post(`${getServerUrl()}/stock-locations/add`, stockLocation)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static editStockLocation(stockLocation: StockLocationTO, onSuccess: Function, onError: Function) {
+        axios.post(`${getServerUrl()}/stock-locations/update`, stockLocation)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static deleteStockLocation(id: number, onSuccess: Function, onError: Function) {
+        axios.delete(`${getServerUrl()}/stock-locations/${id}`)
             .then(response => onSuccess(response))
             .catch(error => {
                 console.log(error);
