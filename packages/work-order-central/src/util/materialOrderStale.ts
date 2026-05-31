@@ -6,6 +6,7 @@ export const MATERIAL_ORDER_STALE_LAST_CHANGE_DAYS = 3;
 export const MATERIAL_ORDER_STALE_MONITOR_EXCLUDED_STATUSES: MaterialOrderStatus[] = [
     'RECEIVED_IN_STOCK',
     'VALIDATED',
+    'REJECTED',
 ];
 
 export const MATERIAL_ORDER_MANUAL_TRANSITION_STATUSES: MaterialOrderStatus[] = [

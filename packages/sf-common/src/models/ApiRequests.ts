@@ -75,9 +75,12 @@ export type MaterialOrderStatus =
     | 'IN_TRANSPORT'
     | 'RECEIVED_IN_STOCK'
     | 'VALIDATED'
+    | 'REJECTED'
 
 export interface MaterialOrderTO {
     id?: number,
+    /** Server-generated order number (NM + MMddyyyyHHmm). */
+    code?: string,
     quantity?: number,
     materialId?: number,
     materialName?: string,
@@ -87,20 +90,35 @@ export interface MaterialOrderTO {
     status?: MaterialOrderStatus,
     /** ISO-8601 server timestamp when status was last changed. */
     lastChanged?: string,
+    /** ISO-8601 server timestamp when the order was created. */
+    createdAt?: string,
+    /** ISO-8601 server timestamp when the order was rejected. */
+    rejectedAt?: string,
     /** Raw Base64 or data URL for upload. */
     certificateBase64?: string,
     certificatePresent?: boolean,
 }
 
+export interface MaterialOrderReceptionInternalControlTO {
+    diameterSamples?: number[],
+    lengthSamples?: number[],
+    widthSamples?: number[],
+    weightSamples?: number[],
+    overallWeight?: number,
+    overallAcceptance?: boolean,
+}
+
 export interface MaterialOrderReceptionTO {
     id?: number,
     materialOrderId?: number,
+    materialOrderCode?: string,
     materialCode?: string,
     materialName?: string,
     materialProviderName?: string,
     /** ISO-8601 date-time of physical reception. */
     receivedAt?: string,
     receivedQuantity?: number,
+    internalControl?: MaterialOrderReceptionInternalControlTO,
 }
 
 export type EmailTemplateCode =
@@ -288,7 +306,8 @@ export interface PurchaseOrderTO {
     confirmedAt?: string,
     inProductionAt?: string,
     completedAt?: string,
-    deliveredAt?: string
+    deliveredAt?: string,
+    rejectedAt?: string,
 }
 
 /** Aggregated finished-good stock from work orders (external surplus + internal demand), per product. */

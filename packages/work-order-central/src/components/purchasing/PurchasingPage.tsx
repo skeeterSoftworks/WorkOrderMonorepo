@@ -24,8 +24,9 @@ import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import PublishedWithChangesOutlinedIcon from '@mui/icons-material/PublishedWithChangesOutlined';
+import BlockIcon from '@mui/icons-material/Block';
 import { useTranslation } from 'react-i18next';
-import { Server } from 'sf-common';
+import { Server, ConfirmationModal } from 'sf-common';
 import type {
     EmailTemplateCode,
     MaterialOrderStatus,
@@ -47,7 +48,59 @@ function formatMaterialOrderLastChanged(iso?: string): string {
 }
 
 function materialOrderStatusLocked(order: MaterialOrderTO): boolean {
-    return order.status === 'RECEIVED_IN_STOCK' || order.status === 'VALIDATED';
+    return (
+        order.status === 'RECEIVED_IN_STOCK'
+        || order.status === 'VALIDATED'
+        || order.status === 'REJECTED'
+    );
+}
+
+const MATERIAL_ORDER_STATUSES: MaterialOrderStatus[] = [
+    'ORDER_CREATED',
+    'ORDER_SENT',
+    'ORDER_ACKNOWLEDGED',
+    'ORDER_ACCEPTED',
+    'IN_TRANSPORT',
+    'RECEIVED_IN_STOCK',
+    'VALIDATED',
+    'REJECTED',
+];
+
+function toIsoDateInput(d: Date): string {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function currentMonthDateRange(): { from: string; to: string } {
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth(), 1);
+    const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return { from: toIsoDateInput(from), to: toIsoDateInput(to) };
+}
+
+function parseMaterialOrderCreatedAt(order: MaterialOrderTO): Date | null {
+    const iso = order.createdAt ?? order.lastChanged;
+    if (!iso) return null;
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function isCreatedWithinPeriod(created: Date | null, from: string, to: string): boolean {
+    if (!created) return false;
+    if (from) {
+        const start = new Date(`${from}T00:00:00`);
+        if (created < start) return false;
+    }
+    if (to) {
+        const end = new Date(`${to}T23:59:59.999`);
+        if (created > end) return false;
+    }
+    return true;
+}
+
+function canRejectMaterialOrder(order: MaterialOrderTO): boolean {
+    const status = order.status ?? 'ORDER_CREATED';
+    return status !== 'RECEIVED_IN_STOCK' && status !== 'VALIDATED' && status !== 'REJECTED';
 }
 
 const MATERIAL_ORDER_EMAIL_TEMPLATE_CODES: EmailTemplateCode[] = [
@@ -72,6 +125,21 @@ export function PurchasingPage() {
     const [emailPickProvider, setEmailPickProvider] = useState<MaterialProviderTO | undefined>(undefined);
     const [selectedEmailTemplate, setSelectedEmailTemplate] =
         useState<EmailTemplateCode>('MATERIAL_ORDER_INQUIRY');
+    const defaultMonthRange = useMemo(() => currentMonthDateRange(), []);
+    const [statusFilter, setStatusFilter] = useState<string>('ALL');
+    const [periodFrom, setPeriodFrom] = useState(defaultMonthRange.from);
+    const [periodTo, setPeriodTo] = useState(defaultMonthRange.to);
+    const [orderToReject, setOrderToReject] = useState<MaterialOrderTO | null>(null);
+
+    const filteredOrders = useMemo(() => {
+        return orders.filter((order) => {
+            const status = order.status ?? 'ORDER_CREATED';
+            if (statusFilter !== 'ALL' && status !== statusFilter) {
+                return false;
+            }
+            return isCreatedWithinPeriod(parseMaterialOrderCreatedAt(order), periodFrom, periodTo);
+        });
+    }, [orders, statusFilter, periodFrom, periodTo]);
 
     const selectedMaterial = useMemo(
         () => materials.find((m) => m.id === materialId),
@@ -206,6 +274,34 @@ export function PurchasingPage() {
         );
     };
 
+    const handleConfirmReject = () => {
+        if (!orderToReject?.id) {
+            setOrderToReject(null);
+            return;
+        }
+        Server.rejectMaterialOrder(
+            Number(orderToReject.id),
+            () => {
+                loadOrders();
+                setOrderToReject(null);
+                toastActionSuccess(t('toastMaterialOrderRejected'));
+            },
+            (err: unknown) => {
+                const body = (err as { response?: { data?: unknown } })?.response?.data;
+                const msg =
+                    body === 'MATERIAL_ORDER_HAS_RECEPTION'
+                        ? t('materialOrderHasReceptionCannotReject')
+                        : body === 'MATERIAL_ORDER_REJECT_NOT_ALLOWED'
+                          ? t('materialOrderRejectNotAllowed')
+                          : typeof body === 'string'
+                            ? body
+                            : t('msg_errorRejectingMaterialOrder');
+                setOrderToReject(null);
+                toastActionError(msg);
+            },
+        );
+    };
+
     const handleCreate = () => {
         if (!canCreate) return;
         const payload = {
@@ -245,10 +341,49 @@ export function PurchasingPage() {
             </Box>
 
             <Paper sx={{ p: 2 }}>
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2, alignItems: 'center' }}>
+                    <TextField
+                        select
+                        label={t('materialOrderStatusFilter')}
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        size="small"
+                        sx={{ minWidth: 180 }}
+                    >
+                        <MenuItem value="ALL">{t('materialOrderStatusFilterAll')}</MenuItem>
+                        {MATERIAL_ORDER_STATUSES.map((s) => (
+                            <MenuItem key={s} value={s}>
+                                {t(`materialOrderStatus_${s}`)}
+                            </MenuItem>
+                        ))}
+                    </TextField>
+                    <TextField
+                        label={t('dateFrom')}
+                        type="date"
+                        value={periodFrom}
+                        onChange={(e) => setPeriodFrom(e.target.value)}
+                        size="small"
+                        InputLabelProps={{ shrink: true }}
+                        sx={{ width: 160 }}
+                    />
+                    <TextField
+                        label={t('dateUntil')}
+                        type="date"
+                        value={periodTo}
+                        onChange={(e) => setPeriodTo(e.target.value)}
+                        size="small"
+                        InputLabelProps={{ shrink: true }}
+                        sx={{ width: 160 }}
+                    />
+                    <Typography variant="body2" color="text.secondary" sx={{ ml: { sm: 'auto' } }}>
+                        {t('materialOrderFilterCount', { count: filteredOrders.length, total: orders.length })}
+                    </Typography>
+                </Box>
                 <TableContainer>
                     <Table size="small">
                         <TableHead>
                             <TableRow>
+                                <TableCell>{t('materialOrderCode')}</TableCell>
                                 <TableCell>{t('materialName')}</TableCell>
                                 <TableCell>{t('materialProviderName')}</TableCell>
                                 <TableCell>{t('quantity')}</TableCell>
@@ -259,8 +394,8 @@ export function PurchasingPage() {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {orders.length > 0 ? (
-                                orders.map((o) => (
+                            {filteredOrders.length > 0 ? (
+                                filteredOrders.map((o) => (
                                     <TableRow
                                         key={o.id ?? `${o.materialId}-${o.materialProviderId}-${o.quantity}`}
                                         sx={{
@@ -269,6 +404,7 @@ export function PurchasingPage() {
                                                 : {}),
                                         }}
                                     >
+                                        <TableCell>{o.code || '—'}</TableCell>
                                         <TableCell>{o.materialName || o.materialCode || '—'}</TableCell>
                                         <TableCell>{o.materialProviderName || '—'}</TableCell>
                                         <TableCell>{o.quantity ?? 0}</TableCell>
@@ -279,6 +415,7 @@ export function PurchasingPage() {
                                             <IconButton
                                                 size="small"
                                                 title={t('emailMaterialOrder')}
+                                                disabled={o.status === 'REJECTED'}
                                                 onClick={() =>
                                                     openMaterialOrderEmailDialog(o, findProviderForOrder(o))
                                                 }
@@ -297,14 +434,22 @@ export function PurchasingPage() {
                                             >
                                                 <PublishedWithChangesOutlinedIcon fontSize="small" />
                                             </IconButton>
+                                            <IconButton
+                                                size="small"
+                                                title={t('rejectMaterialOrder')}
+                                                disabled={!canRejectMaterialOrder(o)}
+                                                onClick={() => setOrderToReject(o)}
+                                            >
+                                                <BlockIcon fontSize="small" />
+                                            </IconButton>
                                         </TableCell>
                                     </TableRow>
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={7}>
+                                    <TableCell colSpan={8}>
                                         <Typography variant="body2" color="text.secondary">
-                                            {t('noMaterialOrders')}
+                                            {orders.length === 0 ? t('noMaterialOrders') : t('materialOrderFilterEmpty')}
                                         </Typography>
                                     </TableCell>
                                 </TableRow>
@@ -463,6 +608,13 @@ export function PurchasingPage() {
                     </Box>
                 </DialogContent>
             </Dialog>
+
+            <ConfirmationModal
+                open={!!orderToReject}
+                modalMessage={t('confirmRejectMaterialOrder')}
+                onConfirm={handleConfirmReject}
+                onModalClose={() => setOrderToReject(null)}
+            />
         </Box>
     );
 }

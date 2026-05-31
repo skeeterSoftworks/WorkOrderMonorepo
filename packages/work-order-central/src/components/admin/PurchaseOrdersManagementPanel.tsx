@@ -22,6 +22,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import DownloadIcon from '@mui/icons-material/Download';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import BlockIcon from '@mui/icons-material/Block';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -48,6 +49,60 @@ const PURCHASE_ORDER_CURRENCIES = ['RSD', 'EUR'] as const;
 type PurchaseOrderCurrency = (typeof PURCHASE_ORDER_CURRENCIES)[number];
 type PurchaseOrderCurrencyField = PurchaseOrderCurrency | '';
 
+const PURCHASE_ORDER_STATUSES = [
+    'CREATED',
+    'CONFIRMED',
+    'IN_PRODUCTION',
+    'COMPLETED',
+    'DELIVERED',
+    'CANCELLED',
+    'REJECTED',
+] as const;
+
+function toIsoDateInput(d: Date): string {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function currentMonthDateRange(): { from: string; to: string } {
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth(), 1);
+    const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return { from: toIsoDateInput(from), to: toIsoDateInput(to) };
+}
+
+function parsePurchaseOrderCreatedAt(iso?: string): Date | null {
+    if (!iso) {
+        return null;
+    }
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function isCreatedWithinPeriod(created: Date | null, from: string, to: string): boolean {
+    if (!created) {
+        return false;
+    }
+    if (from) {
+        const start = new Date(`${from}T00:00:00`);
+        if (created < start) {
+            return false;
+        }
+    }
+    if (to) {
+        const end = new Date(`${to}T23:59:59.999`);
+        if (created > end) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function canRejectPurchaseOrder(order: LocalPurchaseOrder): boolean {
+    const status = order.orderStatus ?? 'CREATED';
+    return status === 'CREATED' || status === 'CONFIRMED';
+}
+
 function normalizePurchaseOrderCurrency(value: string | undefined | null): PurchaseOrderCurrency {
     const v = (value ?? '').trim().toUpperCase();
     return v === 'EUR' ? 'EUR' : 'RSD';
@@ -68,6 +123,8 @@ function purchaseOrderStatusLabel(status: string | undefined, translate: TFuncti
             return translate('stateDelivered');
         case 'CANCELLED':
             return translate('stateCancelled');
+        case 'REJECTED':
+            return translate('stateRejected');
         default:
             return status ?? '—';
     }
@@ -106,6 +163,11 @@ export function PurchaseOrdersManagementPanel() {
     const [detailsLoading, setDetailsLoading] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [deliveryTermsSelectOptions, setDeliveryTermsSelectOptions] = useState<string[]>([]);
+    const defaultMonthRange = useMemo(() => currentMonthDateRange(), []);
+    const [statusFilter, setStatusFilter] = useState<string>('ALL');
+    const [periodFrom, setPeriodFrom] = useState(defaultMonthRange.from);
+    const [periodTo, setPeriodTo] = useState(defaultMonthRange.to);
+    const [orderToReject, setOrderToReject] = useState<LocalPurchaseOrder | null>(null);
 
     useEffect(() => {
         loadOrders();
@@ -170,6 +232,16 @@ export function PurchaseOrdersManagementPanel() {
             selectedCustomerId === internalStockOrdererCustomerId,
         [internalStockOrdererCustomerId, selectedCustomerId],
     );
+
+    const filteredOrders = useMemo(() => {
+        return orders.filter((order) => {
+            const status = order.orderStatus ?? 'CREATED';
+            if (statusFilter !== 'ALL' && status !== statusFilter) {
+                return false;
+            }
+            return isCreatedWithinPeriod(parsePurchaseOrderCreatedAt(order.createdAt), periodFrom, periodTo);
+        });
+    }, [orders, statusFilter, periodFrom, periodTo]);
 
     /** Create flow: lock currency / delivery only when the preset internal orderer is selected. */
     const lockCreateDeliveryFields = !isEditingPurchaseOrder && internalStockOrdererSelected;
@@ -376,6 +448,38 @@ export function PurchaseOrdersManagementPanel() {
 
     const handleDeleteClick = (order: LocalPurchaseOrder) => {
         setOrderToDelete(order);
+    };
+
+    const handleRejectClick = (order: LocalPurchaseOrder) => {
+        setOrderToReject(order);
+    };
+
+    const handleConfirmReject = () => {
+        if (!orderToReject?.id) {
+            setOrderToReject(null);
+            return;
+        }
+        Server.rejectPurchaseOrder(
+            Number(orderToReject.id),
+            () => {
+                loadOrders();
+                setOrderToReject(null);
+                toastActionSuccess(t('toastPurchaseOrderRejected'));
+            },
+            (err: unknown) => {
+                const body = (err as { response?: { data?: unknown } })?.response?.data;
+                const msg =
+                    body === 'PURCHASE_ORDER_HAS_WORK_ORDER'
+                        ? t('purchaseOrderHasWorkOrderCannotReject')
+                        : body === 'PURCHASE_ORDER_REJECT_NOT_ALLOWED'
+                          ? t('purchaseOrderRejectNotAllowed')
+                          : typeof body === 'string'
+                            ? body
+                            : t('msg_errorRejectingPurchaseOrder');
+                setOrderToReject(null);
+                toastActionError(msg);
+            },
+        );
     };
 
     const handleConfirmDelete = () => {
@@ -630,6 +734,44 @@ export function PurchaseOrdersManagementPanel() {
             )}
 
             <Paper sx={{ p: 2 }}>
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2, alignItems: 'center' }}>
+                    <TextField
+                        select
+                        label={t('purchaseOrderStatusFilter')}
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        size="small"
+                        sx={{ minWidth: 180 }}
+                    >
+                        <MenuItem value="ALL">{t('purchaseOrderStatusFilterAll')}</MenuItem>
+                        {PURCHASE_ORDER_STATUSES.map((s) => (
+                            <MenuItem key={s} value={s}>
+                                {purchaseOrderStatusLabel(s, t)}
+                            </MenuItem>
+                        ))}
+                    </TextField>
+                    <TextField
+                        label={t('dateFrom')}
+                        type="date"
+                        value={periodFrom}
+                        onChange={(e) => setPeriodFrom(e.target.value)}
+                        size="small"
+                        InputLabelProps={{ shrink: true }}
+                        sx={{ width: 160 }}
+                    />
+                    <TextField
+                        label={t('dateUntil')}
+                        type="date"
+                        value={periodTo}
+                        onChange={(e) => setPeriodTo(e.target.value)}
+                        size="small"
+                        InputLabelProps={{ shrink: true }}
+                        sx={{ width: 160 }}
+                    />
+                    <Typography variant="body2" color="text.secondary" sx={{ ml: { sm: 'auto' } }}>
+                        {t('purchaseOrderFilterCount', { count: filteredOrders.length, total: orders.length })}
+                    </Typography>
+                </Box>
                 <TableContainer>
                     <Table size="small">
                         <TableHead>
@@ -649,7 +791,14 @@ export function PurchaseOrdersManagementPanel() {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {orders.map((order) => (
+                            {filteredOrders.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={10} align="center">
+                                        {t('purchaseOrderFilterEmpty')}
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                filteredOrders.map((order) => (
                                 <TableRow key={order.id}>
                                     <TableCell>{order.customer?.companyName}</TableCell>
                                     <TableCell>{catalogueSummary(order)}</TableCell>
@@ -677,8 +826,21 @@ export function PurchaseOrdersManagementPanel() {
                                                 onClick={() => handleEditClick(order)}
                                                 sx={tableActionIconButtonSx.edit}
                                                 title={t('editPurchaseOrder')}
+                                                disabled={
+                                                    order.orderStatus === 'REJECTED'
+                                                    || order.orderStatus === 'CANCELLED'
+                                                }
                                             >
                                                 <LinkIcon fontSize="small" />
+                                            </IconButton>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleRejectClick(order)}
+                                                sx={tableActionIconButtonSx.delete}
+                                                title={t('rejectPurchaseOrder')}
+                                                disabled={!canRejectPurchaseOrder(order)}
+                                            >
+                                                <BlockIcon fontSize="small" />
                                             </IconButton>
                                             <IconButton
                                                 size="small"
@@ -691,7 +853,8 @@ export function PurchaseOrdersManagementPanel() {
                                         </TableActionsRow>
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            ))
+                            )}
                         </TableBody>
                     </Table>
                 </TableContainer>
@@ -913,6 +1076,12 @@ export function PurchaseOrdersManagementPanel() {
                 onConfirm={handleConfirmDelete}
                 onModalClose={() => { setOrderToDelete(null); setDeleteError(null); }}
             />
+            <ConfirmationModal
+                open={!!orderToReject}
+                modalMessage={t('confirmRejectPurchaseOrder')}
+                onConfirm={handleConfirmReject}
+                onModalClose={() => setOrderToReject(null)}
+            />
             {deleteError && (
                 <Typography color="error" variant="body2" sx={{ mt: 1 }}>
                     {deleteError}
@@ -1004,6 +1173,7 @@ export function PurchaseOrdersManagementPanel() {
                                     { key: 'IN_PRODUCTION', label: t('stateInProduction'), time: detailsOrder.inProductionAt, emptyLabel: t('notYet') },
                                     { key: 'COMPLETED', label: t('stateCompleted'), time: detailsOrder.completedAt },
                                     { key: 'DELIVERED', label: t('stateDelivered'), time: detailsOrder.deliveredAt },
+                                    { key: 'REJECTED', label: t('stateRejected'), time: detailsOrder.rejectedAt },
                                 ].map((item) => {
                                     const isCurrent = (detailsOrder.orderStatus ?? 'CREATED') === item.key;
                                     return (

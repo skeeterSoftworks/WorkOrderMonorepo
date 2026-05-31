@@ -153,11 +153,13 @@ function productOrderLabel(po: PurchaseOrderTO, line: ProductOrderTO): string {
 }
 
 function staleMaterialOrderLabel(o: MaterialOrderTO): string {
+    const orderCode = o.code?.trim();
     const material =
         o.materialName?.trim() || o.materialCode?.trim() || `#${o.materialId ?? '?'}`;
     const provider =
         o.materialProviderName?.trim() || `#${o.materialProviderId ?? '?'}`;
-    return `${material} · ${provider}`;
+    const core = `${material} · ${provider}`;
+    return orderCode ? `${orderCode} — ${core}` : core;
 }
 
 export function WorkOrdersHealthPanel() {

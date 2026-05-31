@@ -145,6 +145,15 @@ export class Server {
             });
     }
 
+    static rejectPurchaseOrder(id: number, onSuccess: Function, onError: Function) {
+        axios.post(`${getServerUrl()}/purchaseorder/${id}/reject`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
     static getAllWorkOrders(onSuccess: Function, onError: Function) {
         axios.get(`${getServerUrl()}/workorders/all`)
             .then(response => onSuccess(response))
@@ -341,6 +350,15 @@ export class Server {
         onError: Function,
     ) {
         axios.post(`${getServerUrl()}/material-orders/${id}/transition-status`, { status })
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static rejectMaterialOrder(id: number, onSuccess: Function, onError: Function) {
+        axios.post(`${getServerUrl()}/material-orders/${id}/reject`)
             .then(response => onSuccess(response))
             .catch(error => {
                 console.log(error);

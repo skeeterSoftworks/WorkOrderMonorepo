@@ -1,5 +1,6 @@
 {
   "materialName": "Material name",
+  "materialOrderCode": "Order no.",
   "addMachine": "Add machine",
   "addTool": "Add tool",
   "toolsCount": "Tools count",

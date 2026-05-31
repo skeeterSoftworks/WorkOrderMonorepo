@@ -122,6 +122,7 @@ export function IncomingMaterialReceptionPage() {
                         <Table size="small">
                             <TableHead>
                                 <TableRow>
+                                    <TableCell>{t('materialOrderCode')}</TableCell>
                                     <TableCell>{t('materialName')}</TableCell>
                                     <TableCell>{t('materialProviderName')}</TableCell>
                                     <TableCell>{t('quantity')}</TableCell>
@@ -132,13 +133,14 @@ export function IncomingMaterialReceptionPage() {
                             <TableBody>
                                 {orders.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={5} align="center">
+                                        <TableCell colSpan={6} align="center">
                                             {t('incomingMaterialNoOrders')}
                                         </TableCell>
                                     </TableRow>
                                 ) : (
                                     orders.map((o) => (
                                         <TableRow key={o.id}>
+                                            <TableCell>{o.code || '—'}</TableCell>
                                             <TableCell>{o.materialName || o.materialCode || '—'}</TableCell>
                                             <TableCell>{o.materialProviderName || '—'}</TableCell>
                                             <TableCell>{o.quantity ?? 0}</TableCell>
@@ -167,6 +169,7 @@ export function IncomingMaterialReceptionPage() {
                 <DialogTitle>{t('receiveMaterialDialogTitle')}</DialogTitle>
                 <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
                     <Typography variant="body2" color="text.secondary">
+                        {selectedOrder?.code ? `${selectedOrder.code} — ` : ''}
                         {selectedOrder?.materialName || selectedOrder?.materialCode} —{' '}
                         {selectedOrder?.materialProviderName}
                     </Typography>
