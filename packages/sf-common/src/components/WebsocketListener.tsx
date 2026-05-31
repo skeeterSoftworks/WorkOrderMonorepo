@@ -4,8 +4,6 @@ import {Client} from '@stomp/stompjs';
 import {addToAppStore, clearQrData} from "../actions/Actions";
 import {SOCKET_URL} from "../constants/Constants";
 
-let stompClient: any;
-
 type Props = {
     onMessage: Function,
     onConnect?: Function,
@@ -18,9 +16,8 @@ export function WebsocketListener(props: Props) {
     const dispatch = useDispatch();
 
     useEffect(() => {
-
-        stompClient = new Client({
-            brokerURL: props.socketUrl,
+        const stomp = new Client({
+            brokerURL: props.socketUrl || SOCKET_URL,
             reconnectDelay: 2000,
             onConnect: () => {
 
@@ -28,23 +25,24 @@ export function WebsocketListener(props: Props) {
 
                 dispatch(addToAppStore("socketConnected", true));
 
-                props.onConnect && props.onConnect()
+                props.onConnect?.();
 
-                stompClient.unsubscribe("sub-0");
-                stompClient.subscribe("/websocket/message", (messageRaw) => {
+                stomp.subscribe("/websocket/message", (messageRaw) => {
                     messageRaw && props.onMessage(JSON.parse(messageRaw.body))
-
-                })
+                });
             },
             onWebSocketClose: () => {
                 console.error("Websocket closed!")
                 dispatch(addToAppStore("socketConnected", false));
                 dispatch(clearQrData())
-                props.onWebsocketClose && props.onWebsocketClose()
+                props.onWebsocketClose?.();
             }
-        })
-        stompClient.activate();
-    });
+        });
+        stomp.activate();
+        return () => {
+            stomp.deactivate();
+        };
+    }, [props.socketUrl, dispatch]);
 
     return (
         <div/>

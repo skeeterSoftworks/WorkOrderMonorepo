@@ -92,6 +92,17 @@ export interface MaterialOrderTO {
     certificatePresent?: boolean,
 }
 
+export interface MaterialOrderReceptionTO {
+    id?: number,
+    materialOrderId?: number,
+    materialCode?: string,
+    materialName?: string,
+    materialProviderName?: string,
+    /** ISO-8601 date-time of physical reception. */
+    receivedAt?: string,
+    receivedQuantity?: number,
+}
+
 export type EmailTemplateCode =
     | 'MATERIAL_ORDER_INQUIRY'
     | 'MATERIAL_ORDER_REMINDER'
