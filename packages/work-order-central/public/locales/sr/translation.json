@@ -522,6 +522,8 @@
   "materialName": "Materijal",
   "materialCode": "Šifra materijala",
   "materialProductsPerUnit": "Komada po jedinici",
+  "materialDimensionsHint": "Unesite bar jedno od polja: prečnik, težina, dužina ili širina.",
+  "materialDimensionsRequired": "Obavezno je bar jedno od polja: prečnik, težina, dužina ili širina.",
   "materialProviderName": "Dobavljač",
   "materialProviderContact": "Kontakt osoba",
   "materialProviderEmail": "Email",

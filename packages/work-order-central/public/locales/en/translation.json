@@ -522,6 +522,8 @@
   "materialName": "Material name",
   "materialCode": "Material code",
   "materialProductsPerUnit": "Products per unit",
+  "materialDimensionsHint": "Enter at least one of diameter, weight, length, or width.",
+  "materialDimensionsRequired": "At least one of diameter, weight, length, or width is required.",
   "materialProviderName": "Provider name",
   "materialProviderContact": "Contact person",
   "materialProviderEmail": "Email",

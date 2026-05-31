@@ -15,16 +15,18 @@ import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import Alert from '@mui/material/Alert';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
+import FormHelperText from '@mui/material/FormHelperText';
 import MenuItem from '@mui/material/MenuItem';
 import CloseIcon from '@mui/icons-material/Close';
 import { alpha } from '@mui/material/styles';
 import type { MaterialProviderTO, MaterialTO, ProductTO } from 'sf-common/src/models/ApiRequests';
 import { Server, ConfirmationModal } from 'sf-common';
 import { useTranslation } from 'react-i18next';
-import { toastActionSuccess, toastServerError } from '../../util/actionToast';
+import { toastActionError, toastActionSuccess, toastServerError } from '../../util/actionToast';
 import { TableActionsRow, tableActionsTableCellSx, tableActionIconButtonSx } from '../shared/tableActions';
 import { filterDecimalNumericInput, parseDecimalNumericInputToNumber } from 'sf-common/src/util/DataUtils';
 
@@ -36,6 +38,17 @@ function providerKey(p: MaterialProviderTO): string {
 function materialProvidersOf(m: MaterialTO): MaterialProviderTO[] {
     if (Array.isArray(m.providers)) return m.providers;
     return m.provider ? [m.provider] : [];
+}
+
+function hasAtLeastOneMaterialDimension(
+    diameter: string,
+    weight: string,
+    length: string,
+    width: string,
+): boolean {
+    return [diameter, weight, length, width].some(
+        (v) => parseDecimalNumericInputToNumber(v) !== undefined,
+    );
 }
 
 export function MaterialProvidersManagementPanel() {
@@ -60,6 +73,18 @@ export function MaterialProvidersManagementPanel() {
     const [materialLength, setMaterialLength] = useState('');
     const [materialWidth, setMaterialWidth] = useState('');
     const [materialProviderKeysSelected, setMaterialProviderKeysSelected] = useState<string[]>([]);
+    const [materialDimensionsShowError, setMaterialDimensionsShowError] = useState(false);
+
+    const materialDimensionsValid = useMemo(
+        () =>
+            hasAtLeastOneMaterialDimension(
+                materialDiameter,
+                materialWeight,
+                materialLength,
+                materialWidth,
+            ),
+        [materialDiameter, materialWeight, materialLength, materialWidth],
+    );
 
     const sortedProviders = useMemo(
         () => [...providers].sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '')),
@@ -252,6 +277,15 @@ export function MaterialProvidersManagementPanel() {
         setMaterialLength('');
         setMaterialWidth('');
         setMaterialProviderKeysSelected([]);
+        setMaterialDimensionsShowError(false);
+    };
+
+    const onMaterialDimensionChange = (
+        setter: (v: string) => void,
+        value: string,
+    ) => {
+        setter(filterDecimalNumericInput(value));
+        setMaterialDimensionsShowError(false);
     };
 
     const openMaterialsDialog = (provider: MaterialProviderTO) => {
@@ -265,6 +299,11 @@ export function MaterialProvidersManagementPanel() {
 
     const addOrUpdateMaterial = () => {
         if (!materialName.trim() || !materialCode.trim() || !materialProductsPerUnit.trim() || materialProviderKeysSelected.length === 0) {
+            return;
+        }
+        if (!materialDimensionsValid) {
+            setMaterialDimensionsShowError(true);
+            toastActionError(t('materialDimensionsRequired'));
             return;
         }
         const selectedProviders = materialProviderKeysSelected
@@ -432,11 +471,49 @@ export function MaterialProvidersManagementPanel() {
                             <TextField required label={t('materialCode')} value={materialCode} onChange={(e) => setMaterialCode(e.target.value)} size="small" sx={{ flex: '1 1 160px' }} />
                             <TextField required label={t('materialProductsPerUnit')} value={materialProductsPerUnit} onChange={(e) => setMaterialProductsPerUnit(e.target.value.replace(/[^\d]/g, ''))} size="small" sx={{ width: 180 }} />
                         </Box>
-                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                            <TextField label={t('diameterMeasurement')} value={materialDiameter} onChange={(e) => setMaterialDiameter(filterDecimalNumericInput(e.target.value))} size="small" sx={{ width: 130 }} />
-                            <TextField label={t('weight')} value={materialWeight} onChange={(e) => setMaterialWeight(filterDecimalNumericInput(e.target.value))} size="small" sx={{ width: 130 }} />
-                            <TextField label={t('length')} value={materialLength} onChange={(e) => setMaterialLength(filterDecimalNumericInput(e.target.value))} size="small" sx={{ width: 130 }} />
-                            <TextField label={t('width')} value={materialWidth} onChange={(e) => setMaterialWidth(filterDecimalNumericInput(e.target.value))} size="small" sx={{ width: 130 }} />
+                        <Alert severity="info" sx={{ py: 0.5 }}>
+                            {t('materialDimensionsHint')}
+                        </Alert>
+                        <Box>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                <TextField
+                                    label={t('diameterMeasurement')}
+                                    value={materialDiameter}
+                                    onChange={(e) => onMaterialDimensionChange(setMaterialDiameter, e.target.value)}
+                                    size="small"
+                                    sx={{ width: 130 }}
+                                    error={materialDimensionsShowError && !materialDimensionsValid}
+                                />
+                                <TextField
+                                    label={t('weight')}
+                                    value={materialWeight}
+                                    onChange={(e) => onMaterialDimensionChange(setMaterialWeight, e.target.value)}
+                                    size="small"
+                                    sx={{ width: 130 }}
+                                    error={materialDimensionsShowError && !materialDimensionsValid}
+                                />
+                                <TextField
+                                    label={t('length')}
+                                    value={materialLength}
+                                    onChange={(e) => onMaterialDimensionChange(setMaterialLength, e.target.value)}
+                                    size="small"
+                                    sx={{ width: 130 }}
+                                    error={materialDimensionsShowError && !materialDimensionsValid}
+                                />
+                                <TextField
+                                    label={t('width')}
+                                    value={materialWidth}
+                                    onChange={(e) => onMaterialDimensionChange(setMaterialWidth, e.target.value)}
+                                    size="small"
+                                    sx={{ width: 130 }}
+                                    error={materialDimensionsShowError && !materialDimensionsValid}
+                                />
+                            </Box>
+                            {materialDimensionsShowError && !materialDimensionsValid && (
+                                <FormHelperText error sx={{ mx: 1.75 }}>
+                                    {t('materialDimensionsRequired')}
+                                </FormHelperText>
+                            )}
                         </Box>
                         <TextField
                             select
