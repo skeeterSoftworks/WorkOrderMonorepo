@@ -1,4 +1,5 @@
 import type {
+    MaterialOrderReceptionInternalControlTO,
     MaterialOrderReceptionTO,
     MaterialOrderTO,
     StockLocationTO,
@@ -276,6 +277,43 @@ export class Server {
                     toast.error(i18n.t(msg, { defaultValue: msg }));
                 } else {
                     toast.error(i18n.t("toastMaterialOrderReceptionError"));
+                }
+                onError && onError(error);
+            });
+    }
+
+    static getMaterialOrderReceptionsPendingValidation(onSuccess: Function, onError?: Function) {
+        axios.get<MaterialOrderReceptionTO[]>(`${getServerUrl()}/material-order-receptions/pending-validation`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError && onError(error);
+            });
+    }
+
+    static submitMaterialOrderInternalControl(
+        receptionId: number,
+        body: MaterialOrderReceptionInternalControlTO,
+        onSuccess: Function,
+        onError?: Function,
+    ) {
+        axios.post<MaterialOrderReceptionTO>(
+            `${getServerUrl()}/material-order-receptions/${receptionId}/submit-internal-control`,
+            body,
+        )
+            .then(response => {
+                toast.success(i18n.t("toastMaterialOrderValidated"));
+                onSuccess(response);
+            })
+            .catch(error => {
+                console.log(error);
+                const msg = error?.response?.data;
+                if (typeof msg === "string" && msg.startsWith("MATERIAL_ORDER_RECEPTION_SAMPLES")) {
+                    toast.error(i18n.t("materialInternalControlSamplesRequired"));
+                } else if (typeof msg === "string" && msg.length > 0) {
+                    toast.error(i18n.t(msg, { defaultValue: msg }));
+                } else {
+                    toast.error(i18n.t("toastMaterialOrderValidationError"));
                 }
                 onError && onError(error);
             });

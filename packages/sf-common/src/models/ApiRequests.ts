@@ -67,6 +67,11 @@ export interface StockLocationTO {
     stockedMaterials?: StockedMaterialTO[],
 }
 
+export interface MaterialReceptionStockAllocationTO {
+    stockLocationId?: number,
+    quantity?: number,
+}
+
 export type MaterialOrderStatus =
     | 'ORDER_CREATED'
     | 'ORDER_SENT'
@@ -97,6 +102,14 @@ export interface MaterialOrderTO {
     /** Raw Base64 or data URL for upload. */
     certificateBase64?: string,
     certificatePresent?: boolean,
+    /** Nominal diameter from linked material (0 = not defined). */
+    materialDiameter?: number,
+    /** Nominal weight from linked material (0 = not defined). */
+    materialWeight?: number,
+    /** Nominal length from linked material (0 = not defined). */
+    materialLength?: number,
+    /** Nominal width from linked material (0 = not defined). */
+    materialWidth?: number,
 }
 
 export interface MaterialOrderReceptionInternalControlTO {
@@ -119,6 +132,16 @@ export interface MaterialOrderReceptionTO {
     receivedAt?: string,
     receivedQuantity?: number,
     internalControl?: MaterialOrderReceptionInternalControlTO,
+    /** Nominal diameter from linked material (0 = not defined). */
+    materialDiameter?: number,
+    /** Nominal weight from linked material (0 = not defined). */
+    materialWeight?: number,
+    /** Nominal length from linked material (0 = not defined). */
+    materialLength?: number,
+    /** Nominal width from linked material (0 = not defined). */
+    materialWidth?: number,
+    /** Quantities to place at stock locations; sum must equal receivedQuantity. */
+    stockAllocations?: MaterialReceptionStockAllocationTO[],
 }
 
 export type EmailTemplateCode =
