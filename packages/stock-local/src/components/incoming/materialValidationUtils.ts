@@ -66,13 +66,41 @@ export function sampleInputsFromInternalControl(
     return next;
 }
 
+export type InternalControlSubmitData = {
+    samples: SampleInputs;
+    overallWeight: string;
+    overallAcceptance: boolean;
+};
+
+export function parseOverallWeight(raw: string): number | undefined {
+    const n = Number.parseFloat(raw.trim());
+    return Number.isFinite(n) ? n : undefined;
+}
+
+export function isOverallWeightValid(raw: string): boolean {
+    return parseOverallWeight(raw) != null;
+}
+
+export function overallFieldsFromInternalControl(ic: MaterialOrderReceptionInternalControlTO | undefined): {
+    overallWeight: string;
+    overallAcceptance: boolean | null;
+} {
+    return {
+        overallWeight: ic?.overallWeight != null ? String(ic.overallWeight) : '',
+        overallAcceptance: ic?.overallAcceptance ?? null,
+    };
+}
+
 export function buildInternalControlPayload(
     source: MaterialOrderReceptionTO | MaterialOrderTO,
-    samples: SampleInputs,
+    form: InternalControlSubmitData,
 ): MaterialOrderReceptionInternalControlTO {
-    const payload: MaterialOrderReceptionInternalControlTO = {};
+    const payload: MaterialOrderReceptionInternalControlTO = {
+        overallWeight: parseOverallWeight(form.overallWeight),
+        overallAcceptance: form.overallAcceptance,
+    };
     for (const key of getDefinedMaterialDimensions(source)) {
-        const parsed = samples[key].map((raw) => Number.parseFloat(raw.trim()));
+        const parsed = form.samples[key].map((raw) => Number.parseFloat(raw.trim()));
         if (key === 'diameter') payload.diameterSamples = parsed;
         if (key === 'length') payload.lengthSamples = parsed;
         if (key === 'width') payload.widthSamples = parsed;
@@ -91,6 +119,19 @@ export function areRequiredSamplesComplete(
             if (!Number.isFinite(n)) return false;
         }
     }
+    return true;
+}
+
+export function isInternalControlFormComplete(
+    source: MaterialOrderReceptionTO | MaterialOrderTO,
+    samples: SampleInputs,
+    overallWeight: string,
+    overallAcceptance: boolean | null,
+): boolean {
+    if (!isOverallWeightValid(overallWeight)) return false;
+    if (overallAcceptance === null) return false;
+    const dimensions = getDefinedMaterialDimensions(source);
+    if (dimensions.length > 0 && !areRequiredSamplesComplete(source, samples)) return false;
     return true;
 }
 

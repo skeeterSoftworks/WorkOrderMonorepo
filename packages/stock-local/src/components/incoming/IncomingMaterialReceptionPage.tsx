@@ -31,7 +31,7 @@ import { ReceiveMaterialStockAllocationSection } from './ReceiveMaterialStockAll
 import {
     buildInternalControlPayload,
     orderToReceptionContext,
-    type SampleInputs,
+    type InternalControlSubmitData,
 } from './materialValidationUtils';
 import {
     buildStockAllocationsPayload,
@@ -212,12 +212,12 @@ export function IncomingMaterialReceptionPage() {
         );
     };
 
-    const submitInternalControl = (samples: SampleInputs) => {
+    const submitInternalControl = (form: InternalControlSubmitData) => {
         if (!validationReception?.id) return;
         setSubmittingValidation(true);
         Server.submitMaterialOrderInternalControl(
             validationReception.id,
-            buildInternalControlPayload(validationReception, samples),
+            buildInternalControlPayload(validationReception, form),
             () => {
                 setSubmittingValidation(false);
                 closeValidationDialog();
@@ -231,34 +231,9 @@ export function IncomingMaterialReceptionPage() {
 
     return (
         <Box sx={{ py: 2 }}>
-            <Box
-                sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 1,
-                    mb: 1,
-                }}
-            >
-                <Typography variant="h5" component="h1" sx={{ mb: 0 }}>
-                    {t('incomingMaterialReception')}
-                </Typography>
-                <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={handleRefresh}
-                    disabled={loading || refreshing}
-                    startIcon={
-                        refreshing ? (
-                            <CircularProgress size={16} color="inherit" />
-                        ) : (
-                            <RefreshIcon />
-                        )
-                    }
-                >
-                    {t('synchronizeTable')}
-                </Button>
-            </Box>
+            <Typography variant="h5" component="h1" gutterBottom>
+                {t('incomingMaterialReception')}
+            </Typography>
             <Button component={RouterLink} to="/" sx={{ mb: 2 }}>
                 {t('backToHome')}
             </Button>
@@ -383,6 +358,25 @@ export function IncomingMaterialReceptionPage() {
                         </TableContainer>
                     </Paper>
                 </>
+            )}
+            {!loading && (
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                    <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={handleRefresh}
+                        disabled={refreshing}
+                        startIcon={
+                            refreshing ? (
+                                <CircularProgress size={16} color="inherit" />
+                            ) : (
+                                <RefreshIcon />
+                            )
+                        }
+                    >
+                        {t('synchronizeTable')}
+                    </Button>
+                </Box>
             )}
 
             <Dialog open={selectedOrder != null} onClose={closeReceiveDialog} maxWidth="md" fullWidth>

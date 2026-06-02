@@ -6,16 +6,23 @@ import {
     DialogActions,
     DialogContent,
     DialogTitle,
+    FormControl,
+    FormControlLabel,
+    FormLabel,
+    Radio,
+    RadioGroup,
     TextField,
     Typography,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import type { MaterialOrderReceptionTO } from 'sf-common/src/models/ApiRequests';
 import {
-    areRequiredSamplesComplete,
     emptySampleInputs,
     getDefinedMaterialDimensions,
     getNominalDimensionValue,
+    isInternalControlFormComplete,
+    overallFieldsFromInternalControl,
+    type InternalControlSubmitData,
     type MaterialDimensionKey,
     type SampleInputs,
     sampleInputsFromInternalControl,
@@ -33,7 +40,7 @@ type Props = {
     reception: MaterialOrderReceptionTO | null;
     submitting?: boolean;
     onClose: () => void;
-    onSubmit: (samples: SampleInputs) => void;
+    onSubmit: (form: InternalControlSubmitData) => void;
     onMeasureLater: () => void;
 };
 
@@ -47,6 +54,8 @@ export function MaterialInternalControlDialog({
 }: Props) {
     const { t } = useTranslation();
     const [samples, setSamples] = useState<SampleInputs>(emptySampleInputs());
+    const [overallWeight, setOverallWeight] = useState('');
+    const [overallAcceptance, setOverallAcceptance] = useState<boolean | null>(null);
 
     const definedDimensions = useMemo(
         () => (reception ? getDefinedMaterialDimensions(reception) : []),
@@ -56,14 +65,19 @@ export function MaterialInternalControlDialog({
     useEffect(() => {
         if (!open || !reception) {
             setSamples(emptySampleInputs());
+            setOverallWeight('');
+            setOverallAcceptance(null);
             return;
         }
         setSamples(sampleInputsFromInternalControl(reception.internalControl));
+        const overall = overallFieldsFromInternalControl(reception.internalControl);
+        setOverallWeight(overall.overallWeight);
+        setOverallAcceptance(overall.overallAcceptance);
     }, [open, reception]);
 
     const canSubmit =
         reception != null &&
-        (definedDimensions.length === 0 || areRequiredSamplesComplete(reception, samples));
+        isInternalControlFormComplete(reception, samples, overallWeight, overallAcceptance);
 
     const updateSample = (dimension: MaterialDimensionKey, index: number, value: string) => {
         setSamples((prev) => {
@@ -109,6 +123,35 @@ export function MaterialInternalControlDialog({
                         );
                     })
                 )}
+                <TextField
+                    label={t('overallWeight')}
+                    type="number"
+                    size="small"
+                    required
+                    value={overallWeight}
+                    onChange={(e) => setOverallWeight(e.target.value)}
+                    inputProps={{ step: 'any', min: 0 }}
+                    fullWidth
+                />
+                <FormControl component="fieldset" variant="standard" required>
+                    <FormLabel component="legend">{t('overallAcceptance')}</FormLabel>
+                    <RadioGroup
+                        row
+                        value={overallAcceptance === null ? '' : overallAcceptance ? 'accepted' : 'rejected'}
+                        onChange={(e) => setOverallAcceptance(e.target.value === 'accepted')}
+                    >
+                        <FormControlLabel
+                            value="accepted"
+                            control={<Radio size="small" />}
+                            label={t('overallAcceptanceAccepted')}
+                        />
+                        <FormControlLabel
+                            value="rejected"
+                            control={<Radio size="small" />}
+                            label={t('overallAcceptanceRejected')}
+                        />
+                    </RadioGroup>
+                </FormControl>
             </DialogContent>
             <DialogActions sx={{ px: 3, pb: 2 }}>
                 <Button onClick={onMeasureLater} disabled={submitting}>
@@ -121,7 +164,10 @@ export function MaterialInternalControlDialog({
                 <Button
                     variant="contained"
                     disabled={submitting || !canSubmit}
-                    onClick={() => onSubmit(samples)}
+                    onClick={() => {
+                        if (overallAcceptance === null) return;
+                        onSubmit({ samples, overallWeight, overallAcceptance });
+                    }}
                 >
                     {t('submitInternalControl')}
                 </Button>
