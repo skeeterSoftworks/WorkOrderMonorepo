@@ -15,6 +15,7 @@ import type {
     StockLocationTO,
     MaterialOrderTO,
     MaterialOrderStatus,
+    MaterialOrderCertificateTO,
     EmailTemplateTO,
     EmailTemplateCode,
     RenderedEmailTO,
@@ -359,6 +360,31 @@ export class Server {
 
     static rejectMaterialOrder(id: number, onSuccess: Function, onError: Function) {
         axios.post(`${getServerUrl()}/material-orders/${id}/reject`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static getMaterialOrderCertificate(id: number, onSuccess: Function, onError: Function) {
+        axios.get<MaterialOrderCertificateTO>(`${getServerUrl()}/material-orders/${id}/certificate`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static uploadMaterialOrderCertificate(
+        id: number,
+        certificateBase64: string,
+        onSuccess: Function,
+        onError: Function,
+    ) {
+        axios.post<MaterialOrderTO>(`${getServerUrl()}/material-orders/${id}/certificate`, {
+            certificateBase64,
+        })
             .then(response => onSuccess(response))
             .catch(error => {
                 console.log(error);

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
@@ -25,6 +25,8 @@ import AddIcon from '@mui/icons-material/Add';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import PublishedWithChangesOutlinedIcon from '@mui/icons-material/PublishedWithChangesOutlined';
 import BlockIcon from '@mui/icons-material/Block';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import { useTranslation } from 'react-i18next';
 import { Server, ConfirmationModal } from 'sf-common';
 import type {
@@ -39,6 +41,13 @@ import {
     isMaterialOrderStaleForMonitoring,
     MATERIAL_ORDER_MANUAL_TRANSITION_STATUSES,
 } from '../../util/materialOrderStale';
+import { MaterialOrderCertificateViewDialog } from './MaterialOrderCertificateViewDialog';
+
+const CERTIFICATE_ACCEPT = 'application/pdf,image/*';
+
+function canUploadCertificate(order: MaterialOrderTO): boolean {
+    return order.status !== 'REJECTED';
+}
 
 function formatMaterialOrderLastChanged(iso?: string): string {
     if (!iso) return '—';
@@ -130,6 +139,13 @@ export function PurchasingPage() {
     const [periodFrom, setPeriodFrom] = useState(defaultMonthRange.from);
     const [periodTo, setPeriodTo] = useState(defaultMonthRange.to);
     const [orderToReject, setOrderToReject] = useState<MaterialOrderTO | null>(null);
+    const certificateFileInputRef = useRef<HTMLInputElement>(null);
+    const [certificateUploadOrder, setCertificateUploadOrder] = useState<MaterialOrderTO | null>(null);
+    const [uploadingCertificateId, setUploadingCertificateId] = useState<number | null>(null);
+    const [certificateViewOrder, setCertificateViewOrder] = useState<MaterialOrderTO | null>(null);
+    const [certificateViewUrl, setCertificateViewUrl] = useState<string | undefined>(undefined);
+    const [certificateViewLoading, setCertificateViewLoading] = useState(false);
+    const [certificateViewError, setCertificateViewError] = useState(false);
 
     const filteredOrders = useMemo(() => {
         return orders.filter((order) => {
@@ -302,6 +318,86 @@ export function PurchasingPage() {
         );
     };
 
+    const openCertificateView = (order: MaterialOrderTO) => {
+        if (order.id == null || !Number.isFinite(order.id)) return;
+        setCertificateViewOrder(order);
+        setCertificateViewUrl(undefined);
+        setCertificateViewLoading(true);
+        setCertificateViewError(false);
+        Server.getMaterialOrderCertificate(
+            order.id,
+            (response: unknown) => {
+                const data = (response as { data?: { certificateBase64?: string } })?.data;
+                setCertificateViewUrl(data?.certificateBase64);
+                setCertificateViewLoading(false);
+                setCertificateViewError(!data?.certificateBase64);
+            },
+            () => {
+                setCertificateViewLoading(false);
+                setCertificateViewError(true);
+            },
+        );
+    };
+
+    const closeCertificateView = () => {
+        setCertificateViewOrder(null);
+        setCertificateViewUrl(undefined);
+        setCertificateViewLoading(false);
+        setCertificateViewError(false);
+    };
+
+    const triggerCertificateUpload = (order: MaterialOrderTO) => {
+        if (!canUploadCertificate(order) || order.id == null) return;
+        setCertificateUploadOrder(order);
+        certificateFileInputRef.current?.click();
+    };
+
+    const handleCertificateFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        const order = certificateUploadOrder;
+        event.target.value = '';
+        setCertificateUploadOrder(null);
+        if (!file || order?.id == null) return;
+
+        const isPdf =
+            file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+        const isImage = file.type.startsWith('image/');
+        if (!isPdf && !isImage) {
+            toastActionError(t('materialOrderCertificateInvalidType'));
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            const dataUrl = reader.result;
+            if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) {
+                toastActionError(t('materialOrderCertificateInvalidType'));
+                return;
+            }
+            setUploadingCertificateId(order.id!);
+            Server.uploadMaterialOrderCertificate(
+                order.id!,
+                dataUrl,
+                () => {
+                    setUploadingCertificateId(null);
+                    loadOrders();
+                    toastActionSuccess(t('toastMaterialOrderCertificateUploaded'));
+                },
+                (err: unknown) => {
+                    setUploadingCertificateId(null);
+                    const body = (err as { response?: { data?: unknown } })?.response?.data;
+                    const msg =
+                        typeof body === 'string' && body.length > 0
+                            ? t(body, { defaultValue: body })
+                            : t('materialOrderCertificateUploadError');
+                    toastActionError(msg);
+                },
+            );
+        };
+        reader.onerror = () => toastActionError(t('materialOrderCertificateUploadError'));
+        reader.readAsDataURL(file);
+    };
+
     const handleCreate = () => {
         if (!canCreate) return;
         const payload = {
@@ -410,7 +506,31 @@ export function PurchasingPage() {
                                         <TableCell>{o.quantity ?? 0}</TableCell>
                                         <TableCell>{o.status ? t(`materialOrderStatus_${o.status}`) : '—'}</TableCell>
                                         <TableCell>{formatMaterialOrderLastChanged(o.lastChanged)}</TableCell>
-                                        <TableCell>{o.certificatePresent ? t('yes') : t('no')}</TableCell>
+                                        <TableCell align="center">
+                                            {o.certificatePresent ? (
+                                                <IconButton
+                                                    size="small"
+                                                    title={t('viewCertificate')}
+                                                    disabled={o.id == null}
+                                                    onClick={() => openCertificateView(o)}
+                                                >
+                                                    <VisibilityIcon fontSize="small" />
+                                                </IconButton>
+                                            ) : (
+                                                <IconButton
+                                                    size="small"
+                                                    title={t('uploadCertificate')}
+                                                    disabled={
+                                                        o.id == null
+                                                        || !canUploadCertificate(o)
+                                                        || uploadingCertificateId === o.id
+                                                    }
+                                                    onClick={() => triggerCertificateUpload(o)}
+                                                >
+                                                    <UploadFileIcon fontSize="small" />
+                                                </IconButton>
+                                            )}
+                                        </TableCell>
                                         <TableCell align="right">
                                             <IconButton
                                                 size="small"
@@ -614,6 +734,27 @@ export function PurchasingPage() {
                 modalMessage={t('confirmRejectMaterialOrder')}
                 onConfirm={handleConfirmReject}
                 onModalClose={() => setOrderToReject(null)}
+            />
+
+            <input
+                ref={certificateFileInputRef}
+                type="file"
+                accept={CERTIFICATE_ACCEPT}
+                style={{ display: 'none' }}
+                onChange={handleCertificateFileSelected}
+            />
+
+            <MaterialOrderCertificateViewDialog
+                open={certificateViewOrder != null}
+                title={
+                    certificateViewOrder?.code
+                        ? t('materialOrderCertificateTitle', { code: certificateViewOrder.code })
+                        : t('materialOrderCertificateTitleGeneric')
+                }
+                certificateUrl={certificateViewUrl}
+                loading={certificateViewLoading}
+                loadError={certificateViewError}
+                onClose={closeCertificateView}
             />
         </Box>
     );

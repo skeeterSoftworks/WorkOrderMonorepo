@@ -72,6 +72,10 @@ export interface MaterialReceptionStockAllocationTO {
     quantity?: number,
 }
 
+export interface MaterialOrderCertificateTO {
+    certificateBase64?: string,
+}
+
 export type MaterialOrderStatus =
     | 'ORDER_CREATED'
     | 'ORDER_SENT'
