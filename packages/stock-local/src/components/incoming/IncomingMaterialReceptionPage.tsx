@@ -16,9 +16,12 @@ import {
     TableHead,
     TableRow,
     TextField,
+    Tooltip,
     Typography,
 } from '@mui/material';
 import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { MaterialOrderReceptionTO, MaterialOrderTO, StockLocationTO } from 'sf-common/src/models/ApiRequests';
@@ -64,11 +67,16 @@ function toServerDateTime(localValue: string): string {
     return localValue.length === 16 ? `${localValue}:00` : localValue;
 }
 
+function materialOrderHasCertificate(order: MaterialOrderTO): boolean {
+    return order.certificatePresent === true;
+}
+
 export function IncomingMaterialReceptionPage() {
     const { t } = useTranslation();
     const [orders, setOrders] = useState<MaterialOrderTO[]>([]);
     const [pendingValidations, setPendingValidations] = useState<MaterialOrderReceptionTO[]>([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [loadError, setLoadError] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState<MaterialOrderTO | null>(null);
     const [receivedAt, setReceivedAt] = useState('');
@@ -79,8 +87,12 @@ export function IncomingMaterialReceptionPage() {
     const [stockLocations, setStockLocations] = useState<StockLocationTO[]>([]);
     const [allocationRows, setAllocationRows] = useState<StockAllocationRow[]>([newAllocationRow()]);
 
-    const loadData = useCallback(() => {
-        setLoading(true);
+    const loadData = useCallback((options?: { refresh?: boolean }) => {
+        if (options?.refresh) {
+            setRefreshing(true);
+        } else {
+            setLoading(true);
+        }
         setLoadError(false);
         let openDone = false;
         let pendingDone = false;
@@ -97,6 +109,7 @@ export function IncomingMaterialReceptionPage() {
                 setPendingValidations(pending);
             }
             setLoading(false);
+            setRefreshing(false);
         };
 
         Server.getMaterialOrdersOpenForReception(
@@ -144,6 +157,7 @@ export function IncomingMaterialReceptionPage() {
         });
 
     const openReceiveDialog = (order: MaterialOrderTO) => {
+        if (!materialOrderHasCertificate(order)) return;
         setSelectedOrder(order);
         setReceivedAt(toDatetimeLocalValue(new Date()));
         setReceivedQuantity(String(order.quantity ?? ''));
@@ -213,11 +227,38 @@ export function IncomingMaterialReceptionPage() {
         );
     };
 
+    const handleRefresh = () => loadData({ refresh: true });
+
     return (
         <Box sx={{ py: 2 }}>
-            <Typography variant="h5" component="h1" gutterBottom>
-                {t('incomingMaterialReception')}
-            </Typography>
+            <Box
+                sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 1,
+                    mb: 1,
+                }}
+            >
+                <Typography variant="h5" component="h1" sx={{ mb: 0 }}>
+                    {t('incomingMaterialReception')}
+                </Typography>
+                <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={handleRefresh}
+                    disabled={loading || refreshing}
+                    startIcon={
+                        refreshing ? (
+                            <CircularProgress size={16} color="inherit" />
+                        ) : (
+                            <RefreshIcon />
+                        )
+                    }
+                >
+                    {t('synchronizeTable')}
+                </Button>
+            </Box>
             <Button component={RouterLink} to="/" sx={{ mb: 2 }}>
                 {t('backToHome')}
             </Button>
@@ -266,13 +307,25 @@ export function IncomingMaterialReceptionPage() {
                                                     {o.status ? t(`materialOrderStatus_${o.status}`) : '—'}
                                                 </TableCell>
                                                 <TableCell align="right">
-                                                    <Button
-                                                        variant="contained"
-                                                        size="small"
-                                                        onClick={() => openReceiveDialog(o)}
-                                                    >
-                                                        {t('receiveMaterial')}
-                                                    </Button>
+                                                    {materialOrderHasCertificate(o) ? (
+                                                        <Button
+                                                            variant="contained"
+                                                            size="small"
+                                                            onClick={() => openReceiveDialog(o)}
+                                                        >
+                                                            {t('receiveMaterial')}
+                                                        </Button>
+                                                    ) : (
+                                                        <Tooltip title={t('materialOrderCertificateMissing')}>
+                                                            <IconButton
+                                                                size="small"
+                                                                aria-label={t('materialOrderCertificateMissing')}
+                                                                sx={{ color: 'warning.main' }}
+                                                            >
+                                                                <ErrorOutlineIcon fontSize="small" />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                    )}
                                                 </TableCell>
                                             </TableRow>
                                         ))

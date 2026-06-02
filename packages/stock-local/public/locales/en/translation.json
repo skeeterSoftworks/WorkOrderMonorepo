@@ -613,6 +613,8 @@
   "incomingMaterialLoadError": "Could not load material orders open for reception.",
   "incomingMaterialNoOrders": "No material orders in transport awaiting reception.",
   "receiveMaterial": "Receive",
+  "materialOrderCertificateMissing": "A certificate must be uploaded for this material order before it can be received.",
+  "MATERIAL_ORDER_CERTIFICATE_REQUIRED": "Cannot receive material without an uploaded certificate.",
   "receiveMaterialDialogTitle": "Record material reception",
   "receptionDate": "Reception date and time",
   "receivedQuantity": "Received quantity",
