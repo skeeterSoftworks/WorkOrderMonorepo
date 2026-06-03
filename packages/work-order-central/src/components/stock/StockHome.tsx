@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LoggedUser } from 'work-order-local/src/models/Common.ts';
 import { StockProductsAvailablePanel } from './StockProductsAvailablePanel';
+import { StockMaterialsByLocationPanel } from './StockMaterialsByLocationPanel';
 
 const StockTabs = {
     MATERIALS: 0,
@@ -43,11 +44,7 @@ export function StockHome() {
             </Box>
 
             <Box sx={{ py: 4 }}>
-                {activeTab === StockTabs.MATERIALS && (
-                    <Typography variant="body1" color="text.secondary">
-                        {t('stockTbd')}
-                    </Typography>
-                )}
+                {activeTab === StockTabs.MATERIALS && <StockMaterialsByLocationPanel />}
                 {activeTab === StockTabs.PRODUCTS && <StockProductsAvailablePanel />}
             </Box>
         </Container>

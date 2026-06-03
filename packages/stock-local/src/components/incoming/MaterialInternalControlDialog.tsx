@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next';
 import type { MaterialOrderReceptionTO } from 'sf-common/src/models/ApiRequests';
 import {
     emptySampleInputs,
-    getDefinedMaterialDimensions,
+    getSampleMaterialDimensions,
     getNominalDimensionValue,
     isInternalControlFormComplete,
     overallFieldsFromInternalControl,
@@ -57,8 +57,8 @@ export function MaterialInternalControlDialog({
     const [overallWeight, setOverallWeight] = useState('');
     const [overallAcceptance, setOverallAcceptance] = useState<boolean | null>(null);
 
-    const definedDimensions = useMemo(
-        () => (reception ? getDefinedMaterialDimensions(reception) : []),
+    const sampleDimensions = useMemo(
+        () => (reception ? getSampleMaterialDimensions(reception) : []),
         [reception],
     );
 
@@ -95,10 +95,10 @@ export function MaterialInternalControlDialog({
                     {reception?.materialOrderCode ? `${reception.materialOrderCode} — ` : ''}
                     {reception?.materialName || reception?.materialCode} — {reception?.materialProviderName}
                 </Typography>
-                {definedDimensions.length === 0 ? (
+                {sampleDimensions.length === 0 ? (
                     <Typography variant="body2">{t('materialInternalControlNoDimensions')}</Typography>
                 ) : (
-                    definedDimensions.map((dimension) => {
+                    sampleDimensions.map((dimension) => {
                         const nominal = reception ? getNominalDimensionValue(reception, dimension) : undefined;
                         return (
                             <Box key={dimension}>

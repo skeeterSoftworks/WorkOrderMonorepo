@@ -28,6 +28,13 @@ export function getDefinedMaterialDimensions(
     );
 }
 
+/** Sample inputs for diameter, length, and width only; weight uses overallWeight instead. */
+export function getSampleMaterialDimensions(
+    source: MaterialOrderReceptionTO | MaterialOrderTO,
+): MaterialDimensionKey[] {
+    return getDefinedMaterialDimensions(source).filter((key) => key !== 'weight');
+}
+
 export function getNominalDimensionValue(
     source: MaterialOrderReceptionTO | MaterialOrderTO,
     key: MaterialDimensionKey,
@@ -99,12 +106,11 @@ export function buildInternalControlPayload(
         overallWeight: parseOverallWeight(form.overallWeight),
         overallAcceptance: form.overallAcceptance,
     };
-    for (const key of getDefinedMaterialDimensions(source)) {
+    for (const key of getSampleMaterialDimensions(source)) {
         const parsed = form.samples[key].map((raw) => Number.parseFloat(raw.trim()));
         if (key === 'diameter') payload.diameterSamples = parsed;
         if (key === 'length') payload.lengthSamples = parsed;
         if (key === 'width') payload.widthSamples = parsed;
-        if (key === 'weight') payload.weightSamples = parsed;
     }
     return payload;
 }
@@ -113,7 +119,7 @@ export function areRequiredSamplesComplete(
     source: MaterialOrderReceptionTO | MaterialOrderTO,
     samples: SampleInputs,
 ): boolean {
-    for (const key of getDefinedMaterialDimensions(source)) {
+    for (const key of getSampleMaterialDimensions(source)) {
         for (const raw of samples[key]) {
             const n = Number.parseFloat(raw.trim());
             if (!Number.isFinite(n)) return false;
@@ -130,7 +136,7 @@ export function isInternalControlFormComplete(
 ): boolean {
     if (!isOverallWeightValid(overallWeight)) return false;
     if (overallAcceptance === null) return false;
-    const dimensions = getDefinedMaterialDimensions(source);
+    const dimensions = getSampleMaterialDimensions(source);
     if (dimensions.length > 0 && !areRequiredSamplesComplete(source, samples)) return false;
     return true;
 }
