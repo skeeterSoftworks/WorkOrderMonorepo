@@ -374,6 +374,7 @@
   "scannedQrReference": "Scanned QR reference",
   "hello": "Hello",
   "numberOfResultsPerPage": "Results per page:",
+  "paginationDisplayedRows": "{{from}}–{{to}} of {{count}}",
   "operatorPanelSessionOverview": "Sessions overview",
   "localStationSessionsOverview": "Local station sessions overview",
   "msg_errorSearchingProductByQr": "Error searching product by QR: ",

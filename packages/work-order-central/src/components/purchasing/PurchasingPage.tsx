@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
@@ -10,6 +10,8 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
+import TableSortLabel from '@mui/material/TableSortLabel';
+import TablePagination from '@mui/material/TablePagination';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
@@ -46,6 +48,33 @@ import {
 import { MaterialOrderCertificateViewDialog } from './MaterialOrderCertificateViewDialog';
 
 const CERTIFICATE_ACCEPT = 'application/pdf,image/*';
+const DEFAULT_ROWS_PER_PAGE = 25;
+const ROWS_PER_PAGE_OPTIONS = [10, 25, 50, 100] as const;
+
+type MaterialOrderSortField =
+    | 'code'
+    | 'materialName'
+    | 'materialProviderName'
+    | 'quantity'
+    | 'status'
+    | 'lastChanged'
+    | 'certificatePresent';
+
+type MaterialOrderTableQuery = {
+    page: number;
+    size: number;
+    sortBy: MaterialOrderSortField;
+    asc: boolean;
+};
+
+function defaultTableQuery(): MaterialOrderTableQuery {
+    return {
+        page: 0,
+        size: DEFAULT_ROWS_PER_PAGE,
+        sortBy: 'lastChanged',
+        asc: false,
+    };
+}
 
 function canUploadCertificate(order: MaterialOrderTO): boolean {
     return order.status !== 'REJECTED';
@@ -143,6 +172,7 @@ export function PurchasingPage() {
         useState<EmailTemplateCode>('MATERIAL_ORDER_INQUIRY');
     const [filterDraft, setFilterDraft] = useState<MaterialOrderSearchForm>(defaultSearchForm);
     const [appliedFilters, setAppliedFilters] = useState<MaterialOrderSearchForm>(defaultSearchForm);
+    const [tableQuery, setTableQuery] = useState<MaterialOrderTableQuery>(defaultTableQuery);
     const [orderToReject, setOrderToReject] = useState<MaterialOrderTO | null>(null);
     const certificateFileInputRef = useRef<HTMLInputElement>(null);
     const [certificateUploadOrder, setCertificateUploadOrder] = useState<MaterialOrderTO | null>(null);
@@ -168,14 +198,17 @@ export function PurchasingPage() {
         Number(quantity) > 0 &&
         Number.isFinite(Number(quantity));
 
-    const fetchOrders = useCallback((filters: MaterialOrderSearchForm) => {
+    const fetchOrders = useCallback((
+        filters: MaterialOrderSearchForm,
+        query: MaterialOrderTableQuery,
+    ) => {
         setOrdersLoading(true);
         Server.searchMaterialOrders(
             {
-                page: 0,
-                size: 200,
-                sortBy: 'createdAt',
-                asc: false,
+                page: query.page,
+                size: query.size,
+                sortBy: query.sortBy,
+                asc: query.asc,
                 status: filters.status,
                 createdFrom: filters.periodFrom || undefined,
                 createdTo: filters.periodTo || undefined,
@@ -199,19 +232,58 @@ export function PurchasingPage() {
     }, []);
 
     const refreshOrders = useCallback(() => {
-        fetchOrders(appliedFilters);
-    }, [appliedFilters, fetchOrders]);
+        fetchOrders(appliedFilters, tableQuery);
+    }, [appliedFilters, tableQuery, fetchOrders]);
 
     useEffect(() => {
-        fetchOrders(appliedFilters);
-    }, [appliedFilters, fetchOrders]);
+        fetchOrders(appliedFilters, tableQuery);
+    }, [appliedFilters, tableQuery, fetchOrders]);
 
     useEffect(() => {
         loadMaterials();
     }, []);
 
     const applyFilters = () => {
+        setTableQuery((prev) => ({ ...prev, page: 0 }));
         setAppliedFilters({ ...filterDraft });
+    };
+
+    const handleSort = (field: MaterialOrderSortField) => {
+        setTableQuery((prev) => ({
+            ...prev,
+            page: 0,
+            sortBy: field,
+            asc: prev.sortBy === field ? !prev.asc : true,
+        }));
+    };
+
+    const handlePageChange = (_event: unknown, newPage: number) => {
+        setTableQuery((prev) => ({ ...prev, page: newPage }));
+    };
+
+    const handleRowsPerPageChange = (event: ChangeEvent<HTMLInputElement>) => {
+        setTableQuery((prev) => ({
+            ...prev,
+            page: 0,
+            size: parseInt(event.target.value, 10),
+        }));
+    };
+
+    const renderSortableHeader = (field: MaterialOrderSortField, label: string) => {
+        const active = tableQuery.sortBy === field;
+        return (
+            <TableCell
+                sortDirection={active ? (tableQuery.asc ? 'asc' : 'desc') : false}
+            >
+                <TableSortLabel
+                    active={active}
+                    direction={active ? (tableQuery.asc ? 'asc' : 'desc') : 'asc'}
+                    onClick={() => handleSort(field)}
+                >
+                    {label}
+                </TableSortLabel>
+            </TableCell>
+        );
     };
 
     const updateFilterDraft = <K extends keyof MaterialOrderSearchForm>(
@@ -551,13 +623,13 @@ export function PurchasingPage() {
                     <Table size="small">
                         <TableHead>
                             <TableRow>
-                                <TableCell>{t('materialOrderCode')}</TableCell>
-                                <TableCell>{t('materialName')}</TableCell>
-                                <TableCell>{t('materialProviderName')}</TableCell>
-                                <TableCell>{t('quantity')}</TableCell>
-                                <TableCell>{t('status')}</TableCell>
-                                <TableCell>{t('purchasingLastChanged')}</TableCell>
-                                <TableCell>{t('certificate')}</TableCell>
+                                {renderSortableHeader('code', t('materialOrderCode'))}
+                                {renderSortableHeader('materialName', t('materialName'))}
+                                {renderSortableHeader('materialProviderName', t('materialProviderName'))}
+                                {renderSortableHeader('quantity', t('quantity'))}
+                                {renderSortableHeader('status', t('status'))}
+                                {renderSortableHeader('lastChanged', t('purchasingLastChanged'))}
+                                {renderSortableHeader('certificatePresent', t('certificate'))}
                                 <TableCell align="right">{t('actions')}</TableCell>
                             </TableRow>
                         </TableHead>
@@ -655,6 +727,23 @@ export function PurchasingPage() {
                         </TableBody>
                     </Table>
                 </TableContainer>
+                <TablePagination
+                    component="div"
+                    count={totalElements}
+                    page={tableQuery.page}
+                    onPageChange={handlePageChange}
+                    rowsPerPage={tableQuery.size}
+                    onRowsPerPageChange={handleRowsPerPageChange}
+                    rowsPerPageOptions={[...ROWS_PER_PAGE_OPTIONS]}
+                    labelRowsPerPage={t('numberOfResultsPerPage')}
+                    labelDisplayedRows={({ from, to, count }) =>
+                        t('paginationDisplayedRows', {
+                            from,
+                            to,
+                            count: count !== -1 ? count : to,
+                        })
+                    }
+                />
             </Paper>
 
             <Dialog open={createOpen} onClose={closeCreateDialog} maxWidth="sm" fullWidth>

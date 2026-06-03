@@ -375,6 +375,7 @@
   "scannedQrReference": "Referenca iz skeniranog QR",
   "hello": "Zdravo",
   "numberOfResultsPerPage": "Broj rezultata po strani:",
+  "paginationDisplayedRows": "{{from}}–{{to}} od {{count}}",
   "localStationSessionsOverview": "Pregled sesija na lokalnoj stanici",
   "msg_errorSearchingProductByQr": "Greška prilikom pretrage QR komada: ",
   "msg_noSessionFoundForGivenQr": "Nije pronađena ni jedna sesija za dati QR kod!",
