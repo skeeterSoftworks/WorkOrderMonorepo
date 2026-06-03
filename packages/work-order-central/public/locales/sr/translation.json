@@ -599,6 +599,7 @@
   "materialOrderStatusFilter": "Status",
   "materialOrderStatusFilterAll": "Svi statusi",
   "materialOrderFilterCount": "Prikazano {{count}} od {{total}}",
+  "materialOrderCertificatePresentOnly": "Samo sa sertifikatom",
   "materialOrderFilterEmpty": "Nema narudžbi materijala koje odgovaraju filterima.",
   "rejectMaterialOrder": "Odbij narudžbu materijala",
   "confirmRejectMaterialOrder": "Odbiti ovu narudžbu materijala?",

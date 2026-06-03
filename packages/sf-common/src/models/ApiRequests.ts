@@ -116,6 +116,30 @@ export interface MaterialOrderTO {
     materialWidth?: number,
 }
 
+export interface MaterialOrderSearchParams {
+    page?: number,
+    size?: number,
+    sortBy?: string,
+    asc?: boolean,
+    status?: string,
+    createdFrom?: string,
+    createdTo?: string,
+    code?: string,
+    materialName?: string,
+    materialProviderName?: string,
+    quantity?: number,
+    lastChangedFrom?: string,
+    lastChangedTo?: string,
+    certificatePresent?: boolean,
+}
+
+export interface MaterialOrderPageTO {
+    content?: MaterialOrderTO[],
+    totalElements?: number,
+    page?: number,
+    size?: number,
+}
+
 export interface MaterialOrderReceptionInternalControlTO {
     diameterSamples?: number[],
     lengthSamples?: number[],

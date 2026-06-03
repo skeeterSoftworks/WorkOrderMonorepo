@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
@@ -13,6 +13,8 @@ import TableRow from '@mui/material/TableRow';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import Checkbox from '@mui/material/Checkbox';
+import CircularProgress from '@mui/material/CircularProgress';
 import FormLabel from '@mui/material/FormLabel';
 import Radio from '@mui/material/Radio';
 import RadioGroup from '@mui/material/RadioGroup';
@@ -87,24 +89,27 @@ function currentMonthDateRange(): { from: string; to: string } {
     return { from: toIsoDateInput(from), to: toIsoDateInput(to) };
 }
 
-function parseMaterialOrderCreatedAt(order: MaterialOrderTO): Date | null {
-    const iso = order.createdAt ?? order.lastChanged;
-    if (!iso) return null;
-    const d = new Date(iso);
-    return Number.isNaN(d.getTime()) ? null : d;
-}
+type MaterialOrderSearchForm = {
+    status: string;
+    periodFrom: string;
+    periodTo: string;
+    code: string;
+    materialName: string;
+    materialProviderName: string;
+    certificatePresentOnly: boolean;
+};
 
-function isCreatedWithinPeriod(created: Date | null, from: string, to: string): boolean {
-    if (!created) return false;
-    if (from) {
-        const start = new Date(`${from}T00:00:00`);
-        if (created < start) return false;
-    }
-    if (to) {
-        const end = new Date(`${to}T23:59:59.999`);
-        if (created > end) return false;
-    }
-    return true;
+function defaultSearchForm(): MaterialOrderSearchForm {
+    const month = currentMonthDateRange();
+    return {
+        status: 'ALL',
+        periodFrom: month.from,
+        periodTo: month.to,
+        code: '',
+        materialName: '',
+        materialProviderName: '',
+        certificatePresentOnly: false,
+    };
 }
 
 function canRejectMaterialOrder(order: MaterialOrderTO): boolean {
@@ -121,6 +126,8 @@ const MATERIAL_ORDER_EMAIL_TEMPLATE_CODES: EmailTemplateCode[] = [
 export function PurchasingPage() {
     const { t } = useTranslation();
     const [orders, setOrders] = useState<MaterialOrderTO[]>([]);
+    const [totalElements, setTotalElements] = useState(0);
+    const [ordersLoading, setOrdersLoading] = useState(false);
     const [materials, setMaterials] = useState<MaterialTO[]>([]);
     const [createOpen, setCreateOpen] = useState(false);
 
@@ -134,10 +141,8 @@ export function PurchasingPage() {
     const [emailPickProvider, setEmailPickProvider] = useState<MaterialProviderTO | undefined>(undefined);
     const [selectedEmailTemplate, setSelectedEmailTemplate] =
         useState<EmailTemplateCode>('MATERIAL_ORDER_INQUIRY');
-    const defaultMonthRange = useMemo(() => currentMonthDateRange(), []);
-    const [statusFilter, setStatusFilter] = useState<string>('ALL');
-    const [periodFrom, setPeriodFrom] = useState(defaultMonthRange.from);
-    const [periodTo, setPeriodTo] = useState(defaultMonthRange.to);
+    const [filterDraft, setFilterDraft] = useState<MaterialOrderSearchForm>(defaultSearchForm);
+    const [appliedFilters, setAppliedFilters] = useState<MaterialOrderSearchForm>(defaultSearchForm);
     const [orderToReject, setOrderToReject] = useState<MaterialOrderTO | null>(null);
     const certificateFileInputRef = useRef<HTMLInputElement>(null);
     const [certificateUploadOrder, setCertificateUploadOrder] = useState<MaterialOrderTO | null>(null);
@@ -146,16 +151,6 @@ export function PurchasingPage() {
     const [certificateViewUrl, setCertificateViewUrl] = useState<string | undefined>(undefined);
     const [certificateViewLoading, setCertificateViewLoading] = useState(false);
     const [certificateViewError, setCertificateViewError] = useState(false);
-
-    const filteredOrders = useMemo(() => {
-        return orders.filter((order) => {
-            const status = order.status ?? 'ORDER_CREATED';
-            if (statusFilter !== 'ALL' && status !== statusFilter) {
-                return false;
-            }
-            return isCreatedWithinPeriod(parseMaterialOrderCreatedAt(order), periodFrom, periodTo);
-        });
-    }, [orders, statusFilter, periodFrom, periodTo]);
 
     const selectedMaterial = useMemo(
         () => materials.find((m) => m.id === materialId),
@@ -173,21 +168,57 @@ export function PurchasingPage() {
         Number(quantity) > 0 &&
         Number.isFinite(Number(quantity));
 
+    const fetchOrders = useCallback((filters: MaterialOrderSearchForm) => {
+        setOrdersLoading(true);
+        Server.searchMaterialOrders(
+            {
+                page: 0,
+                size: 200,
+                sortBy: 'createdAt',
+                asc: false,
+                status: filters.status,
+                createdFrom: filters.periodFrom || undefined,
+                createdTo: filters.periodTo || undefined,
+                code: filters.code.trim() || undefined,
+                materialName: filters.materialName.trim() || undefined,
+                materialProviderName: filters.materialProviderName.trim() || undefined,
+                certificatePresent: filters.certificatePresentOnly ? true : undefined,
+            },
+            (response: { data?: { content?: MaterialOrderTO[]; totalElements?: number } }) => {
+                const data = response?.data;
+                setOrders(Array.isArray(data?.content) ? data.content : []);
+                setTotalElements(data?.totalElements ?? 0);
+                setOrdersLoading(false);
+            },
+            () => {
+                setOrders([]);
+                setTotalElements(0);
+                setOrdersLoading(false);
+            },
+        );
+    }, []);
+
+    const refreshOrders = useCallback(() => {
+        fetchOrders(appliedFilters);
+    }, [appliedFilters, fetchOrders]);
+
     useEffect(() => {
-        loadOrders();
+        fetchOrders(appliedFilters);
+    }, [appliedFilters, fetchOrders]);
+
+    useEffect(() => {
         loadMaterials();
     }, []);
 
-    const loadOrders = () => {
-        Server.getAllMaterialOrders(
-            (response: any) => {
-                let data: MaterialOrderTO[] = [];
-                if (Array.isArray(response?.data)) data = response.data;
-                else if (Array.isArray(response?.data?.data)) data = response.data.data;
-                setOrders(data);
-            },
-            () => {},
-        );
+    const applyFilters = () => {
+        setAppliedFilters({ ...filterDraft });
+    };
+
+    const updateFilterDraft = <K extends keyof MaterialOrderSearchForm>(
+        key: K,
+        value: MaterialOrderSearchForm[K],
+    ) => {
+        setFilterDraft((prev) => ({ ...prev, [key]: value }));
     };
 
     const loadMaterials = () => {
@@ -282,7 +313,7 @@ export function PurchasingPage() {
             id,
             pendingStatus,
             () => {
-                loadOrders();
+                refreshOrders();
                 closeStatusDialog();
                 toastActionSuccess(t('toastMaterialOrderStatusUpdated'));
             },
@@ -298,7 +329,7 @@ export function PurchasingPage() {
         Server.rejectMaterialOrder(
             Number(orderToReject.id),
             () => {
-                loadOrders();
+                refreshOrders();
                 setOrderToReject(null);
                 toastActionSuccess(t('toastMaterialOrderRejected'));
             },
@@ -380,7 +411,7 @@ export function PurchasingPage() {
                 dataUrl,
                 () => {
                     setUploadingCertificateId(null);
-                    loadOrders();
+                    refreshOrders();
                     toastActionSuccess(t('toastMaterialOrderCertificateUploaded'));
                 },
                 (err: unknown) => {
@@ -412,7 +443,7 @@ export function PurchasingPage() {
                 if (response?.data && typeof response.data === 'object' && !Array.isArray(response.data)) {
                     saved = response.data as MaterialOrderTO;
                 }
-                loadOrders();
+                refreshOrders();
                 closeCreateDialog();
                 toastActionSuccess(t('toastMaterialOrderAdded'));
                 const effectiveOrder: MaterialOrderTO = saved ?? {
@@ -437,12 +468,19 @@ export function PurchasingPage() {
             </Box>
 
             <Paper sx={{ p: 2 }}>
-                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2, alignItems: 'center' }}>
+                <Box
+                    component="form"
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        applyFilters();
+                    }}
+                    sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2, alignItems: 'center' }}
+                >
                     <TextField
                         select
                         label={t('materialOrderStatusFilter')}
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
+                        value={filterDraft.status}
+                        onChange={(e) => updateFilterDraft('status', e.target.value)}
                         size="small"
                         sx={{ minWidth: 180 }}
                     >
@@ -456,8 +494,8 @@ export function PurchasingPage() {
                     <TextField
                         label={t('dateFrom')}
                         type="date"
-                        value={periodFrom}
-                        onChange={(e) => setPeriodFrom(e.target.value)}
+                        value={filterDraft.periodFrom}
+                        onChange={(e) => updateFilterDraft('periodFrom', e.target.value)}
                         size="small"
                         InputLabelProps={{ shrink: true }}
                         sx={{ width: 160 }}
@@ -465,14 +503,48 @@ export function PurchasingPage() {
                     <TextField
                         label={t('dateUntil')}
                         type="date"
-                        value={periodTo}
-                        onChange={(e) => setPeriodTo(e.target.value)}
+                        value={filterDraft.periodTo}
+                        onChange={(e) => updateFilterDraft('periodTo', e.target.value)}
                         size="small"
                         InputLabelProps={{ shrink: true }}
                         sx={{ width: 160 }}
                     />
+                    <TextField
+                        label={t('materialOrderCode')}
+                        value={filterDraft.code}
+                        onChange={(e) => updateFilterDraft('code', e.target.value)}
+                        size="small"
+                        sx={{ minWidth: 140 }}
+                    />
+                    <TextField
+                        label={t('materialName')}
+                        value={filterDraft.materialName}
+                        onChange={(e) => updateFilterDraft('materialName', e.target.value)}
+                        size="small"
+                        sx={{ minWidth: 160 }}
+                    />
+                    <TextField
+                        label={t('materialProviderName')}
+                        value={filterDraft.materialProviderName}
+                        onChange={(e) => updateFilterDraft('materialProviderName', e.target.value)}
+                        size="small"
+                        sx={{ minWidth: 160 }}
+                    />
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                checked={filterDraft.certificatePresentOnly}
+                                onChange={(e) => updateFilterDraft('certificatePresentOnly', e.target.checked)}
+                                size="small"
+                            />
+                        }
+                        label={t('materialOrderCertificatePresentOnly')}
+                    />
+                    <Button type="submit" variant="contained" disabled={ordersLoading}>
+                        {t('searchAction')}
+                    </Button>
                     <Typography variant="body2" color="text.secondary" sx={{ ml: { sm: 'auto' } }}>
-                        {t('materialOrderFilterCount', { count: filteredOrders.length, total: orders.length })}
+                        {t('materialOrderFilterCount', { count: orders.length, total: totalElements })}
                     </Typography>
                 </Box>
                 <TableContainer>
@@ -490,8 +562,14 @@ export function PurchasingPage() {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {filteredOrders.length > 0 ? (
-                                filteredOrders.map((o) => (
+                            {ordersLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={8} align="center" sx={{ py: 3 }}>
+                                        <CircularProgress size={28} aria-label={t('loadingDetails')} />
+                                    </TableCell>
+                                </TableRow>
+                            ) : orders.length > 0 ? (
+                                orders.map((o) => (
                                     <TableRow
                                         key={o.id ?? `${o.materialId}-${o.materialProviderId}-${o.quantity}`}
                                         sx={{
@@ -569,7 +647,7 @@ export function PurchasingPage() {
                                 <TableRow>
                                     <TableCell colSpan={8}>
                                         <Typography variant="body2" color="text.secondary">
-                                            {orders.length === 0 ? t('noMaterialOrders') : t('materialOrderFilterEmpty')}
+                                            {t('materialOrderFilterEmpty')}
                                         </Typography>
                                     </TableCell>
                                 </TableRow>

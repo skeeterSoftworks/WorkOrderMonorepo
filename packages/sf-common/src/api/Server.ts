@@ -15,6 +15,8 @@ import type {
     StockLocationTO,
     MaterialOrderTO,
     MaterialOrderStatus,
+    MaterialOrderSearchParams,
+    MaterialOrderPageTO,
     MaterialOrderCertificateTO,
     EmailTemplateTO,
     EmailTemplateCode,
@@ -319,6 +321,19 @@ export class Server {
 
     static getAllMaterialOrders(onSuccess: Function, onError: Function) {
         axios.get(`${getServerUrl()}/material-orders/all`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static searchMaterialOrders(
+        params: MaterialOrderSearchParams,
+        onSuccess: Function,
+        onError: Function,
+    ) {
+        axios.get<MaterialOrderPageTO>(`${getServerUrl()}/material-orders/search`, { params })
             .then(response => onSuccess(response))
             .catch(error => {
                 console.log(error);

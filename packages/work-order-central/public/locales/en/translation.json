@@ -599,6 +599,7 @@
   "materialOrderStatusFilter": "Status",
   "materialOrderStatusFilterAll": "All statuses",
   "materialOrderFilterCount": "Showing {{count}} of {{total}}",
+  "materialOrderCertificatePresentOnly": "Certificate present only",
   "materialOrderFilterEmpty": "No material orders match the selected filters.",
   "rejectMaterialOrder": "Reject material order",
   "confirmRejectMaterialOrder": "Reject this material order?",
