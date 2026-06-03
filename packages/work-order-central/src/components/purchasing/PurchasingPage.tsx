@@ -45,6 +45,7 @@ import {
     isMaterialOrderStaleForMonitoring,
     MATERIAL_ORDER_MANUAL_TRANSITION_STATUSES,
 } from '../../util/materialOrderStale';
+import { materialOrderStatusColor } from '../../util/materialOrderStatusColor';
 import { MaterialOrderCertificateViewDialog } from './MaterialOrderCertificateViewDialog';
 
 const CERTIFICATE_ACCEPT = 'application/pdf,image/*';
@@ -655,7 +656,17 @@ export function PurchasingPage() {
                                         <TableCell>{o.materialName || o.materialCode || '—'}</TableCell>
                                         <TableCell>{o.materialProviderName || '—'}</TableCell>
                                         <TableCell>{o.quantity ?? 0}</TableCell>
-                                        <TableCell>{o.status ? t(`materialOrderStatus_${o.status}`) : '—'}</TableCell>
+                                        <TableCell>
+                                            {o.status ? (
+                                                <Typography
+                                                    component="span"
+                                                    variant="body2"
+                                                    sx={{ color: materialOrderStatusColor(o.status), fontWeight: 600 }}
+                                                >
+                                                    {t(`materialOrderStatus_${o.status}`)}
+                                                </Typography>
+                                            ) : '—'}
+                                        </TableCell>
                                         <TableCell>{formatMaterialOrderLastChanged(o.lastChanged)}</TableCell>
                                         <TableCell align="center">
                                             {o.certificatePresent ? (
