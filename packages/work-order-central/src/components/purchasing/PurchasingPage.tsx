@@ -44,6 +44,7 @@ import { toastActionError, toastActionSuccess, toastServerError } from '../../ut
 import {
     isMaterialOrderStaleForMonitoring,
     MATERIAL_ORDER_MANUAL_TRANSITION_STATUSES,
+    MATERIAL_ORDER_STALE_ROW_BACKGROUND,
 } from '../../util/materialOrderStale';
 import { materialOrderStatusColor } from '../../util/materialOrderStatusColor';
 import { MaterialOrderCertificateViewDialog } from './MaterialOrderCertificateViewDialog';
@@ -648,7 +649,7 @@ export function PurchasingPage() {
                                         key={o.id ?? `${o.materialId}-${o.materialProviderId}-${o.quantity}`}
                                         sx={{
                                             ...(isMaterialOrderStaleForMonitoring(o)
-                                                ? { backgroundColor: 'rgba(239, 68, 68, 0.12)' }
+                                                ? { backgroundColor: MATERIAL_ORDER_STALE_ROW_BACKGROUND }
                                                 : {}),
                                         }}
                                     >

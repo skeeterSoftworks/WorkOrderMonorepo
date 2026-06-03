@@ -1,7 +1,9 @@
 import type { MaterialOrderStatus, MaterialOrderTO } from 'sf-common/src/models/ApiRequests';
 
 /** Matches {@link com.skeeterSoftworks.WorkOrderCentral.service.MaterialOrderService#STALE_LAST_CHANGE_DAYS}. */
-export const MATERIAL_ORDER_STALE_LAST_CHANGE_DAYS = 3;
+export const MATERIAL_ORDER_STALE_LAST_CHANGE_DAYS = 5;
+
+export const MATERIAL_ORDER_STALE_ROW_BACKGROUND = '#ffcdd2';
 
 export const MATERIAL_ORDER_STALE_MONITOR_EXCLUDED_STATUSES: MaterialOrderStatus[] = [
     'RECEIVED_IN_STOCK',

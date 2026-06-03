@@ -16,6 +16,7 @@ import type {
     WorkOrderTO,
 } from 'sf-common/src/models/ApiRequests';
 import { Server } from 'sf-common';
+import { MATERIAL_ORDER_STALE_LAST_CHANGE_DAYS } from '../../util/materialOrderStale';
 
 function unwrapArray<T>(response: unknown): T[] {
     const r = response as { data?: T[] | { data?: T[] } };
@@ -174,8 +175,7 @@ export function WorkOrdersHealthPanel() {
     const [overdueLabels, setOverdueLabels] = useState<string[]>([]);
     const [productOrdersWithoutWorkOrder, setProductOrdersWithoutWorkOrder] = useState(0);
     const [productOrdersWithoutWorkOrderLabels, setProductOrdersWithoutWorkOrderLabels] = useState<string[]>([]);
-    const [staleMaterialOrders, setStaleMaterialOrders] = useState(0);
-    const [staleMaterialOrderLabels, setStaleMaterialOrderLabels] = useState<string[]>([]);
+    const [staleMaterialOrders, setStaleMaterialOrders] = useState<MaterialOrderTO[]>([]);
 
     useEffect(() => {
         let cancelled = false;
@@ -192,9 +192,7 @@ export function WorkOrdersHealthPanel() {
                 ]);
                 if (cancelled) return;
 
-                const staleLabels = staleOrders.map(staleMaterialOrderLabel);
-                setStaleMaterialOrders(staleOrders.length);
-                setStaleMaterialOrderLabels(staleLabels);
+                setStaleMaterialOrders(staleOrders);
 
                 const assignedProductOrderIds = new Set<number>(
                     workOrders
@@ -336,27 +334,53 @@ export function WorkOrdersHealthPanel() {
     }
 
     return (
-        <Paper sx={{ p: 2 }}>
-            <Typography variant="subtitle1">{t('operationsHealth')}</Typography>
-            <Stack spacing={0.5} sx={{ mt: 1, alignItems: 'flex-start' }}>
-                {healthRow(
-                    t('healthProductOrdersWithoutAssignedWorkOrders'),
-                    productOrdersWithoutWorkOrder,
-                    productOrdersWithoutWorkOrderLabels,
-                )}
-                {healthRow(t('healthStaleMaterialOrders'), staleMaterialOrders, staleMaterialOrderLabels)}
-                {healthRow(
-                    t('healthWorkOrdersWithoutProductionBooking'),
-                    workOrdersWithoutBooking,
-                    workOrdersWithoutBookingLabels,
-                )}
-                {healthRow(
-                    t('healthMachinesIdleProductionNextWeek'),
-                    machinesIdleNextWeek,
-                    machinesIdleLabels,
-                )}
-                {healthRow(t('healthIncompleteWorkOrdersOverdue'), overdueIncomplete, overdueLabels)}
-            </Stack>
-        </Paper>
+        <Box>
+            <Paper sx={{ p: 2 }}>
+                <Typography variant="subtitle1">{t('operationsHealth')}</Typography>
+                <Stack spacing={0.5} sx={{ mt: 1, alignItems: 'flex-start' }}>
+                    {healthRow(
+                        t('healthProductOrdersWithoutAssignedWorkOrders'),
+                        productOrdersWithoutWorkOrder,
+                        productOrdersWithoutWorkOrderLabels,
+                    )}
+                    {healthRow(
+                        t('healthStaleMaterialOrders', { days: MATERIAL_ORDER_STALE_LAST_CHANGE_DAYS }),
+                        staleMaterialOrders.length,
+                        staleMaterialOrders.map(staleMaterialOrderLabel),
+                    )}
+                    {healthRow(
+                        t('healthWorkOrdersWithoutProductionBooking'),
+                        workOrdersWithoutBooking,
+                        workOrdersWithoutBookingLabels,
+                    )}
+                    {healthRow(
+                        t('healthMachinesIdleProductionNextWeek'),
+                        machinesIdleNextWeek,
+                        machinesIdleLabels,
+                    )}
+                    {healthRow(t('healthIncompleteWorkOrdersOverdue'), overdueIncomplete, overdueLabels)}
+                </Stack>
+            </Paper>
+
+            {staleMaterialOrders.length > 0 && (
+                <Paper sx={{ p: 2, mt: 2 }}>
+                    <Typography variant="subtitle1">{t('materialOrdersHealth')}</Typography>
+                    <Stack spacing={0.5} sx={{ mt: 1, alignItems: 'flex-start' }}>
+                        {staleMaterialOrders.map((order) => (
+                            <Typography
+                                key={order.id ?? order.code ?? staleMaterialOrderLabel(order)}
+                                variant="body2"
+                                color="error.dark"
+                            >
+                                {t('healthStaleMaterialOrderDetail', {
+                                    code: order.code?.trim() || `#${order.id ?? '?'}`,
+                                    days: MATERIAL_ORDER_STALE_LAST_CHANGE_DAYS,
+                                })}
+                            </Typography>
+                        ))}
+                    </Stack>
+                </Paper>
+            )}
+        </Box>
     );
 }
