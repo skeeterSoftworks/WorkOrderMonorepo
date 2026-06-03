@@ -248,7 +248,7 @@ export function CustomersManagementPanel() {
                     </IconButton>
                 </DialogTitle>
                 <DialogContent dividers>
-                    <Box component="form" sx={{display: 'flex', flexDirection: 'column', gap: 2, pt: 1}}>
+                    <Box component="form" autoComplete="off" sx={{display: 'flex', flexDirection: 'column', gap: 2, pt: 1}}>
                         <TextField
                             label={t('companyName')}
                             value={companyName}

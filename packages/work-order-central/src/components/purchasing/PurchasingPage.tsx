@@ -542,6 +542,7 @@ export function PurchasingPage() {
             <Paper sx={{ p: 2 }}>
                 <Box
                     component="form"
+                    autoComplete="off"
                     onSubmit={(e) => {
                         e.preventDefault();
                         applyFilters();

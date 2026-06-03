@@ -31,7 +31,7 @@ export function DropdownFieldStyled(props: Props) {
         <Grid item xs={props.size || 4} sx={{ display: "grid", width: "100%" }} >
             <label style={{ textAlign: "left" }}>{props.label}</label>
             <Field name={props.fieldName} component="select" multiple={props.multiple}
-                   style={{ width: props.dropdownWidth || "60%"}} disabled={props.disabled} >
+                   style={{ width: props.dropdownWidth || "60%"}} disabled={props.disabled} autoComplete="off">
                 {selectOptions}
             </Field>
         </Grid>

@@ -79,11 +79,11 @@ export function LoginForm() {
 
                     <div style={{ textAlign: "center" }}>
 
-                        <form onSubmit={handleSubmit}>
+                        <form onSubmit={handleSubmit} autoComplete="off">
                             <h2>Login</h2>
                             <div style={{ textAlign: "center", marginBottom: "5vh" }}>
                                 <label style={{ marginRight: "3vh" }}>{t("enterOrScanQR")}</label>
-                                <Field name="userID" component="input" />
+                                <Field name="userID" component="input" autoComplete="off" />
                             </div>
                             <Button variant="contained" type='submit'>{t("loginButton")}</Button>
                         </form>

@@ -1,6 +1,7 @@
 import { createTheme } from "@mui/material";
 import { blueGrey, cyan, green } from "@mui/material/colors";
 import { muiTableHeaderThemeComponents } from "./tableHeaderTheme";
+import { formAutocompleteThemeComponents } from "./formAutocompleteTheme";
 
 
 export function getLocalStationTheme() {
@@ -19,6 +20,7 @@ export function getLocalStationTheme() {
 		},
 		components: {
 			...muiTableHeaderThemeComponents,
+			...formAutocompleteThemeComponents,
 		},
 	})
 
@@ -40,6 +42,7 @@ export function getCentralTheme() {
 		},
 		components: {
 			...muiTableHeaderThemeComponents,
+			...formAutocompleteThemeComponents,
 		},
 	})
 
@@ -61,6 +64,7 @@ export function getDispenserTheme() {
 		},
 		components: {
 			...muiTableHeaderThemeComponents,
+			...formAutocompleteThemeComponents,
 		},
 	})
 

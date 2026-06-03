@@ -671,7 +671,7 @@ export function WorkOrdersManagementPanel() {
                     </IconButton>
                 </DialogTitle>
                 <DialogContent dividers>
-                    <Box component="form" sx={{display: 'flex', flexDirection: 'column', gap: 2, pt: 1}}>
+                    <Box component="form" autoComplete="off" sx={{display: 'flex', flexDirection: 'column', gap: 2, pt: 1}}>
                         <TextField
                             select
                             label={t('purchaseOrder')}

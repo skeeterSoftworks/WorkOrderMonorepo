@@ -1,6 +1,7 @@
 import { createTheme } from "@mui/material";
 import { blueGrey, green } from "@mui/material/colors";
 import { muiTableHeaderThemeComponents } from "sf-common/src/util/tableHeaderTheme";
+import { formAutocompleteThemeComponents } from "sf-common/src/util/formAutocompleteTheme";
 
 
 export function getLocalStationTheme() {
@@ -19,6 +20,7 @@ export function getLocalStationTheme() {
 		},
 		components: {
 			...muiTableHeaderThemeComponents,
+			...formAutocompleteThemeComponents,
 		},
 	})
 
@@ -40,6 +42,7 @@ export function getCentralTheme() {
 		},
 		components: {
 			...muiTableHeaderThemeComponents,
+			...formAutocompleteThemeComponents,
 			MuiContainer: {
 				defaultProps: {
 					maxWidth: 'xl',
