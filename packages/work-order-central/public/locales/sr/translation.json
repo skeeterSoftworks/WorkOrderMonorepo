@@ -40,6 +40,7 @@
   "stockByLocationLoadError": "Nije moguće učitati lokacije zaliha.",
   "stockByLocationEmpty": "Nema definisanih lokacija zaliha.",
   "stockByLocationNoMaterials": "Na ovoj lokaciji nema zaliha materijala.",
+  "stockByLocationNoLocationsForCatalogueId": "Nijedna lokacija nema zalihe za kataloški ID \"{{catalogueId}}\".",
   "stockedMaterialsCountLabel": "materijala",
   "stockTbd": "TBD",
   "stockProductsAvailabilityDescription": "Količine gotovih proizvoda na raspolaganju za magacin: višak proizvodnje na kupčevim radnim nalozima plus sva proizvodnja na narudžbenicama označenim kao interna potražnja za magacin (zajedno po proizvodu).",

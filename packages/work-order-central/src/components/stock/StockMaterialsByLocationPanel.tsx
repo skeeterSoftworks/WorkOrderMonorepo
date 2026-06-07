@@ -14,7 +14,12 @@ import Typography from '@mui/material/Typography';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useTranslation } from 'react-i18next';
 import type { StockLocationTO } from 'sf-common/src/models/ApiRequests';
-import { Server } from 'sf-common';
+import {
+    collectStockCatalogueIds,
+    filterStockLocationsByCatalogueId,
+    Server,
+    StockLocationCatalogueFilterBar,
+} from 'sf-common';
 
 function parseStockLocationsResponse(response: unknown): StockLocationTO[] {
     const r = response as { data?: StockLocationTO[] };
@@ -26,6 +31,8 @@ export function StockMaterialsByLocationPanel() {
     const [locations, setLocations] = useState<StockLocationTO[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [filterDraftCatalogueId, setFilterDraftCatalogueId] = useState('');
+    const [appliedCatalogueId, setAppliedCatalogueId] = useState('');
 
     useEffect(() => {
         setLoading(true);
@@ -43,13 +50,19 @@ export function StockMaterialsByLocationPanel() {
         );
     }, [t]);
 
+    const catalogueOptions = useMemo(() => collectStockCatalogueIds(locations), [locations]);
+
     const sortedLocations = useMemo(
         () =>
-            [...locations].sort((a, b) =>
+            [...filterStockLocationsByCatalogueId(locations, appliedCatalogueId)].sort((a, b) =>
                 (a.stockLocationCode ?? '').localeCompare(b.stockLocationCode ?? ''),
             ),
-        [locations],
+        [locations, appliedCatalogueId],
     );
+
+    const applyCatalogueFilter = () => {
+        setAppliedCatalogueId(filterDraftCatalogueId.trim());
+    };
 
     if (loading) {
         return (
@@ -73,9 +86,17 @@ export function StockMaterialsByLocationPanel() {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 {t('stockMaterialsByLocationDescription')}
             </Typography>
+            <StockLocationCatalogueFilterBar
+                draftCatalogueId={filterDraftCatalogueId}
+                catalogueOptions={catalogueOptions}
+                onDraftChange={setFilterDraftCatalogueId}
+                onSubmit={applyCatalogueFilter}
+            />
             {sortedLocations.length === 0 ? (
                 <Typography variant="body2" color="text.secondary">
-                    {t('stockByLocationEmpty')}
+                    {appliedCatalogueId
+                        ? t('stockByLocationNoLocationsForCatalogueId', { catalogueId: appliedCatalogueId })
+                        : t('stockByLocationEmpty')}
                 </Typography>
             ) : (
                 sortedLocations.map((loc) => {

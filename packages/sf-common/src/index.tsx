@@ -37,4 +37,12 @@ export {
 
 export { normalizeBinaryDataUrl, isPdfDataUrl } from "./util/mediaDataUrl"
 
+export {
+    materialCatalogueId,
+    collectStockCatalogueIds,
+    filterStockLocationsByCatalogueId,
+} from "./util/stockLocationFilters"
+
+export { StockLocationCatalogueFilterBar } from "./components/StockLocationCatalogueFilterBar"
+
 export {SOCKET_URL, measuringFeaturesTableHeaders, mfClassTypes} from "./constants/Constants"

@@ -38,6 +38,7 @@
   "stockByLocationLoadError": "Could not load stock locations.",
   "stockByLocationEmpty": "No stock locations defined.",
   "stockByLocationNoMaterials": "No materials stocked at this location.",
+  "stockByLocationNoLocationsForCatalogueId": "No locations hold stock for catalogue ID \"{{catalogueId}}\".",
   "stockedMaterialsCountLabel": "materials",
   "stockTbd": "TBD",
   "stockProductsAvailabilityDescription": "Finished-goods quantities available for stock: overproduction on customer work orders plus all production on purchase orders marked as internal stock demand (combined per product).",

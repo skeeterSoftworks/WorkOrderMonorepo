@@ -18,6 +18,11 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { StockLocationTO } from 'sf-common/src/models/ApiRequests';
+import {
+    collectStockCatalogueIds,
+    filterStockLocationsByCatalogueId,
+    StockLocationCatalogueFilterBar,
+} from 'sf-common';
 import { Server } from '../../api/Server';
 
 function parseStockLocationsResponse(response: unknown): StockLocationTO[] {
@@ -30,6 +35,8 @@ export function StockByLocationPage() {
     const [locations, setLocations] = useState<StockLocationTO[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState(false);
+    const [filterDraftCatalogueId, setFilterDraftCatalogueId] = useState('');
+    const [appliedCatalogueId, setAppliedCatalogueId] = useState('');
 
     useEffect(() => {
         Server.getAllStockLocations(
@@ -44,13 +51,19 @@ export function StockByLocationPage() {
         );
     }, []);
 
+    const catalogueOptions = useMemo(() => collectStockCatalogueIds(locations), [locations]);
+
     const sortedLocations = useMemo(
         () =>
-            [...locations].sort((a, b) =>
+            [...filterStockLocationsByCatalogueId(locations, appliedCatalogueId)].sort((a, b) =>
                 (a.stockLocationCode ?? '').localeCompare(b.stockLocationCode ?? ''),
             ),
-        [locations],
+        [locations, appliedCatalogueId],
     );
+
+    const applyCatalogueFilter = () => {
+        setAppliedCatalogueId(filterDraftCatalogueId.trim());
+    };
 
     return (
         <Box sx={{ py: 2 }}>
@@ -61,6 +74,14 @@ export function StockByLocationPage() {
                 {t('backToHome')}
             </Button>
 
+            <StockLocationCatalogueFilterBar
+                draftCatalogueId={filterDraftCatalogueId}
+                catalogueOptions={catalogueOptions}
+                onDraftChange={setFilterDraftCatalogueId}
+                onSubmit={applyCatalogueFilter}
+                disabled={loading}
+            />
+
             {loading && (
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
                     <CircularProgress />
@@ -70,7 +91,11 @@ export function StockByLocationPage() {
                 <Typography color="error">{t('stockByLocationLoadError')}</Typography>
             )}
             {!loading && !loadError && sortedLocations.length === 0 && (
-                <Typography color="text.secondary">{t('stockByLocationEmpty')}</Typography>
+                <Typography color="text.secondary">
+                    {appliedCatalogueId
+                        ? t('stockByLocationNoLocationsForCatalogueId', { catalogueId: appliedCatalogueId })
+                        : t('stockByLocationEmpty')}
+                </Typography>
             )}
             {!loading && !loadError && sortedLocations.map((loc) => {
                 const materials = loc.stockedMaterials ?? [];

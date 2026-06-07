@@ -630,6 +630,7 @@
   "stockByLocationLoadError": "Could not load stock locations.",
   "stockByLocationEmpty": "No stock locations defined.",
   "stockByLocationNoMaterials": "No materials stocked at this location.",
+  "stockByLocationNoLocationsForCatalogueId": "No locations hold stock for catalogue ID \"{{catalogueId}}\".",
   "stockedMaterialsCountLabel": "materials",
   "materialProviderName": "Material provider",
   "materialOrderStatus_IN_TRANSPORT": "In transport",
