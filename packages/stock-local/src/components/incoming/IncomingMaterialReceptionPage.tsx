@@ -20,7 +20,6 @@ import {
     Typography,
 } from '@mui/material';
 import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -69,6 +68,10 @@ function toServerDateTime(localValue: string): string {
 
 function materialOrderHasCertificate(order: MaterialOrderTO): boolean {
     return order.certificatePresent === true;
+}
+
+function receptionHasCertificate(reception: MaterialOrderReceptionTO): boolean {
+    return reception.certificatePresent === true;
 }
 
 export function IncomingMaterialReceptionPage() {
@@ -157,7 +160,6 @@ export function IncomingMaterialReceptionPage() {
         });
 
     const openReceiveDialog = (order: MaterialOrderTO) => {
-        if (!materialOrderHasCertificate(order)) return;
         setSelectedOrder(order);
         setReceivedAt(toDatetimeLocalValue(new Date()));
         setReceivedQuantity(String(order.quantity ?? ''));
@@ -197,7 +199,7 @@ export function IncomingMaterialReceptionPage() {
                 const saved = (response as { data?: MaterialOrderReceptionTO })?.data;
                 closeReceiveDialog();
                 loadData();
-                if (saved?.id != null) {
+                if (saved?.id != null && materialOrderHasCertificate(selectedOrder)) {
                     openValidationDialog({
                         ...orderToReceptionContext(selectedOrder, saved.id),
                         ...saved,
@@ -282,25 +284,13 @@ export function IncomingMaterialReceptionPage() {
                                                     {o.status ? t(`materialOrderStatus_${o.status}`) : '—'}
                                                 </TableCell>
                                                 <TableCell align="right">
-                                                    {materialOrderHasCertificate(o) ? (
-                                                        <Button
-                                                            variant="contained"
-                                                            size="small"
-                                                            onClick={() => openReceiveDialog(o)}
-                                                        >
-                                                            {t('receiveMaterial')}
-                                                        </Button>
-                                                    ) : (
-                                                        <Tooltip title={t('materialOrderCertificateMissing')}>
-                                                            <IconButton
-                                                                size="small"
-                                                                aria-label={t('materialOrderCertificateMissing')}
-                                                                sx={{ color: 'warning.main' }}
-                                                            >
-                                                                <ErrorOutlineIcon fontSize="small" />
-                                                            </IconButton>
-                                                        </Tooltip>
-                                                    )}
+                                                    <Button
+                                                        variant="contained"
+                                                        size="small"
+                                                        onClick={() => openReceiveDialog(o)}
+                                                    >
+                                                        {t('receiveMaterial')}
+                                                    </Button>
                                                 </TableCell>
                                             </TableRow>
                                         ))
@@ -342,13 +332,27 @@ export function IncomingMaterialReceptionPage() {
                                                 <TableCell>{r.receivedQuantity ?? '—'}</TableCell>
                                                 <TableCell>{t('materialOrderStatus_RECEIVED_IN_STOCK')}</TableCell>
                                                 <TableCell align="right">
-                                                    <IconButton
-                                                        size="small"
-                                                        title={t('openMaterialValidation')}
-                                                        onClick={() => openValidationDialog(r)}
-                                                    >
-                                                        <FactCheckOutlinedIcon fontSize="small" />
-                                                    </IconButton>
+                                                    {receptionHasCertificate(r) ? (
+                                                        <IconButton
+                                                            size="small"
+                                                            title={t('openMaterialValidation')}
+                                                            onClick={() => openValidationDialog(r)}
+                                                        >
+                                                            <FactCheckOutlinedIcon fontSize="small" />
+                                                        </IconButton>
+                                                    ) : (
+                                                        <Tooltip title={t('materialOrderCertificateRequiredForInternalControl')}>
+                                                            <span>
+                                                                <IconButton
+                                                                    size="small"
+                                                                    disabled
+                                                                    aria-label={t('materialOrderCertificateRequiredForInternalControl')}
+                                                                >
+                                                                    <FactCheckOutlinedIcon fontSize="small" />
+                                                                </IconButton>
+                                                            </span>
+                                                        </Tooltip>
+                                                    )}
                                                 </TableCell>
                                             </TableRow>
                                         ))

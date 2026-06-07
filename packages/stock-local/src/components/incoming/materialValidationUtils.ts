@@ -103,14 +103,23 @@ export function buildInternalControlPayload(
     form: InternalControlSubmitData,
 ): MaterialOrderReceptionInternalControlTO {
     const payload: MaterialOrderReceptionInternalControlTO = {
-        overallWeight: parseOverallWeight(form.overallWeight),
         overallAcceptance: form.overallAcceptance,
     };
+    const overallWeight = parseOverallWeight(form.overallWeight);
+    if (overallWeight != null) {
+        payload.overallWeight = overallWeight;
+    }
     for (const key of getSampleMaterialDimensions(source)) {
-        const parsed = form.samples[key].map((raw) => Number.parseFloat(raw.trim()));
-        if (key === 'diameter') payload.diameterSamples = parsed;
-        if (key === 'length') payload.lengthSamples = parsed;
-        if (key === 'width') payload.widthSamples = parsed;
+        const parsed = form.samples[key].map((raw) => {
+            const trimmed = raw.trim();
+            if (!trimmed) return Number.NaN;
+            return Number.parseFloat(trimmed);
+        });
+        if (parsed.length === 3 && parsed.every((n) => Number.isFinite(n))) {
+            if (key === 'diameter') payload.diameterSamples = parsed;
+            if (key === 'length') payload.lengthSamples = parsed;
+            if (key === 'width') payload.widthSamples = parsed;
+        }
     }
     return payload;
 }
@@ -129,16 +138,12 @@ export function areRequiredSamplesComplete(
 }
 
 export function isInternalControlFormComplete(
-    source: MaterialOrderReceptionTO | MaterialOrderTO,
-    samples: SampleInputs,
-    overallWeight: string,
+    _source: MaterialOrderReceptionTO | MaterialOrderTO,
+    _samples: SampleInputs,
+    _overallWeight: string,
     overallAcceptance: boolean | null,
 ): boolean {
-    if (!isOverallWeightValid(overallWeight)) return false;
-    if (overallAcceptance === null) return false;
-    const dimensions = getSampleMaterialDimensions(source);
-    if (dimensions.length > 0 && !areRequiredSamplesComplete(source, samples)) return false;
-    return true;
+    return overallAcceptance !== null;
 }
 
 export function orderToReceptionContext(order: MaterialOrderTO, receptionId: number): MaterialOrderReceptionTO {

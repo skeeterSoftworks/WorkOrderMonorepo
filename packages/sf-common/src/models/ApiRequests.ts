@@ -170,6 +170,8 @@ export interface MaterialOrderReceptionTO {
     materialWidth?: number,
     /** Quantities to place at stock locations; sum must equal receivedQuantity. */
     stockAllocations?: MaterialReceptionStockAllocationTO[],
+    /** Whether the linked material order has an uploaded certificate. */
+    certificatePresent?: boolean,
 }
 
 export type EmailTemplateCode =

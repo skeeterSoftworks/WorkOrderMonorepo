@@ -127,7 +127,6 @@ export function MaterialInternalControlDialog({
                     label={t('overallWeight')}
                     type="number"
                     size="small"
-                    required
                     value={overallWeight}
                     onChange={(e) => setOverallWeight(e.target.value)}
                     inputProps={{ step: 'any', min: 0 }}
