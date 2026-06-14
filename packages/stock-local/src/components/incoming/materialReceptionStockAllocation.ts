@@ -48,11 +48,15 @@ export function buildStockAllocationsPayload(
 
 export function isReceiveFormValid(params: {
     receivedQuantity: string;
-    orderQuantity: number | undefined;
+    maxQuantity: number | undefined;
+    deliveryNoteNumber: string;
     allocationRows: StockAllocationRow[];
 }): boolean {
     const received = parseReceivedQuantity(params.receivedQuantity);
-    if (received == null || params.orderQuantity == null || received !== params.orderQuantity) {
+    if (received == null || params.maxQuantity == null || params.maxQuantity <= 0 || received > params.maxQuantity) {
+        return false;
+    }
+    if (!params.deliveryNoteNumber.trim()) {
         return false;
     }
     const allocated = sumAllocationQuantities(params.allocationRows);

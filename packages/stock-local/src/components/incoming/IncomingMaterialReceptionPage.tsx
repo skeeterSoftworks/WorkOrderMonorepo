@@ -21,6 +21,7 @@ import { useTranslation } from 'react-i18next';
 import type { MaterialOrderLineTO, MaterialOrderReceptionTO, MaterialOrderTO, StockLocationTO } from 'sf-common/src/models/ApiRequests';
 import { Server } from '../../api/Server';
 import { MaterialInternalControlDialog } from './MaterialInternalControlDialog';
+import { MaterialDeliveryNotesPanel } from './MaterialDeliveryNotesPanel';
 import { ReceiveMaterialDialog } from './ReceiveMaterialDialog';
 import {
     buildInternalControlPayload,
@@ -91,6 +92,15 @@ function openReceptionRows(orders: MaterialOrderTO[]): OpenReceptionRow[] {
 
 function lineMaterialLabel(line: MaterialOrderLineTO, order: MaterialOrderTO): string {
     return line.materialName?.trim() || line.materialCode?.trim() || order.materialName || order.materialCode || '—';
+}
+
+function lineQuantityLabel(line: MaterialOrderLineTO): string {
+    const ordered = line.quantity ?? 0;
+    const received = line.receivedQuantityTotal ?? 0;
+    if (received > 0 && received < ordered) {
+        return `${received} / ${ordered}`;
+    }
+    return String(ordered);
 }
 
 export function IncomingMaterialReceptionPage() {
@@ -175,7 +185,7 @@ export function IncomingMaterialReceptionPage() {
 
     const handleReceived = (saved: MaterialOrderReceptionTO, order: MaterialOrderTO, line: MaterialOrderLineTO) => {
         loadData();
-        if (saved.id != null && materialOrderHasCertificate(order)) {
+        if (saved.lineFullyReceived && saved.id != null && materialOrderHasCertificate(order)) {
             openValidationDialog({
                 ...orderToReceptionContext(order, line, saved.id),
                 ...saved,
@@ -243,6 +253,7 @@ export function IncomingMaterialReceptionPage() {
                                         <TableCell>{t('materialName')}</TableCell>
                                         <TableCell>{t('materialProviderName')}</TableCell>
                                         <TableCell>{t('quantity')}</TableCell>
+                                        <TableCell>{t('deliveryNotes')}</TableCell>
                                         <TableCell>{t('status')}</TableCell>
                                         <TableCell align="right">{t('actions')}</TableCell>
                                     </TableRow>
@@ -250,7 +261,7 @@ export function IncomingMaterialReceptionPage() {
                                 <TableBody>
                                     {awaitingReceptionRows.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={6} align="center">
+                                            <TableCell colSpan={7} align="center">
                                                 {t('incomingMaterialNoOrders')}
                                             </TableCell>
                                         </TableRow>
@@ -260,7 +271,13 @@ export function IncomingMaterialReceptionPage() {
                                                 <TableCell>{order.code || '—'}</TableCell>
                                                 <TableCell>{lineMaterialLabel(line, order)}</TableCell>
                                                 <TableCell>{order.materialProviderName || '—'}</TableCell>
-                                                <TableCell>{line.quantity ?? 0}</TableCell>
+                                                <TableCell>{lineQuantityLabel(line)}</TableCell>
+                                                <TableCell>
+                                                    <MaterialDeliveryNotesPanel
+                                                        notes={line.deliveryNotes ?? []}
+                                                        rowKey={`${order.id}-${line.id ?? line.materialId}`}
+                                                    />
+                                                </TableCell>
                                                 <TableCell>
                                                     {order.status ? t(`materialOrderStatus_${order.status}`) : '—'}
                                                 </TableCell>
@@ -269,6 +286,7 @@ export function IncomingMaterialReceptionPage() {
                                                         variant="contained"
                                                         size="small"
                                                         onClick={() => openReceiveDialog(order, line)}
+                                                        disabled={(line.remainingQuantity ?? Math.max(0, (line.quantity ?? 0) - (line.receivedQuantityTotal ?? 0))) <= 0}
                                                     >
                                                         {t('receiveMaterial')}
                                                     </Button>

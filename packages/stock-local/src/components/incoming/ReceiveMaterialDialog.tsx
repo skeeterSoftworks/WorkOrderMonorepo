@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
     Button,
     Dialog,
@@ -34,6 +34,15 @@ function lineMaterialLabel(line: MaterialOrderLineTO, order: MaterialOrderTO): s
     return line.materialName?.trim() || line.materialCode?.trim() || order.materialName || order.materialCode || '—';
 }
 
+function remainingQuantity(line: MaterialOrderLineTO): number {
+    if (line.remainingQuantity != null) {
+        return Math.max(0, line.remainingQuantity);
+    }
+    const ordered = line.quantity ?? 0;
+    const received = line.receivedQuantityTotal ?? 0;
+    return Math.max(0, ordered - received);
+}
+
 type Props = {
     open: boolean;
     order: MaterialOrderTO | null;
@@ -45,23 +54,40 @@ type Props = {
 
 export function ReceiveMaterialDialog({ open, order, line, stockLocations, onClose, onReceived }: Props) {
     const { t } = useTranslation();
+    const [deliveryNoteNumber, setDeliveryNoteNumber] = useState('');
     const [receivedAt, setReceivedAt] = useState('');
     const [receivedQuantity, setReceivedQuantity] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [allocationRows, setAllocationRows] = useState<StockAllocationRow[]>([newAllocationRow()]);
 
+    const maxQuantity = useMemo(() => (line ? remainingQuantity(line) : 0), [line]);
+
     useEffect(() => {
         if (!open || !line) return;
+        setDeliveryNoteNumber('');
         setReceivedAt(toDatetimeLocalValue(new Date()));
-        setReceivedQuantity(String(line.quantity ?? ''));
+        setReceivedQuantity(String(maxQuantity > 0 ? maxQuantity : ''));
         setAllocationRows([newAllocationRow()]);
-    }, [open, line?.id, line?.materialId, line?.quantity]);
+    }, [open, line?.id, line?.materialId, maxQuantity]);
 
     const receivedQtyParsed = parseReceivedQuantity(receivedQuantity);
     const canConfirm =
         order?.id != null &&
         line != null &&
-        isReceiveFormValid({ receivedQuantity, orderQuantity: line.quantity, allocationRows });
+        maxQuantity > 0 &&
+        isReceiveFormValid({
+            receivedQuantity,
+            maxQuantity,
+            deliveryNoteNumber,
+            allocationRows,
+        });
+
+    const quantityHelperText =
+        maxQuantity <= 0
+            ? t('materialLineFullyReceived')
+            : maxQuantity === line?.quantity
+              ? t('receivedQuantityBatchWhole', { max: maxQuantity })
+              : t('receivedQuantityBatchPartial', { received: line?.receivedQuantityTotal ?? 0, ordered: line?.quantity ?? 0, max: maxQuantity });
 
     const confirmReceive = () => {
         if (!order?.id || !line || !canConfirm) return;
@@ -72,6 +98,7 @@ export function ReceiveMaterialDialog({ open, order, line, stockLocations, onClo
             {
                 materialOrderId: order.id,
                 materialOrderLineId: line.id,
+                deliveryNoteNumber: deliveryNoteNumber.trim(),
                 receivedAt: toServerDateTime(receivedAt),
                 receivedQuantity: qty,
                 stockAllocations: buildStockAllocationsPayload(allocationRows),
@@ -94,8 +121,32 @@ export function ReceiveMaterialDialog({ open, order, line, stockLocations, onClo
                     {order?.code ? `${order.code} — ` : ''}
                     {line && order ? lineMaterialLabel(line, order) : ''} — {order?.materialProviderName}
                 </Typography>
-                <TextField label={t('receptionDate')} type="datetime-local" value={receivedAt} onChange={(e) => setReceivedAt(e.target.value)} InputLabelProps={{ shrink: true }} fullWidth />
-                <TextField label={t('receivedQuantity')} type="number" value={receivedQuantity} onChange={(e) => setReceivedQuantity(e.target.value)} fullWidth inputProps={{ min: 1 }} helperText={t('receivedQuantityMustMatchOrder')} />
+                <TextField
+                    label={t('deliveryNoteNumber')}
+                    value={deliveryNoteNumber}
+                    onChange={(e) => setDeliveryNoteNumber(e.target.value)}
+                    fullWidth
+                    required
+                />
+                <TextField
+                    label={t('receptionDate')}
+                    type="datetime-local"
+                    value={receivedAt}
+                    onChange={(e) => setReceivedAt(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    fullWidth
+                    required
+                />
+                <TextField
+                    label={t('receivedQuantity')}
+                    type="number"
+                    value={receivedQuantity}
+                    onChange={(e) => setReceivedQuantity(e.target.value)}
+                    fullWidth
+                    inputProps={{ min: 1, max: maxQuantity > 0 ? maxQuantity : undefined }}
+                    helperText={quantityHelperText}
+                    disabled={maxQuantity <= 0}
+                />
                 <ReceiveMaterialStockAllocationSection
                     rows={allocationRows}
                     stockLocations={stockLocations}
@@ -106,7 +157,9 @@ export function ReceiveMaterialDialog({ open, order, line, stockLocations, onClo
             </DialogContent>
             <DialogActions>
                 <Button onClick={onClose} disabled={submitting}>{t('cancel')}</Button>
-                <Button variant="contained" onClick={confirmReceive} disabled={submitting || !canConfirm}>{t('confirmAction')}</Button>
+                <Button variant="contained" onClick={confirmReceive} disabled={submitting || !canConfirm}>
+                    {t('confirmAction')}
+                </Button>
             </DialogActions>
         </Dialog>
     );

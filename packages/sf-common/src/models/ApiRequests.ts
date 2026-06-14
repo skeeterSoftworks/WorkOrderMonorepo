@@ -93,6 +93,9 @@ export interface MaterialOrderLineTO {
     materialCode?: string,
     quantity?: number,
     received?: boolean,
+    receivedQuantityTotal?: number,
+    remainingQuantity?: number,
+    deliveryNotes?: DeliveryNoteTO[],
     materialDiameter?: number,
     materialWeight?: number,
     materialLength?: number,
@@ -156,6 +159,16 @@ export interface MaterialOrderPageTO {
     size?: number,
 }
 
+export interface DeliveryNoteTO {
+    id?: number,
+    materialOrderId?: number,
+    materialOrderLineId?: number,
+    deliveryNoteNumber?: string,
+    /** ISO-8601 date-time of physical reception for this batch. */
+    receivedAt?: string,
+    quantity?: number,
+}
+
 export interface MaterialOrderReceptionInternalControlTO {
     diameterSamples?: number[],
     lengthSamples?: number[],
@@ -176,6 +189,11 @@ export interface MaterialOrderReceptionTO {
     /** ISO-8601 date-time of physical reception. */
     receivedAt?: string,
     receivedQuantity?: number,
+    /** User-entered delivery note number for this batch. */
+    deliveryNoteNumber?: string,
+    deliveryNoteId?: number,
+    /** True when the order line is fully received after this batch. */
+    lineFullyReceived?: boolean,
     internalControl?: MaterialOrderReceptionInternalControlTO,
     /** Nominal diameter from linked material (0 = not defined). */
     materialDiameter?: number,
