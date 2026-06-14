@@ -426,6 +426,24 @@ export interface WorkOrderTO {
     /** Produced good quantity aggregated across sessions (denormalized from backend). */
     producedGoodQuantity?: number,
     state?: WorkOrderState,
+    /** Optional finished-goods stock allocations when creating a work order. */
+    stockAssignments?: WorkOrderStockAllocationTO[],
+}
+
+export interface WorkOrderStockAllocationTO {
+    quantity?: number,
+}
+
+export interface ProductStockAvailabilityTO {
+    productId?: number,
+    productReference?: string,
+    productName?: string,
+    availableQuantity?: number,
+}
+
+export interface WorkOrderCreateResultTO {
+    workOrder?: WorkOrderTO,
+    stockAssignmentOrderPdfBase64?: string,
 }
 
 export interface ProductProfileTO {

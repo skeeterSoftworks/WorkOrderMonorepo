@@ -328,4 +328,13 @@ export class Server {
             });
     }
 
+    static getProductStockAvailability(onSuccess: Function, onError?: Function) {
+        axios.get(`${getServerUrl()}/stock/products-availability`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError && onError(error);
+            });
+    }
+
 }

@@ -45,7 +45,7 @@ export function Home() {
                 <Grid item xs="auto" sx={{textAlign: 'center'}}>
                     <Button
                         component={Link}
-                        to="/stock-by-location"
+                        to="/stock"
                         variant="contained"
                         sx={homeButtonStyle}
                     >
@@ -54,7 +54,7 @@ export function Home() {
                                 component="span"
                                 sx={{fontSize: '1.1rem', fontWeight: 600, lineHeight: 1.2}}
                             >
-                                {t('stockByLocation')}
+                                {t('stock')}
                             </Typography>
                             <WarehouseIcon sx={{fontSize: 34}} />
                         </Box>

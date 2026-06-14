@@ -7,7 +7,7 @@ import {BrowserRouter, Route, Routes} from "react-router-dom";
 import {HOC} from "./containers/HOC.tsx";
 import {Home} from "./components/home/Home.tsx";
 import {IncomingMaterialReceptionPage} from "./components/incoming/IncomingMaterialReceptionPage.tsx";
-import {StockByLocationPage} from "./components/stock/StockByLocationPage.tsx";
+import {StockPage} from "./components/stock/StockPage.tsx";
 
 
 const root = ReactDOM.createRoot(
@@ -28,7 +28,8 @@ root.render(
                     <Routes>
                         <Route path="/" element={<Home/>}/>
                         <Route path="/incoming-material" element={<IncomingMaterialReceptionPage/>}/>
-                        <Route path="/stock-by-location" element={<StockByLocationPage/>}/>
+                        <Route path="/stock" element={<StockPage/>}/>
+                        <Route path="/stock-by-location" element={<StockPage/>}/>
                     </Routes>
                 </HOC>
             </BrowserRouter>

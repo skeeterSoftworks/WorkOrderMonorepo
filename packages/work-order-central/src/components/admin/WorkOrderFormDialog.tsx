@@ -7,11 +7,25 @@ import DialogTitle from '@mui/material/DialogTitle';
 import IconButton from '@mui/material/IconButton';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+import Alert from '@mui/material/Alert';
+import Backdrop from '@mui/material/Backdrop';
+import CircularProgress from '@mui/material/CircularProgress';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
-import type { WorkOrderTO, PurchaseOrderTO, ProductOrderTO } from 'sf-common/src/models/ApiRequests';
+import type {
+    WorkOrderTO,
+    PurchaseOrderTO,
+    ProductOrderTO,
+    WorkOrderCreateResultTO,
+} from 'sf-common/src/models/ApiRequests';
 import { Server } from 'sf-common';
 import { toastActionSuccess, toastServerError } from '../../util/actionToast';
+import { downloadBase64Pdf } from '../../util/downloadBase64Pdf';
+import {
+    buildWorkOrderStockAssignmentsPayload,
+    isWorkOrderStockAssignmentValid,
+} from '../../util/workOrderStockAllocation';
 
 function purchaseOrderDeliveryToDueDateInput(deliveryDate: PurchaseOrderTO['deliveryDate']): string {
     if (deliveryDate == null) return '';
@@ -97,6 +111,33 @@ export function WorkOrderFormDialog({
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [comment, setComment] = useState('');
+    const [productStockAvailable, setProductStockAvailable] = useState(0);
+    const [productStockLoading, setProductStockLoading] = useState(false);
+    const [stockAssignQuantity, setStockAssignQuantity] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    
+    const selectableLines = useMemo(
+        () => getSelectableProductLines(purchaseOrderId, purchaseOrders, workOrders, editingId),
+        [purchaseOrderId, purchaseOrders, workOrders, editingId],
+    );
+
+    const selectedProductLine = useMemo(() => {
+        if (productOrderLineId == null) return undefined;
+        return selectableLines.find((line) => line.id === productOrderLineId);
+    }, [productOrderLineId, selectableLines]);
+
+    const selectedProductId = selectedProductLine?.product?.id;
+    const requiredQuantity = selectedProductLine?.quantity;
+    const stockAssignmentsPayload = buildWorkOrderStockAssignmentsPayload(stockAssignQuantity);
+    const stockAllocationValid = isWorkOrderStockAssignmentValid({
+        quantityRaw: stockAssignQuantity,
+        availableQuantity: productStockAvailable,
+        requiredQuantity,
+    });
+
+    const willGenerateStockAssignmentOrder =
+        editingId == null && stockAssignmentsPayload.length > 0;
+
 
     useEffect(() => {
         if (!open) return;
@@ -140,13 +181,41 @@ export function WorkOrderFormDialog({
         setDueDate(po ? purchaseOrderDeliveryToDueDateInput(po.deliveryDate) : '');
     }, [open, editingId, purchaseOrderId, purchaseOrders]);
 
-    const selectableLines = useMemo(
-        () => getSelectableProductLines(purchaseOrderId, purchaseOrders, workOrders, editingId),
-        [purchaseOrderId, purchaseOrders, workOrders, editingId],
-    );
+    useEffect(() => {
+        if (!open || editingId) {
+            setProductStockAvailable(0);
+            setStockAssignQuantity('');
+            return;
+        }
+        if (selectedProductId == null || !Number.isFinite(selectedProductId)) {
+            setProductStockAvailable(0);
+            setStockAssignQuantity('');
+            return;
+        }
+        setProductStockLoading(true);
+        setStockAssignQuantity('');
+        Server.getProductStockAvailabilityForProduct(
+            selectedProductId,
+            (response: { data?: { availableQuantity?: number } }) => {
+                setProductStockAvailable(response?.data?.availableQuantity ?? 0);
+                setProductStockLoading(false);
+            },
+            () => {
+                setProductStockAvailable(0);
+                setProductStockLoading(false);
+            },
+        );
+    }, [open, editingId, selectedProductId]);
+
+    useEffect(() => {
+        if (!open) {
+            setSubmitting(false);
+        }
+    }, [open]);
 
     const handleSubmit = () => {
-        if (productOrderLineId == null) return;
+        if (productOrderLineId == null || !stockAllocationValid || submitting) return;
+        setSubmitting(true);
         const payload: WorkOrderTO = {
             id: editingId,
             productOrderId: productOrderLineId,
@@ -154,24 +223,39 @@ export function WorkOrderFormDialog({
             startDate: startDate || undefined,
             endDate: endDate || undefined,
             comment: comment || undefined,
+            stockAssignments: stockAssignmentsPayload.length > 0 ? stockAssignmentsPayload : undefined,
         };
-        const onSuccess = () => {
+        const onSuccess = (response?: { data?: WorkOrderCreateResultTO }) => {
+            const pdf = response?.data?.stockAssignmentOrderPdfBase64;
+            if (pdf) {
+                const workOrderId = response?.data?.workOrder?.id;
+                downloadBase64Pdf(
+                    pdf,
+                    `stock-assignment-order-${workOrderId ?? 'new'}.pdf`,
+                );
+            }
+            setSubmitting(false);
             onSaved();
             onClose();
             toastActionSuccess(editingId ? t('toastWorkOrderUpdated') : t('toastWorkOrderAdded'));
         };
+        const onError = (err: unknown) => {
+            setSubmitting(false);
+            toastServerError(err, t);
+        };
         if (editingId) {
-            Server.editWorkOrder(payload, onSuccess, (err: unknown) => toastServerError(err, t));
+            Server.editWorkOrder(payload, onSuccess, onError);
         } else {
-            Server.addWorkOrder(payload, onSuccess, (err: unknown) => toastServerError(err, t));
+            Server.addWorkOrder(payload, onSuccess, onError);
         }
     };
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth scroll="paper">
+        <>
+            <Dialog open={open} onClose={submitting ? undefined : onClose} maxWidth="sm" fullWidth scroll="paper">
             <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 {editingId ? t('editWorkOrder') : t('createNewWorkOrder')}
-                <IconButton size="small" onClick={onClose} aria-label={t('close')}>
+                <IconButton size="small" onClick={onClose} aria-label={t('close')} disabled={submitting}>
                     <CloseIcon />
                 </IconButton>
             </DialogTitle>
@@ -225,6 +309,36 @@ export function WorkOrderFormDialog({
                             </MenuItem>
                         ))}
                     </TextField>
+                    {!editingId && productOrderLineId != null && (
+                        <>
+                            {productStockLoading ? (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <CircularProgress size={20} />
+                                    <Typography variant="body2" color="text.secondary">
+                                        {t('workOrderStockAvailabilityChecking')}
+                                    </Typography>
+                                </Box>
+                            ) : productStockAvailable > 0 ? (
+                                <>
+                                    <Alert severity="info">
+                                        {t('workOrderStockAvailableNotice', {
+                                            quantity: productStockAvailable,
+                                        })}
+                                    </Alert>
+                                    <TextField
+                                        label={t('workOrderStockAssignQuantity')}
+                                        type="number"
+                                        value={stockAssignQuantity}
+                                        onChange={(e) => setStockAssignQuantity(e.target.value)}
+                                        size="small"
+                                        fullWidth
+                                        inputProps={{ min: 1, max: productStockAvailable }}
+                                        helperText={t('workOrderStockAssignmentHint')}
+                                    />
+                                </>
+                            ) : null}
+                        </>
+                    )}
                     <TextField
                         label={t('dueDate')}
                         type="date"
@@ -271,16 +385,34 @@ export function WorkOrderFormDialog({
                             variant="contained"
                             color="primary"
                             onClick={handleSubmit}
-                            disabled={productOrderLineId == null}
+                            disabled={productOrderLineId == null || !stockAllocationValid || submitting}
                         >
                             {editingId ? t('editWorkOrder') : t('addWorkOrder')}
                         </Button>
-                        <Button variant="outlined" onClick={onClose}>
+                        <Button variant="outlined" onClick={onClose} disabled={submitting}>
                             {t('cancel')}
                         </Button>
                     </Box>
                 </Box>
             </DialogContent>
         </Dialog>
+            <Backdrop
+                open={submitting}
+                sx={{
+                    color: '#fff',
+                    zIndex: (theme) => theme.zIndex.modal + 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2,
+                }}
+            >
+                <CircularProgress color="inherit" />
+                <Typography variant="body1" component="p">
+                    {willGenerateStockAssignmentOrder
+                        ? t('generatingStockAssignmentOrder')
+                        : t('loadingDetails')}
+                </Typography>
+            </Backdrop>
+        </>
     );
 }

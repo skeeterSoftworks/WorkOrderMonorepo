@@ -175,6 +175,15 @@ export class Server {
             });
     }
 
+    static getProductStockAvailabilityForProduct(productId: number, onSuccess: Function, onError: Function) {
+        axios.get(`${getServerUrl()}/stock/products/${productId}/availability`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
     static addWorkOrder(workOrder: WorkOrderTO, onSuccess: Function, onError: Function) {
         axios.post(`${getServerUrl()}/workorders/add`, workOrder)
             .then(response => onSuccess(response))
