@@ -451,6 +451,41 @@ export interface StockAssignmentOrderTO {
     createdByFullName?: string,
     assignedAt?: string,
     assignedByUserQr?: string,
+    assignedByFullName?: string,
+}
+
+export type StockOrderHistoryProductType = 'FINISHED_PRODUCT' | 'MATERIAL'
+
+export interface StockOrderHistoryRowTO {
+    id?: number,
+    code?: string,
+    productType?: StockOrderHistoryProductType,
+    workOrderId?: number,
+    productId?: number,
+    productReference?: string,
+    productName?: string,
+    quantity?: number,
+    assignedAt?: string,
+    assignedByFullName?: string,
+    assignedByUserQr?: string,
+}
+
+export interface StockOrderHistoryPageTO {
+    content?: StockOrderHistoryRowTO[],
+    totalElements?: number,
+    page?: number,
+    size?: number,
+}
+
+export interface StockOrderHistorySearchParams {
+    page?: number,
+    size?: number,
+    sortBy?: string,
+    asc?: boolean,
+    productType?: string,
+    assignedFrom?: string,
+    assignedTo?: string,
+    assignedBy?: string,
 }
 
 export interface FulfillStockAssignmentOrderRequestTO {

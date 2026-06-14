@@ -3,6 +3,7 @@ import type {
     MaterialOrderReceptionTO,
     MaterialOrderTO,
     StockLocationTO,
+    StockOrderHistorySearchParams,
 } from "sf-common/src/models/ApiRequests";
 import type {
     BoundMachineProductTO,
@@ -352,6 +353,19 @@ export class Server {
         onError?: Function,
     ) {
         axios.post(`${getServerUrl()}/stock/assignment-orders/fulfill`, body)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError && onError(error);
+            });
+    }
+
+    static searchStockOrderHistory(
+        params: StockOrderHistorySearchParams,
+        onSuccess: Function,
+        onError?: Function,
+    ) {
+        axios.get(`${getServerUrl()}/stock/order-history/search`, { params })
             .then(response => onSuccess(response))
             .catch(error => {
                 console.log(error);

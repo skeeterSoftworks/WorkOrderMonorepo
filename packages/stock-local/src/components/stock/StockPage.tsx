@@ -9,10 +9,12 @@ import { useTranslation } from 'react-i18next';
 import { StockMaterialsByLocationPanel } from './StockMaterialsByLocationPanel';
 import { StockProductsAvailablePanel } from './StockProductsAvailablePanel';
 import { StockAssignmentFulfillPanel } from './StockAssignmentFulfillPanel';
+import { StockOrderHistoryPanel } from './StockOrderHistoryPanel';
 
 const StockTabs = {
     MATERIALS: 0,
     PRODUCTS: 1,
+    ORDER_HISTORY: 2,
 } as const;
 
 type StockTabId = (typeof StockTabs)[keyof typeof StockTabs];
@@ -35,6 +37,7 @@ export function StockPage() {
                 <Tabs value={activeTab} onChange={(_, value) => setActiveTab(value as StockTabId)}>
                     <Tab label={t('stockMaterials')} value={StockTabs.MATERIALS} />
                     <Tab label={t('products')} value={StockTabs.PRODUCTS} />
+                    <Tab label={t('stockOrderHistoryTab')} value={StockTabs.ORDER_HISTORY} />
                 </Tabs>
             </Box>
 
@@ -45,6 +48,7 @@ export function StockPage() {
                     <StockProductsAvailablePanel refreshKey={productsRefreshKey} />
                 </>
             )}
+            {activeTab === StockTabs.ORDER_HISTORY && <StockOrderHistoryPanel />}
         </Box>
     );
 }
