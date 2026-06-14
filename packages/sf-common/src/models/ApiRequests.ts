@@ -86,11 +86,26 @@ export type MaterialOrderStatus =
     | 'VALIDATED'
     | 'REJECTED'
 
+export interface MaterialOrderLineTO {
+    id?: number,
+    materialId?: number,
+    materialName?: string,
+    materialCode?: string,
+    quantity?: number,
+    received?: boolean,
+    materialDiameter?: number,
+    materialWeight?: number,
+    materialLength?: number,
+    materialWidth?: number,
+}
+
 export interface MaterialOrderTO {
     id?: number,
     /** Server-generated order number (NM + MMddyyyyHHmm). */
     code?: string,
+    /** Sum of line quantities. */
     quantity?: number,
+    /** Populated when the order has exactly one line (legacy list views). */
     materialId?: number,
     materialName?: string,
     materialCode?: string,
@@ -106,14 +121,15 @@ export interface MaterialOrderTO {
     /** Raw Base64 or data URL for upload. */
     certificateBase64?: string,
     certificatePresent?: boolean,
-    /** Nominal diameter from linked material (0 = not defined). */
+    /** Nominal diameter from first/only line material (0 = not defined). */
     materialDiameter?: number,
-    /** Nominal weight from linked material (0 = not defined). */
+    /** Nominal weight from first/only line material (0 = not defined). */
     materialWeight?: number,
-    /** Nominal length from linked material (0 = not defined). */
+    /** Nominal length from first/only line material (0 = not defined). */
     materialLength?: number,
-    /** Nominal width from linked material (0 = not defined). */
+    /** Nominal width from first/only line material (0 = not defined). */
     materialWidth?: number,
+    lines?: MaterialOrderLineTO[],
 }
 
 export interface MaterialOrderSearchParams {
@@ -152,6 +168,7 @@ export interface MaterialOrderReceptionInternalControlTO {
 export interface MaterialOrderReceptionTO {
     id?: number,
     materialOrderId?: number,
+    materialOrderLineId?: number,
     materialOrderCode?: string,
     materialCode?: string,
     materialName?: string,

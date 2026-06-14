@@ -37,6 +37,8 @@ export {
 
 export { normalizeBinaryDataUrl, isPdfDataUrl } from "./util/mediaDataUrl"
 
+export { useFormIsolation } from "./hooks/useFormIsolation"
+
 export {
     materialCatalogueId,
     collectStockCatalogueIds,

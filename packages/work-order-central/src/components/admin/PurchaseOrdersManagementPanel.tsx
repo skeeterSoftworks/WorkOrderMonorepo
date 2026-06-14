@@ -2,7 +2,6 @@ import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
-import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -10,11 +9,9 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import MenuItem from '@mui/material/MenuItem';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
-import Autocomplete from '@mui/material/Autocomplete';
 import LinkIcon from '@mui/icons-material/Link';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
@@ -27,10 +24,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import type { PurchaseOrderTO, ProductOrderTO, CustomerTO, ProductTO } from 'sf-common/src/models/ApiRequests';
+import type { PurchaseOrderTO, CustomerTO, ProductTO } from 'sf-common/src/models/ApiRequests';
 import { formatEuropeanDate, formatEuropeanDateTime } from 'sf-common/src/util/DateUtils';
 import { Server, ConfirmationModal } from 'sf-common';
-import { toastActionError, toastActionSuccess, toastServerError } from '../../util/actionToast';
+import { toastActionError, toastActionSuccess } from '../../util/actionToast';
 import {
     downloadPurchaseOrderTemplate,
     parsePurchaseOrderFile,
@@ -41,13 +38,16 @@ import {
     tableActionsTableCellSx,
     tableActionIconButtonSx,
 } from '../shared/tableActions';
-import { isInternalStockOrdererCustomer } from '../../util/internalStockOrderer';
+import {
+    PurchaseOrderFormDialog,
+    type PurchaseOrderFormImportDraft,
+} from './PurchaseOrderFormDialog';
+import {
+    PurchaseOrderSearchFilters,
+    type PurchaseOrderSearchFiltersForm,
+} from './PurchaseOrderSearchFilters';
 
 type LocalPurchaseOrder = PurchaseOrderTO;
-
-const PURCHASE_ORDER_CURRENCIES = ['RSD', 'EUR'] as const;
-type PurchaseOrderCurrency = (typeof PURCHASE_ORDER_CURRENCIES)[number];
-type PurchaseOrderCurrencyField = PurchaseOrderCurrency | '';
 
 const PURCHASE_ORDER_STATUSES = [
     'CREATED',
@@ -103,11 +103,6 @@ function canRejectPurchaseOrder(order: LocalPurchaseOrder): boolean {
     return status === 'CREATED' || status === 'CONFIRMED';
 }
 
-function normalizePurchaseOrderCurrency(value: string | undefined | null): PurchaseOrderCurrency {
-    const v = (value ?? '').trim().toUpperCase();
-    return v === 'EUR' ? 'EUR' : 'RSD';
-}
-
 function purchaseOrderStatusLabel(status: string | undefined, translate: TFunction): string {
     const s = status ?? 'CREATED';
     switch (s) {
@@ -130,15 +125,6 @@ function purchaseOrderStatusLabel(status: string | undefined, translate: TFuncti
     }
 }
 
-type ProductOrderRow = {
-    id?: number;
-    productId?: number;
-    quantity: string;
-    pricePerUnit: string;
-    /** Product catalogue / reference ID (stored on Product, editable per line). */
-    catalogueReference: string;
-};
-
 export function PurchaseOrdersManagementPanel() {
     const { t } = useTranslation();
     const navigate = useNavigate();
@@ -146,14 +132,8 @@ export function PurchaseOrdersManagementPanel() {
     const [orders, setOrders] = useState<LocalPurchaseOrder[]>([]);
     const [customers, setCustomers] = useState<CustomerTO[]>([]);
     const [products, setProducts] = useState<ProductTO[]>([]);
-    const [selectedOrderId, setSelectedOrderId] = useState<number | undefined>(undefined);
-    const [selectedCustomerId, setSelectedCustomerId] = useState<number | undefined>(undefined);
-    const [currency, setCurrency] = useState<PurchaseOrderCurrencyField>('');
-    const [deliveryDate, setDeliveryDate] = useState<string>('');
-    const [deliveryTerms, setDeliveryTerms] = useState('');
-    const [shippingAddress, setShippingAddress] = useState('');
-    const [comment, setComment] = useState('');
-    const [productOrderRows, setProductOrderRows] = useState<ProductOrderRow[]>([]);
+    const [editingOrder, setEditingOrder] = useState<LocalPurchaseOrder | null>(null);
+    const [importDraft, setImportDraft] = useState<PurchaseOrderFormImportDraft | null>(null);
     const [orderToDelete, setOrderToDelete] = useState<LocalPurchaseOrder | null>(null);
     const [formModalOpen, setFormModalOpen] = useState(false);
     const [importError, setImportError] = useState<string | null>(null);
@@ -164,9 +144,11 @@ export function PurchaseOrdersManagementPanel() {
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [deliveryTermsSelectOptions, setDeliveryTermsSelectOptions] = useState<string[]>([]);
     const defaultMonthRange = useMemo(() => currentMonthDateRange(), []);
-    const [statusFilter, setStatusFilter] = useState<string>('ALL');
-    const [periodFrom, setPeriodFrom] = useState(defaultMonthRange.from);
-    const [periodTo, setPeriodTo] = useState(defaultMonthRange.to);
+    const [appliedFilters, setAppliedFilters] = useState<PurchaseOrderSearchFiltersForm>(() => ({
+        status: 'ALL',
+        periodFrom: defaultMonthRange.from,
+        periodTo: defaultMonthRange.to,
+    }));
     const [orderToReject, setOrderToReject] = useState<LocalPurchaseOrder | null>(null);
 
     useEffect(() => {
@@ -189,62 +171,19 @@ export function PurchaseOrdersManagementPanel() {
         );
     }, []);
 
-    const internalStockOrdererCustomerId = useMemo(() => {
-        const c = customers.find((x) => isInternalStockOrdererCustomer(x));
-        return c?.id;
-    }, [customers]);
-
-    const ordererCustomersSorted = useMemo(() => {
-        const list = [...customers];
-        const internalId = internalStockOrdererCustomerId;
-        list.sort((a, b) => {
-            if (internalId != null) {
-                if (a.id === internalId) {
-                    return -1;
-                }
-                if (b.id === internalId) {
-                    return 1;
-                }
-            }
-            return (a.companyName ?? '').localeCompare(b.companyName ?? '', undefined, { sensitivity: 'base' });
-        });
-        return list;
-    }, [customers, internalStockOrdererCustomerId]);
-
-    const productsForSelectedCustomer = useMemo(() => {
-        if (selectedCustomerId == null) {
-            return [];
-        }
-        return products.filter((p) => (p.customerIds ?? []).includes(selectedCustomerId));
-    }, [products, selectedCustomerId]);
-
-    const noProductsLinkedForCustomer =
-        selectedCustomerId != null && productsForSelectedCustomer.length === 0;
-    const hasAtLeastOneProductOrder = productOrderRows.some(
-        (row) => row.productId != null && Number(row.productId) > 0,
-    );
-
-    const isEditingPurchaseOrder = selectedOrderId != null && selectedOrderId > 0;
-
-    const internalStockOrdererSelected = useMemo(
-        () =>
-            internalStockOrdererCustomerId != null &&
-            selectedCustomerId === internalStockOrdererCustomerId,
-        [internalStockOrdererCustomerId, selectedCustomerId],
-    );
-
     const filteredOrders = useMemo(() => {
         return orders.filter((order) => {
             const status = order.orderStatus ?? 'CREATED';
-            if (statusFilter !== 'ALL' && status !== statusFilter) {
+            if (appliedFilters.status !== 'ALL' && status !== appliedFilters.status) {
                 return false;
             }
-            return isCreatedWithinPeriod(parsePurchaseOrderCreatedAt(order.createdAt), periodFrom, periodTo);
+            return isCreatedWithinPeriod(
+                parsePurchaseOrderCreatedAt(order.createdAt),
+                appliedFilters.periodFrom,
+                appliedFilters.periodTo,
+            );
         });
-    }, [orders, statusFilter, periodFrom, periodTo]);
-
-    /** Create flow: lock currency / delivery only when the preset internal orderer is selected. */
-    const lockCreateDeliveryFields = !isEditingPurchaseOrder && internalStockOrdererSelected;
+    }, [orders, appliedFilters]);
 
     const loadCustomers = () => {
         Server.getAllCustomers(
@@ -282,168 +221,28 @@ export function PurchaseOrdersManagementPanel() {
         );
     };
 
-    const resetForm = () => {
-        setSelectedOrderId(undefined);
-        setSelectedCustomerId(undefined);
-        setCurrency('');
-        setDeliveryDate('');
-        setDeliveryTerms('');
-        setShippingAddress('');
-        setComment('');
-        setProductOrderRows([]);
-    };
-
-    const addProductOrderRow = () => {
-        if (noProductsLinkedForCustomer) {
-            return;
-        }
-        setProductOrderRows((prev) => [...prev, { quantity: '', pricePerUnit: '', catalogueReference: '' }]);
-    };
-
-    const removeProductOrderRow = (index: number) => {
-        setProductOrderRows((prev) => prev.filter((_, i) => i !== index));
-    };
-
-    const updateProductOrderRow = (index: number, field: keyof ProductOrderRow, value: number | string) => {
-        setProductOrderRows((prev) =>
-            prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)),
-        );
+    const closeFormModal = () => {
+        setFormModalOpen(false);
+        setEditingOrder(null);
+        setImportDraft(null);
+        setImportError(null);
     };
 
     const openFormModal = () => {
-        resetForm();
-        if (internalStockOrdererCustomerId != null) {
-            setSelectedCustomerId(internalStockOrdererCustomerId);
-        }
+        setEditingOrder(null);
+        setImportDraft(null);
         setFormModalOpen(true);
     };
 
     const handleEditClick = (order: LocalPurchaseOrder) => {
-        setSelectedOrderId(order.id);
-        setSelectedCustomerId(order.customer?.id);
-        setCurrency(normalizePurchaseOrderCurrency(order.currency));
-        if (order.deliveryDate) {
-            if (Array.isArray(order.deliveryDate)) {
-                const [year, month = 1, day = 1] = order.deliveryDate as any[];
-                const d = new Date(year, month - 1, day);
-                setDeliveryDate(d.toISOString().substring(0, 10));
-            } else if (typeof order.deliveryDate === 'string') {
-                setDeliveryDate(order.deliveryDate.substring(0, 10));
-            }
-        } else {
-            setDeliveryDate('');
-        }
-        setDeliveryTerms(order.deliveryTerms || '');
-        setShippingAddress(order.shippingAddress || '');
-        setComment(order.comment || '');
-        const stripPricesInternalPo =
-            order.internalStockDemand === true ||
-            (order.customer != null && isInternalStockOrdererCustomer(order.customer));
-        setProductOrderRows(
-            (order.productOrderList || []).map((po) => ({
-                id: po.id,
-                productId: po.product?.id,
-                quantity: String(po.quantity ?? ''),
-                pricePerUnit: stripPricesInternalPo ? '' : String(po.pricePerUnit ?? ''),
-                catalogueReference: po.product?.reference ?? '',
-            })),
-        );
+        setEditingOrder(order);
+        setImportDraft(null);
         setFormModalOpen(true);
     };
 
-    const handleSubmit = () => {
-        if (!hasAtLeastOneProductOrder) {
-            toastActionError(t('purchaseOrderAtLeastOneProductOrderRequired'));
-            return;
-        }
-        const productOrderList: ProductOrderTO[] = productOrderRows
-            .filter((row) => row.productId != null && row.productId > 0)
-            .map((row) => ({
-                id: row.id,
-                product: { id: row.productId },
-                quantity: Number(row.quantity) || 0,
-                pricePerUnit: internalStockOrdererSelected ? 0 : Number(row.pricePerUnit) || 0,
-            }));
-        const customerId = selectedCustomerId && Number(selectedCustomerId);
-        const internalStockDemand = internalStockOrdererSelected;
-        const omitDeliveryFieldsForPayload = isEditingPurchaseOrder ? false : internalStockOrdererSelected;
-        const payload: PurchaseOrderTO = {
-            id: selectedOrderId,
-            currency: omitDeliveryFieldsForPayload ? undefined : currency || undefined,
-            deliveryDate: omitDeliveryFieldsForPayload ? undefined : deliveryDate || undefined,
-            deliveryTerms: omitDeliveryFieldsForPayload ? undefined : deliveryTerms || undefined,
-            shippingAddress: omitDeliveryFieldsForPayload ? undefined : shippingAddress || undefined,
-            comment,
-            internalStockDemand,
-            customerId,
-            customer: customerId != null ? { id: customerId } : undefined,
-            productOrderList,
-        };
-
-        const onSuccess = () => {
-            loadOrders();
-            loadProducts();
-            resetForm();
-            setFormModalOpen(false);
-            toastActionSuccess(selectedOrderId ? t('toastPurchaseOrderUpdated') : t('toastPurchaseOrderAdded'));
-        };
-
-        const savePurchaseOrder = () => {
-            if (selectedOrderId) {
-                Server.editPurchaseOrder(payload, onSuccess, (err: unknown) => toastServerError(err, t));
-            } else {
-                Server.addPurchaseOrder(payload, onSuccess, (err: unknown) => toastServerError(err, t));
-            }
-        };
-
-        const rowsToSync = productOrderRows.filter((row) => {
-            if (!row.productId) return false;
-            const p = products.find((pr) => pr.id === row.productId);
-            const newR = (row.catalogueReference ?? '').trim();
-            const oldR = (p?.reference ?? '').trim();
-            return newR !== oldR;
-        });
-
-        if (rowsToSync.length === 0) {
-            savePurchaseOrder();
-            return;
-        }
-
-        let remaining = rowsToSync.length;
-        let errors = 0;
-        const onEditDone = () => {
-            remaining -= 1;
-            if (remaining === 0) {
-                loadProducts();
-                if (errors === 0) {
-                    savePurchaseOrder();
-                } else {
-                    toastActionError(t('toastProductSyncFailed'));
-                }
-            }
-        };
-        rowsToSync.forEach((row) => {
-            const p = products.find((pr) => pr.id === row.productId);
-            if (!p?.id) {
-                onEditDone();
-                return;
-            }
-            Server.editProduct(
-                {
-                    id: p.id,
-                    name: p.name,
-                    description: p.description,
-                    reference: (row.catalogueReference ?? '').trim(),
-                    machineIds: p.machineIds,
-                    customerIds: p.customerIds,
-                },
-                onEditDone,
-                () => {
-                    errors += 1;
-                    onEditDone();
-                },
-            );
-        });
+    const handleFormSaved = () => {
+        loadOrders();
+        loadProducts();
     };
 
     const handleDeleteClick = (order: LocalPurchaseOrder) => {
@@ -518,58 +317,53 @@ export function PurchaseOrdersManagementPanel() {
         return [...new Set(refs)].join(', ');
     };
 
-    const setProductOrderRowProduct = (index: number, productId: number | undefined) => {
-        setProductOrderRows((prev) =>
-            prev.map((row, i) => {
-                if (i !== index) return row;
-                const p = productId != null ? products.find((pr) => pr.id === productId) : undefined;
-                return {
-                    ...row,
-                    productId,
-                    catalogueReference: p?.reference ?? '',
-                };
-            }),
+    const resolveCustomerId = (companyName: string): number | undefined => {
+        const normalized = companyName.trim().toLowerCase();
+        if (!normalized) return undefined;
+        const found = customers.find(
+            (c) => c.companyName && c.companyName.trim().toLowerCase() === normalized,
         );
+        return found?.id;
     };
 
-    const handleCustomerChange = (customerId: number | undefined) => {
-        setSelectedCustomerId(customerId);
-        const nowInternal =
-            internalStockOrdererCustomerId != null && customerId === internalStockOrdererCustomerId;
-        if (!isEditingPurchaseOrder) {
-            if (nowInternal) {
-                setCurrency('');
-                setDeliveryDate('');
-                setDeliveryTerms('');
-                setShippingAddress('');
-            } else if (customerId != null) {
-                setCurrency((prev) => (prev === '' ? 'RSD' : prev));
-            }
+    const resolveProductId = (nameOrId: string, customerId: number | undefined): number | undefined => {
+        const trimmed = nameOrId.trim();
+        if (!trimmed) return undefined;
+        const pool =
+            customerId == null
+                ? []
+                : products.filter((p) => (p.customerIds ?? []).includes(customerId));
+        const asNum = Number(trimmed);
+        if (!Number.isNaN(asNum) && Number.isInteger(asNum)) {
+            const byId = pool.find((p) => p.id === asNum);
+            if (byId) return byId.id;
         }
-        setProductOrderRows((rows) => {
-            if (customerId == null) {
-                return rows.map((r) => ({
-                    ...r,
-                    productId: undefined,
-                    catalogueReference: '',
-                    pricePerUnit: '',
-                }));
-            }
-            return rows.map((row) => {
-                let next = row;
-                if (row.productId != null) {
-                    const p = products.find((pr) => pr.id === row.productId);
-                    const ok = p && (p.customerIds ?? []).includes(customerId);
-                    if (!ok) {
-                        next = { ...row, productId: undefined, catalogueReference: '' };
-                    }
-                }
-                if (nowInternal) {
-                    next = { ...next, pricePerUnit: '' };
-                }
-                return next;
-            });
+        const normalized = trimmed.toLowerCase();
+        const byName = pool.find((p) => p.name && p.name.trim().toLowerCase() === normalized);
+        return byName?.id;
+    };
+
+    const applyParsedOrder = (parsed: ParsedPurchaseOrder) => {
+        const cid = resolveCustomerId(parsed.customerCompanyName);
+        setEditingOrder(null);
+        setImportDraft({
+            customerId: cid,
+            comment: parsed.comment,
+            productOrderRows: parsed.productRows
+                .filter((row) => row.productNameOrId)
+                .map((row) => {
+                    const pid = resolveProductId(row.productNameOrId, cid);
+                    const p = pid != null ? products.find((pr) => pr.id === pid) : undefined;
+                    const cat = row.catalogueId?.trim() || p?.reference || '';
+                    return {
+                        productId: pid,
+                        catalogueReference: cat,
+                        quantity: String(row.quantity),
+                        pricePerUnit: String(row.pricePerUnit),
+                    };
+                }),
         });
+        setFormModalOpen(true);
     };
 
     const formatDeliveryDate = (value: any): string => {
@@ -621,67 +415,8 @@ export function PurchaseOrdersManagementPanel() {
         setDetailsOrder(null);
     };
 
-    const closeFormModal = () => {
-        setFormModalOpen(false);
-        resetForm();
-        setImportError(null);
-    };
-
     const handleDownloadTemplate = () => {
         downloadPurchaseOrderTemplate();
-    };
-
-    const resolveCustomerId = (companyName: string): number | undefined => {
-        const normalized = companyName.trim().toLowerCase();
-        if (!normalized) return undefined;
-        const found = customers.find(
-            (c) => c.companyName && c.companyName.trim().toLowerCase() === normalized,
-        );
-        return found?.id;
-    };
-
-    const resolveProductId = (nameOrId: string, customerId: number | undefined): number | undefined => {
-        const trimmed = nameOrId.trim();
-        if (!trimmed) return undefined;
-        const pool =
-            customerId == null
-                ? []
-                : products.filter((p) => (p.customerIds ?? []).includes(customerId));
-        const asNum = Number(trimmed);
-        if (!Number.isNaN(asNum) && Number.isInteger(asNum)) {
-            const byId = pool.find((p) => p.id === asNum);
-            if (byId) return byId.id;
-        }
-        const normalized = trimmed.toLowerCase();
-        const byName = pool.find((p) => p.name && p.name.trim().toLowerCase() === normalized);
-        return byName?.id;
-    };
-
-    const applyParsedOrder = (parsed: ParsedPurchaseOrder) => {
-        setSelectedOrderId(undefined);
-        const cid = resolveCustomerId(parsed.customerCompanyName);
-        setSelectedCustomerId(cid);
-        setCurrency('');
-        setDeliveryDate('');
-        setDeliveryTerms('');
-        setShippingAddress('');
-        setComment(parsed.comment);
-        setProductOrderRows(
-            parsed.productRows
-                .filter((row) => row.productNameOrId)
-                .map((row) => {
-                    const pid = resolveProductId(row.productNameOrId, cid);
-                    const p = pid != null ? products.find((pr) => pr.id === pid) : undefined;
-                    const cat = row.catalogueId?.trim() || p?.reference || '';
-                    return {
-                        productId: pid,
-                        catalogueReference: cat,
-                        quantity: String(row.quantity),
-                        pricePerUnit: String(row.pricePerUnit),
-                    };
-                }),
-        );
-        setFormModalOpen(true);
     };
 
     const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -734,44 +469,14 @@ export function PurchaseOrdersManagementPanel() {
             )}
 
             <Paper sx={{ p: 2 }}>
-                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2, alignItems: 'center' }}>
-                    <TextField
-                        select
-                        label={t('purchaseOrderStatusFilter')}
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        size="small"
-                        sx={{ minWidth: 180 }}
-                    >
-                        <MenuItem value="ALL">{t('purchaseOrderStatusFilterAll')}</MenuItem>
-                        {PURCHASE_ORDER_STATUSES.map((s) => (
-                            <MenuItem key={s} value={s}>
-                                {purchaseOrderStatusLabel(s, t)}
-                            </MenuItem>
-                        ))}
-                    </TextField>
-                    <TextField
-                        label={t('dateFrom')}
-                        type="date"
-                        value={periodFrom}
-                        onChange={(e) => setPeriodFrom(e.target.value)}
-                        size="small"
-                        InputLabelProps={{ shrink: true }}
-                        sx={{ width: 160 }}
-                    />
-                    <TextField
-                        label={t('dateUntil')}
-                        type="date"
-                        value={periodTo}
-                        onChange={(e) => setPeriodTo(e.target.value)}
-                        size="small"
-                        InputLabelProps={{ shrink: true }}
-                        sx={{ width: 160 }}
-                    />
-                    <Typography variant="body2" color="text.secondary" sx={{ ml: { sm: 'auto' } }}>
-                        {t('purchaseOrderFilterCount', { count: filteredOrders.length, total: orders.length })}
-                    </Typography>
-                </Box>
+                <PurchaseOrderSearchFilters
+                    initialFilters={appliedFilters}
+                    statusOptions={PURCHASE_ORDER_STATUSES}
+                    resultCount={filteredOrders.length}
+                    totalCount={orders.length}
+                    onApply={setAppliedFilters}
+                    statusLabel={purchaseOrderStatusLabel}
+                />
                 <TableContainer>
                     <Table size="small">
                         <TableHead>
@@ -860,215 +565,16 @@ export function PurchaseOrdersManagementPanel() {
                 </TableContainer>
             </Paper>
 
-            <Dialog open={formModalOpen} onClose={closeFormModal} maxWidth="md" fullWidth scroll="paper">
-                <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    {selectedOrderId ? t('editPurchaseOrder') : t('createNewPurchaseOrder')}
-                    <IconButton size="small" onClick={closeFormModal} aria-label={t('close')}>
-                        <CloseIcon />
-                    </IconButton>
-                </DialogTitle>
-                <DialogContent dividers>
-                    <Box component="form" autoComplete="off" sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-                        <TextField
-                            select
-                            label={t('purchaseOrderOrderer')}
-                            value={selectedCustomerId ?? ''}
-                            onChange={(e) =>
-                                handleCustomerChange(e.target.value ? Number(e.target.value) : undefined)
-                            }
-                            size="small"
-                            fullWidth
-                        >
-                            <MenuItem value="">{t('none')}</MenuItem>
-                            {ordererCustomersSorted.map((c) => (
-                                <MenuItem key={c.id} value={c.id}>
-                                    {c.companyName}
-                                </MenuItem>
-                            ))}
-                        </TextField>
-                        {internalStockOrdererCustomerId == null && (
-                            <Typography variant="caption" color="warning.main">
-                                {t('internalStockOrdererCustomerMissingHint')}
-                            </Typography>
-                        )}
-                        <TextField
-                            select
-                            label={t('currency')}
-                            value={lockCreateDeliveryFields ? '' : currency || 'RSD'}
-                            onChange={(e) => setCurrency(e.target.value as PurchaseOrderCurrency)}
-                            size="small"
-                            fullWidth
-                            disabled={lockCreateDeliveryFields}
-                            SelectProps={{ displayEmpty: true }}
-                        >
-                            {lockCreateDeliveryFields && (
-                                <MenuItem value="">
-                                    <em>—</em>
-                                </MenuItem>
-                            )}
-                            {!lockCreateDeliveryFields &&
-                                PURCHASE_ORDER_CURRENCIES.map((c) => (
-                                    <MenuItem key={c} value={c}>
-                                        {c}
-                                    </MenuItem>
-                                ))}
-                        </TextField>
-                        <TextField
-                            label={t('deliveryDate')}
-                            type="date"
-                            value={lockCreateDeliveryFields ? '' : deliveryDate}
-                            onChange={(e) => setDeliveryDate(e.target.value)}
-                            size="small"
-                            fullWidth
-                            disabled={lockCreateDeliveryFields}
-                            InputLabelProps={{ shrink: true }}
-                            inputProps={{ lang: 'en-GB' }}
-                        />
-                        <Autocomplete
-                            disablePortal
-                            options={[...new Set(deliveryTermsSelectOptions.map((x) => String(x).trim()).filter(Boolean))]}
-                            value={lockCreateDeliveryFields ? '' : deliveryTerms}
-                            onChange={(_, value) => setDeliveryTerms(value ?? '')}
-                            disabled={lockCreateDeliveryFields}
-                            renderInput={(params) => (
-                                <TextField
-                                    {...params}
-                                    label={t('deliveryTerms')}
-                                    size="small"
-                                    fullWidth
-                                />
-                            )}
-                        />
-                        <TextField
-                            label={t('shippingAddress')}
-                            value={lockCreateDeliveryFields ? '' : shippingAddress}
-                            onChange={(e) => setShippingAddress(e.target.value)}
-                            size="small"
-                            fullWidth
-                            multiline
-                            minRows={2}
-                            disabled={lockCreateDeliveryFields}
-                        />
-                        <TextField
-                            label={t('comment')}
-                            value={comment}
-                            onChange={(e) => setComment(e.target.value)}
-                            size="small"
-                            fullWidth
-                            multiline
-                            minRows={2}
-                        />
-                        <Typography variant="subtitle2" sx={{ mt: 1 }}>{t('productOrders')}</Typography>
-                        {noProductsLinkedForCustomer ? (
-                            <Typography variant="body2" color="error" sx={{ mt: 0.5 }}>
-                                {t('purchaseOrderNoProductsForCustomer')}
-                            </Typography>
-                        ) : null}
-                        {productOrderRows.map((row, index) => (
-                            <Box
-                                key={index}
-                                sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'nowrap' }}
-                            >
-                                <TextField
-                                    select
-                                    label={t('product')}
-                                    value={row.productId ?? ''}
-                                    onChange={(e) =>
-                                        setProductOrderRowProduct(
-                                            index,
-                                            e.target.value ? Number(e.target.value) : undefined,
-                                        )}
-                                    size="small"
-                                    sx={{ minWidth: 160, flex: 1 }}
-                                    disabled={
-                                        selectedCustomerId == null ||
-                                        (noProductsLinkedForCustomer && row.productId == null)
-                                    }
-                                    helperText={
-                                        selectedCustomerId == null
-                                            ? t('purchaseOrderSelectCustomerForProducts')
-                                            : undefined
-                                    }
-                                >
-                                    <MenuItem value="">{t('none')}</MenuItem>
-                                    {(() => {
-                                        const pid = row.productId;
-                                        const list = [...productsForSelectedCustomer];
-                                        if (
-                                            pid != null &&
-                                            !list.some((p) => p.id === pid) &&
-                                            products.some((p) => p.id === pid)
-                                        ) {
-                                            const orphan = products.find((p) => p.id === pid);
-                                            if (orphan) list.push(orphan);
-                                        }
-                                        return list.map((p) => (
-                                            <MenuItem key={p.id} value={p.id}>
-                                                {p.name}
-                                            </MenuItem>
-                                        ));
-                                    })()}
-                                </TextField>
-                                <TextField
-                                    label={t('catalogueId')}
-                                    value={row.catalogueReference}
-                                    onChange={(e) => updateProductOrderRow(index, 'catalogueReference', e.target.value)}
-                                    size="small"
-                                    sx={{ minWidth: 140 }}
-                                />
-                                <TextField
-                                    type="number"
-                                    label={t('quantity')}
-                                    value={row.quantity}
-                                    onChange={(e) => updateProductOrderRow(index, 'quantity', e.target.value)}
-                                    size="small"
-                                    sx={{ width: 100 }}
-                                />
-                                <TextField
-                                    type="number"
-                                    label={t('pricePerUnit')}
-                                    value={internalStockOrdererSelected ? '' : row.pricePerUnit}
-                                    onChange={(e) => updateProductOrderRow(index, 'pricePerUnit', e.target.value)}
-                                    size="small"
-                                    sx={{ width: 120 }}
-                                    disabled={internalStockOrdererSelected}
-                                />
-                                <IconButton
-                                    size="small"
-                                    onClick={() => removeProductOrderRow(index)}
-                                    aria-label={t('remove')}
-                                    sx={tableActionIconButtonSx.delete}
-                                >
-                                    <DeleteIcon fontSize="small" />
-                                </IconButton>
-                            </Box>
-                        ))}
-                        <Button
-                            startIcon={<AddIcon />}
-                            variant="outlined"
-                            size="small"
-                            onClick={addProductOrderRow}
-                            disabled={noProductsLinkedForCustomer}
-                        >
-                            {t('addProductOrder')}
-                        </Button>
-
-                        <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
-                            <Button
-                                variant="contained"
-                                color="primary"
-                                onClick={handleSubmit}
-                                disabled={!hasAtLeastOneProductOrder}
-                            >
-                                {selectedOrderId ? t('editPurchaseOrder') : t('addPurchaseOrder')}
-                            </Button>
-                            <Button variant="outlined" onClick={() => { resetForm(); setFormModalOpen(false); }}>
-                                {t('cancel')}
-                            </Button>
-                        </Box>
-                    </Box>
-                </DialogContent>
-            </Dialog>
+            <PurchaseOrderFormDialog
+                open={formModalOpen}
+                editingOrder={editingOrder}
+                importDraft={importDraft}
+                customers={customers}
+                products={products}
+                deliveryTermsSelectOptions={deliveryTermsSelectOptions}
+                onClose={closeFormModal}
+                onSaved={handleFormSaved}
+            />
 
             <ConfirmationModal
                 open={!!orderToDelete}

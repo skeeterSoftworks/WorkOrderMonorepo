@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
-import TextField from '@mui/material/TextField';
+import IconButton from '@mui/material/IconButton';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -12,19 +12,7 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import TablePagination from '@mui/material/TablePagination';
-import MenuItem from '@mui/material/MenuItem';
-import FormControl from '@mui/material/FormControl';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Checkbox from '@mui/material/Checkbox';
 import CircularProgress from '@mui/material/CircularProgress';
-import FormLabel from '@mui/material/FormLabel';
-import Radio from '@mui/material/Radio';
-import RadioGroup from '@mui/material/RadioGroup';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import IconButton from '@mui/material/IconButton';
-import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import PublishedWithChangesOutlinedIcon from '@mui/icons-material/PublishedWithChangesOutlined';
@@ -34,20 +22,22 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import { useTranslation } from 'react-i18next';
 import { Server, ConfirmationModal } from 'sf-common';
 import type {
-    EmailTemplateCode,
     MaterialOrderStatus,
     MaterialOrderTO,
     MaterialProviderTO,
     MaterialTO,
 } from 'sf-common/src/models/ApiRequests';
-import { toastActionError, toastActionSuccess, toastServerError } from '../../util/actionToast';
+import { toastActionError, toastActionSuccess } from '../../util/actionToast';
 import {
     isMaterialOrderStaleForMonitoring,
-    MATERIAL_ORDER_MANUAL_TRANSITION_STATUSES,
     MATERIAL_ORDER_STALE_ROW_BACKGROUND,
 } from '../../util/materialOrderStale';
 import { materialOrderStatusColor } from '../../util/materialOrderStatusColor';
 import { MaterialOrderCertificateViewDialog } from './MaterialOrderCertificateViewDialog';
+import { MaterialOrderCreateDialog } from './MaterialOrderCreateDialog';
+import { MaterialOrderEmailPickerDialog } from './MaterialOrderEmailPickerDialog';
+import { MaterialOrderSearchFilters, type MaterialOrderSearchForm } from './MaterialOrderSearchFilters';
+import { MaterialOrderStatusDialog } from './MaterialOrderStatusDialog';
 
 const CERTIFICATE_ACCEPT = 'application/pdf,image/*';
 const DEFAULT_ROWS_PER_PAGE = 25;
@@ -120,16 +110,6 @@ function currentMonthDateRange(): { from: string; to: string } {
     return { from: toIsoDateInput(from), to: toIsoDateInput(to) };
 }
 
-type MaterialOrderSearchForm = {
-    status: string;
-    periodFrom: string;
-    periodTo: string;
-    code: string;
-    materialName: string;
-    materialProviderName: string;
-    certificatePresentOnly: boolean;
-};
-
 function defaultSearchForm(): MaterialOrderSearchForm {
     const month = currentMonthDateRange();
     return {
@@ -148,11 +128,25 @@ function canRejectMaterialOrder(order: MaterialOrderTO): boolean {
     return status !== 'RECEIVED_IN_STOCK' && status !== 'VALIDATED' && status !== 'REJECTED';
 }
 
-const MATERIAL_ORDER_EMAIL_TEMPLATE_CODES: EmailTemplateCode[] = [
-    'MATERIAL_ORDER_INQUIRY',
-    'MATERIAL_ORDER_REMINDER',
-    'MATERIAL_DELIVERY_LATE',
-];
+function formatMaterialOrderMaterialsLabel(order: MaterialOrderTO): string {
+    if (order.lines != null && order.lines.length > 0) {
+        return order.lines
+            .map((line) => {
+                const label = line.materialName?.trim() || line.materialCode?.trim() || '—';
+                return `${label} (${line.quantity ?? 0})`;
+            })
+            .join(', ');
+    }
+    return order.materialName || order.materialCode || '—';
+}
+
+function formatMaterialOrderQuantity(order: MaterialOrderTO): string | number {
+    if (order.lines != null && order.lines.length > 0) {
+        const total = order.lines.reduce((sum, line) => sum + (line.quantity ?? 0), 0);
+        return total;
+    }
+    return order.quantity ?? 0;
+}
 
 export function PurchasingPage() {
     const { t } = useTranslation();
@@ -160,19 +154,13 @@ export function PurchasingPage() {
     const [totalElements, setTotalElements] = useState(0);
     const [ordersLoading, setOrdersLoading] = useState(false);
     const [materials, setMaterials] = useState<MaterialTO[]>([]);
+    const [providers, setProviders] = useState<MaterialProviderTO[]>([]);
     const [createOpen, setCreateOpen] = useState(false);
 
-    const [quantity, setQuantity] = useState('');
-    const [materialId, setMaterialId] = useState<number | undefined>(undefined);
-    const [materialProviderId, setMaterialProviderId] = useState<number | undefined>(undefined);
     const [statusDialogOrder, setStatusDialogOrder] = useState<MaterialOrderTO | null>(null);
-    const [pendingStatus, setPendingStatus] = useState<MaterialOrderStatus>('ORDER_SENT');
     const [emailPickOpen, setEmailPickOpen] = useState(false);
     const [emailPickOrder, setEmailPickOrder] = useState<MaterialOrderTO | null>(null);
     const [emailPickProvider, setEmailPickProvider] = useState<MaterialProviderTO | undefined>(undefined);
-    const [selectedEmailTemplate, setSelectedEmailTemplate] =
-        useState<EmailTemplateCode>('MATERIAL_ORDER_INQUIRY');
-    const [filterDraft, setFilterDraft] = useState<MaterialOrderSearchForm>(defaultSearchForm);
     const [appliedFilters, setAppliedFilters] = useState<MaterialOrderSearchForm>(defaultSearchForm);
     const [tableQuery, setTableQuery] = useState<MaterialOrderTableQuery>(defaultTableQuery);
     const [orderToReject, setOrderToReject] = useState<MaterialOrderTO | null>(null);
@@ -183,22 +171,6 @@ export function PurchasingPage() {
     const [certificateViewUrl, setCertificateViewUrl] = useState<string | undefined>(undefined);
     const [certificateViewLoading, setCertificateViewLoading] = useState(false);
     const [certificateViewError, setCertificateViewError] = useState(false);
-
-    const selectedMaterial = useMemo(
-        () => materials.find((m) => m.id === materialId),
-        [materials, materialId],
-    );
-
-    const providerOptions = useMemo<MaterialProviderTO[]>(
-        () => (selectedMaterial?.providers ?? []).filter((p): p is MaterialProviderTO => p.id != null),
-        [selectedMaterial],
-    );
-
-    const canCreate =
-        materialId != null &&
-        materialProviderId != null &&
-        Number(quantity) > 0 &&
-        Number.isFinite(Number(quantity));
 
     const fetchOrders = useCallback((
         filters: MaterialOrderSearchForm,
@@ -243,11 +215,22 @@ export function PurchasingPage() {
 
     useEffect(() => {
         loadMaterials();
+        loadProviders();
     }, []);
 
-    const applyFilters = () => {
+    const loadProviders = () => {
+        Server.getAllMaterialProviders(
+            (response: { data?: MaterialProviderTO[] }) => {
+                const data = Array.isArray(response?.data) ? response.data : [];
+                setProviders(data.filter((provider): provider is MaterialProviderTO => provider.id != null));
+            },
+            () => setProviders([]),
+        );
+    };
+
+    const applyFilters = (filters: MaterialOrderSearchForm) => {
         setTableQuery((prev) => ({ ...prev, page: 0 }));
-        setAppliedFilters({ ...filterDraft });
+        setAppliedFilters(filters);
     };
 
     const handleSort = (field: MaterialOrderSortField) => {
@@ -288,13 +271,6 @@ export function PurchasingPage() {
         );
     };
 
-    const updateFilterDraft = <K extends keyof MaterialOrderSearchForm>(
-        key: K,
-        value: MaterialOrderSearchForm[K],
-    ) => {
-        setFilterDraft((prev) => ({ ...prev, [key]: value }));
-    };
-
     const loadMaterials = () => {
         Server.getAllMaterials(
             (response: any) => {
@@ -307,25 +283,13 @@ export function PurchasingPage() {
         );
     };
 
-    const resetCreateForm = () => {
-        setQuantity('');
-        setMaterialId(undefined);
-        setMaterialProviderId(undefined);
-    };
+    const openCreateDialog = () => setCreateOpen(true);
 
-    const openCreateDialog = () => {
-        resetCreateForm();
-        setCreateOpen(true);
-    };
-
-    const closeCreateDialog = () => {
-        setCreateOpen(false);
-    };
+    const closeCreateDialog = () => setCreateOpen(false);
 
     const findProviderForOrder = (order: MaterialOrderTO): MaterialProviderTO | undefined => {
-        if (order.materialId == null || order.materialProviderId == null) return undefined;
-        const material = materials.find((m) => m.id === order.materialId);
-        return material?.providers?.find((p) => p.id === order.materialProviderId);
+        if (order.materialProviderId == null) return undefined;
+        return providers.find((provider) => provider.id === order.materialProviderId);
     };
 
     const openMaterialOrderEmailDialog = (order: MaterialOrderTO, provider?: MaterialProviderTO) => {
@@ -340,7 +304,6 @@ export function PurchasingPage() {
         }
         setEmailPickOrder(order);
         setEmailPickProvider(provider);
-        setSelectedEmailTemplate('MATERIAL_ORDER_INQUIRY');
         setEmailPickOpen(true);
     };
 
@@ -350,50 +313,11 @@ export function PurchasingPage() {
         setEmailPickProvider(undefined);
     };
 
-    const confirmMaterialOrderEmail = () => {
-        const order = emailPickOrder;
-        const provider = emailPickProvider;
-        const email = provider?.emailAddress?.trim();
-        if (!order?.id || !email) return;
-        Server.renderMaterialOrderEmail(
-            selectedEmailTemplate,
-            order.id,
-            (resp) => {
-                const subject = resp.data.subject ?? '';
-                const body = resp.data.body ?? '';
-                const mailto = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-                window.location.href = mailto;
-                closeMaterialOrderEmailDialog();
-            },
-            (err: unknown) => toastServerError(err, t),
-        );
-    };
-
     const openStatusDialog = (order: MaterialOrderTO) => {
-        const initial =
-            order.status && MATERIAL_ORDER_MANUAL_TRANSITION_STATUSES.includes(order.status)
-                ? order.status
-                : 'ORDER_SENT';
-        setPendingStatus(initial);
         setStatusDialogOrder(order);
     };
 
     const closeStatusDialog = () => setStatusDialogOrder(null);
-
-    const submitStatusTransition = () => {
-        const id = statusDialogOrder?.id;
-        if (id == null || !Number.isFinite(id)) return;
-        Server.transitionMaterialOrderStatus(
-            id,
-            pendingStatus,
-            () => {
-                refreshOrders();
-                closeStatusDialog();
-                toastActionSuccess(t('toastMaterialOrderStatusUpdated'));
-            },
-            (err: unknown) => toastServerError(err, t),
-        );
-    };
 
     const handleConfirmReject = () => {
         if (!orderToReject?.id) {
@@ -503,33 +427,10 @@ export function PurchasingPage() {
         reader.readAsDataURL(file);
     };
 
-    const handleCreate = () => {
-        if (!canCreate) return;
-        const payload = {
-            quantity: Math.trunc(Number(quantity)),
-            materialId,
-            materialProviderId,
-        };
-        Server.addMaterialOrder(
-            payload,
-            (response: any) => {
-                let saved: MaterialOrderTO | undefined;
-                if (response?.data && typeof response.data === 'object' && !Array.isArray(response.data)) {
-                    saved = response.data as MaterialOrderTO;
-                }
-                refreshOrders();
-                closeCreateDialog();
-                toastActionSuccess(t('toastMaterialOrderAdded'));
-                const effectiveOrder: MaterialOrderTO = saved ?? {
-                    ...payload,
-                    materialName: selectedMaterial?.name,
-                    materialCode: selectedMaterial?.code,
-                };
-                const provider = providerOptions.find((p) => p.id === materialProviderId);
-                openMaterialOrderEmailDialog(effectiveOrder, provider);
-            },
-            (err: unknown) => toastServerError(err, t),
-        );
+    const handleCreateSuccess = (saved: MaterialOrderTO) => {
+        refreshOrders();
+        const provider = findProviderForOrder(saved);
+        openMaterialOrderEmailDialog(saved, provider);
     };
 
     return (
@@ -542,86 +443,14 @@ export function PurchasingPage() {
             </Box>
 
             <Paper sx={{ p: 2 }}>
-                <Box
-                    component="form"
-                    autoComplete="off"
-                    onSubmit={(e) => {
-                        e.preventDefault();
-                        applyFilters();
-                    }}
-                    sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2, alignItems: 'center' }}
-                >
-                    <TextField
-                        select
-                        label={t('materialOrderStatusFilter')}
-                        value={filterDraft.status}
-                        onChange={(e) => updateFilterDraft('status', e.target.value)}
-                        size="small"
-                        sx={{ minWidth: 180 }}
-                    >
-                        <MenuItem value="ALL">{t('materialOrderStatusFilterAll')}</MenuItem>
-                        {MATERIAL_ORDER_STATUSES.map((s) => (
-                            <MenuItem key={s} value={s}>
-                                {t(`materialOrderStatus_${s}`)}
-                            </MenuItem>
-                        ))}
-                    </TextField>
-                    <TextField
-                        label={t('dateFrom')}
-                        type="date"
-                        value={filterDraft.periodFrom}
-                        onChange={(e) => updateFilterDraft('periodFrom', e.target.value)}
-                        size="small"
-                        InputLabelProps={{ shrink: true }}
-                        sx={{ width: 160 }}
-                    />
-                    <TextField
-                        label={t('dateUntil')}
-                        type="date"
-                        value={filterDraft.periodTo}
-                        onChange={(e) => updateFilterDraft('periodTo', e.target.value)}
-                        size="small"
-                        InputLabelProps={{ shrink: true }}
-                        sx={{ width: 160 }}
-                    />
-                    <TextField
-                        label={t('materialOrderCode')}
-                        value={filterDraft.code}
-                        onChange={(e) => updateFilterDraft('code', e.target.value)}
-                        size="small"
-                        sx={{ minWidth: 140 }}
-                    />
-                    <TextField
-                        label={t('materialName')}
-                        value={filterDraft.materialName}
-                        onChange={(e) => updateFilterDraft('materialName', e.target.value)}
-                        size="small"
-                        sx={{ minWidth: 160 }}
-                    />
-                    <TextField
-                        label={t('materialProviderName')}
-                        value={filterDraft.materialProviderName}
-                        onChange={(e) => updateFilterDraft('materialProviderName', e.target.value)}
-                        size="small"
-                        sx={{ minWidth: 160 }}
-                    />
-                    <FormControlLabel
-                        control={
-                            <Checkbox
-                                checked={filterDraft.certificatePresentOnly}
-                                onChange={(e) => updateFilterDraft('certificatePresentOnly', e.target.checked)}
-                                size="small"
-                            />
-                        }
-                        label={t('materialOrderCertificatePresentOnly')}
-                    />
-                    <Button type="submit" variant="contained" disabled={ordersLoading}>
-                        {t('searchAction')}
-                    </Button>
-                    <Typography variant="body2" color="text.secondary" sx={{ ml: { sm: 'auto' } }}>
-                        {t('materialOrderFilterCount', { count: orders.length, total: totalElements })}
-                    </Typography>
-                </Box>
+                <MaterialOrderSearchFilters
+                    initialFilters={appliedFilters}
+                    statusOptions={MATERIAL_ORDER_STATUSES}
+                    ordersLoading={ordersLoading}
+                    resultCount={orders.length}
+                    totalElements={totalElements}
+                    onApply={applyFilters}
+                />
                 <TableContainer>
                     <Table size="small">
                         <TableHead>
@@ -654,9 +483,9 @@ export function PurchasingPage() {
                                         }}
                                     >
                                         <TableCell>{o.code || '—'}</TableCell>
-                                        <TableCell>{o.materialName || o.materialCode || '—'}</TableCell>
+                                        <TableCell>{formatMaterialOrderMaterialsLabel(o)}</TableCell>
                                         <TableCell>{o.materialProviderName || '—'}</TableCell>
-                                        <TableCell>{o.quantity ?? 0}</TableCell>
+                                        <TableCell>{formatMaterialOrderQuantity(o)}</TableCell>
                                         <TableCell>
                                             {o.status ? (
                                                 <Typography
@@ -759,155 +588,27 @@ export function PurchasingPage() {
                 />
             </Paper>
 
-            <Dialog open={createOpen} onClose={closeCreateDialog} maxWidth="sm" fullWidth>
-                <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    {t('createMaterialOrder')}
-                    <IconButton size="small" onClick={closeCreateDialog} aria-label={t('close')}>
-                        <CloseIcon />
-                    </IconButton>
-                </DialogTitle>
-                <DialogContent dividers>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pt: 1 }}>
-                        <TextField
-                            select
-                            label={t('materialName')}
-                            value={materialId ?? ''}
-                            onChange={(e) => {
-                                const nextMaterialId = e.target.value ? Number(e.target.value) : undefined;
-                                setMaterialId(nextMaterialId);
-                                setMaterialProviderId(undefined);
-                            }}
-                            size="small"
-                            fullWidth
-                        >
-                            <MenuItem value="">{t('none')}</MenuItem>
-                            {materials.map((m) => (
-                                <MenuItem key={m.id} value={m.id}>
-                                    {m.name || m.code || m.id}
-                                </MenuItem>
-                            ))}
-                        </TextField>
+            <MaterialOrderCreateDialog
+                open={createOpen}
+                providers={providers}
+                materials={materials}
+                onClose={closeCreateDialog}
+                onCreated={handleCreateSuccess}
+            />
 
-                        <TextField
-                            select
-                            label={t('materialProviderName')}
-                            value={materialProviderId ?? ''}
-                            onChange={(e) =>
-                                setMaterialProviderId(e.target.value ? Number(e.target.value) : undefined)
-                            }
-                            size="small"
-                            fullWidth
-                            disabled={materialId == null}
-                            helperText={materialId == null ? t('selectMaterialFirst') : undefined}
-                        >
-                            <MenuItem value="">{t('none')}</MenuItem>
-                            {providerOptions.map((p) => (
-                                <MenuItem key={p.id} value={p.id}>
-                                    {p.name || p.contactPerson || p.id}
-                                </MenuItem>
-                            ))}
-                        </TextField>
+            <MaterialOrderEmailPickerDialog
+                open={emailPickOpen}
+                order={emailPickOrder}
+                provider={emailPickProvider}
+                onClose={closeMaterialOrderEmailDialog}
+            />
 
-                        <TextField
-                            type="number"
-                            label={t('quantity')}
-                            value={quantity}
-                            onChange={(e) => setQuantity(e.target.value)}
-                            size="small"
-                            fullWidth
-                            inputProps={{ min: 1, step: 1 }}
-                        />
-
-                        <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                            <Button variant="contained" onClick={handleCreate} disabled={!canCreate}>
-                                {t('saveAction')}
-                            </Button>
-                            <Button variant="outlined" onClick={closeCreateDialog}>
-                                {t('cancel')}
-                            </Button>
-                        </Box>
-                    </Box>
-                </DialogContent>
-            </Dialog>
-
-            <Dialog open={emailPickOpen} onClose={closeMaterialOrderEmailDialog} maxWidth="sm" fullWidth>
-                <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    {t('emailTemplatePickerTitle')}
-                    <IconButton
-                        size="small"
-                        onClick={closeMaterialOrderEmailDialog}
-                        aria-label={t('close')}
-                    >
-                        <CloseIcon />
-                    </IconButton>
-                </DialogTitle>
-                <DialogContent dividers>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        {t('emailTemplatePlaceholdersHint')}
-                    </Typography>
-                    <FormControl component="fieldset" sx={{ width: '100%' }}>
-                        <FormLabel component="legend">{t('emailTemplatePickerChooseLabel')}</FormLabel>
-                        <RadioGroup
-                            value={selectedEmailTemplate}
-                            onChange={(e) =>
-                                setSelectedEmailTemplate(e.target.value as EmailTemplateCode)
-                            }
-                        >
-                            {MATERIAL_ORDER_EMAIL_TEMPLATE_CODES.map((code) => (
-                                <FormControlLabel
-                                    key={code}
-                                    value={code}
-                                    control={<Radio size="small" />}
-                                    label={t(`emailTemplate_${code}`)}
-                                />
-                            ))}
-                        </RadioGroup>
-                    </FormControl>
-                    <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
-                        <Button variant="contained" onClick={confirmMaterialOrderEmail}>
-                            {t('emailTemplatePickerOpenMailto')}
-                        </Button>
-                        <Button variant="outlined" onClick={closeMaterialOrderEmailDialog}>
-                            {t('cancel')}
-                        </Button>
-                    </Box>
-                </DialogContent>
-            </Dialog>
-
-            <Dialog open={statusDialogOrder != null} onClose={closeStatusDialog} maxWidth="xs" fullWidth>
-                <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    {t('materialOrderStatusTransitionTitle')}
-                    <IconButton size="small" onClick={closeStatusDialog} aria-label={t('close')}>
-                        <CloseIcon />
-                    </IconButton>
-                </DialogTitle>
-                <DialogContent dividers>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pt: 1 }}>
-                        <TextField
-                            select
-                            label={t('status')}
-                            value={pendingStatus}
-                            onChange={(e) => setPendingStatus(e.target.value as MaterialOrderStatus)}
-                            size="small"
-                            fullWidth
-                        >
-                            {MATERIAL_ORDER_MANUAL_TRANSITION_STATUSES.map((s) => (
-                                <MenuItem key={s} value={s}>
-                                    {t(`materialOrderStatus_${s}`)}
-                                </MenuItem>
-                            ))}
-                        </TextField>
-                        <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                            <Button variant="contained" onClick={submitStatusTransition}>
-                                {t('saveAction')}
-                            </Button>
-                            <Button variant="outlined" onClick={closeStatusDialog}>
-                                {t('cancel')}
-                            </Button>
-                        </Box>
-                    </Box>
-                </DialogContent>
-            </Dialog>
+            <MaterialOrderStatusDialog
+                open={statusDialogOrder != null}
+                order={statusDialogOrder}
+                onClose={closeStatusDialog}
+                onSaved={refreshOrders}
+            />
 
             <ConfirmationModal
                 open={!!orderToReject}

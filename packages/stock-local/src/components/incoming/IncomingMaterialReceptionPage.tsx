@@ -1,12 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Box,
     Button,
     CircularProgress,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
     IconButton,
     Paper,
     Table,
@@ -15,7 +11,6 @@ import {
     TableContainer,
     TableHead,
     TableRow,
-    TextField,
     Tooltip,
     Typography,
 } from '@mui/material';
@@ -23,21 +18,16 @@ import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { MaterialOrderReceptionTO, MaterialOrderTO, StockLocationTO } from 'sf-common/src/models/ApiRequests';
+import type { MaterialOrderLineTO, MaterialOrderReceptionTO, MaterialOrderTO, StockLocationTO } from 'sf-common/src/models/ApiRequests';
 import { Server } from '../../api/Server';
 import { MaterialInternalControlDialog } from './MaterialInternalControlDialog';
-import { ReceiveMaterialStockAllocationSection } from './ReceiveMaterialStockAllocationSection';
+import { ReceiveMaterialDialog } from './ReceiveMaterialDialog';
 import {
     buildInternalControlPayload,
     orderToReceptionContext,
     type InternalControlSubmitData,
 } from './materialValidationUtils';
 import {
-    buildStockAllocationsPayload,
-    isReceiveFormValid,
-    newAllocationRow,
-    parseReceivedQuantity,
-    type StockAllocationRow,
     stockLocationsForSelect,
 } from './materialReceptionStockAllocation';
 
@@ -56,22 +46,51 @@ function parseStockLocationsResponse(response: unknown): StockLocationTO[] {
     return Array.isArray(r?.data) ? r.data : [];
 }
 
-function toDatetimeLocalValue(d: Date): string {
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function toServerDateTime(localValue: string): string {
-    if (!localValue) return '';
-    return localValue.length === 16 ? `${localValue}:00` : localValue;
-}
-
 function materialOrderHasCertificate(order: MaterialOrderTO): boolean {
     return order.certificatePresent === true;
 }
 
 function receptionHasCertificate(reception: MaterialOrderReceptionTO): boolean {
     return reception.certificatePresent === true;
+}
+
+type OpenReceptionRow = {
+    order: MaterialOrderTO;
+    line: MaterialOrderLineTO;
+};
+
+function openReceptionRows(orders: MaterialOrderTO[]): OpenReceptionRow[] {
+    const rows: OpenReceptionRow[] = [];
+    for (const order of orders) {
+        const pendingLines = (order.lines ?? []).filter((line) => line.received !== true);
+        if (pendingLines.length > 0) {
+            for (const line of pendingLines) {
+                rows.push({ order, line });
+            }
+            continue;
+        }
+        if (!order.lines?.length) {
+            rows.push({
+                order,
+                line: {
+                    id: undefined,
+                    materialId: order.materialId,
+                    materialName: order.materialName,
+                    materialCode: order.materialCode,
+                    quantity: order.quantity,
+                    materialDiameter: order.materialDiameter,
+                    materialWeight: order.materialWeight,
+                    materialLength: order.materialLength,
+                    materialWidth: order.materialWidth,
+                },
+            });
+        }
+    }
+    return rows;
+}
+
+function lineMaterialLabel(line: MaterialOrderLineTO, order: MaterialOrderTO): string {
+    return line.materialName?.trim() || line.materialCode?.trim() || order.materialName || order.materialCode || '—';
 }
 
 export function IncomingMaterialReceptionPage() {
@@ -81,14 +100,10 @@ export function IncomingMaterialReceptionPage() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [loadError, setLoadError] = useState(false);
-    const [selectedOrder, setSelectedOrder] = useState<MaterialOrderTO | null>(null);
-    const [receivedAt, setReceivedAt] = useState('');
-    const [receivedQuantity, setReceivedQuantity] = useState('');
-    const [submittingReceive, setSubmittingReceive] = useState(false);
+    const [receiveTarget, setReceiveTarget] = useState<OpenReceptionRow | null>(null);
     const [validationReception, setValidationReception] = useState<MaterialOrderReceptionTO | null>(null);
     const [submittingValidation, setSubmittingValidation] = useState(false);
     const [stockLocations, setStockLocations] = useState<StockLocationTO[]>([]);
-    const [allocationRows, setAllocationRows] = useState<StockAllocationRow[]>([newAllocationRow()]);
 
     const loadData = useCallback((options?: { refresh?: boolean }) => {
         if (options?.refresh) {
@@ -150,27 +165,26 @@ export function IncomingMaterialReceptionPage() {
         );
     }, [loadData]);
 
-    const receivedQtyParsed = parseReceivedQuantity(receivedQuantity);
-    const canConfirmReceive =
-        selectedOrder != null &&
-        isReceiveFormValid({
-            receivedQuantity,
-            orderQuantity: selectedOrder.quantity,
-            allocationRows,
-        });
+    const awaitingReceptionRows = useMemo(() => openReceptionRows(orders), [orders]);
 
-    const openReceiveDialog = (order: MaterialOrderTO) => {
-        setSelectedOrder(order);
-        setReceivedAt(toDatetimeLocalValue(new Date()));
-        setReceivedQuantity(String(order.quantity ?? ''));
-        setAllocationRows([newAllocationRow()]);
+    const openReceiveDialog = (order: MaterialOrderTO, line: MaterialOrderLineTO) => {
+        setReceiveTarget({ order, line });
     };
 
-    const closeReceiveDialog = () => {
-        setSelectedOrder(null);
-        setReceivedAt('');
-        setReceivedQuantity('');
-        setAllocationRows([newAllocationRow()]);
+    const closeReceiveDialog = () => setReceiveTarget(null);
+
+    const handleReceived = (saved: MaterialOrderReceptionTO, order: MaterialOrderTO, line: MaterialOrderLineTO) => {
+        loadData();
+        if (saved.id != null && materialOrderHasCertificate(order)) {
+            openValidationDialog({
+                ...orderToReceptionContext(order, line, saved.id),
+                ...saved,
+                materialDiameter: saved.materialDiameter ?? line.materialDiameter,
+                materialWeight: saved.materialWeight ?? line.materialWeight,
+                materialLength: saved.materialLength ?? line.materialLength,
+                materialWidth: saved.materialWidth ?? line.materialWidth,
+            });
+        }
     };
 
     const openValidationDialog = (reception: MaterialOrderReceptionTO) => {
@@ -179,39 +193,6 @@ export function IncomingMaterialReceptionPage() {
 
     const closeValidationDialog = () => {
         setValidationReception(null);
-    };
-
-    const confirmReceive = () => {
-        if (!selectedOrder?.id || !canConfirmReceive) return;
-        const qty = receivedQtyParsed;
-        if (qty == null) return;
-
-        setSubmittingReceive(true);
-        Server.recordMaterialOrderReception(
-            {
-                materialOrderId: selectedOrder.id,
-                receivedAt: toServerDateTime(receivedAt),
-                receivedQuantity: qty,
-                stockAllocations: buildStockAllocationsPayload(allocationRows),
-            },
-            (response: unknown) => {
-                setSubmittingReceive(false);
-                const saved = (response as { data?: MaterialOrderReceptionTO })?.data;
-                closeReceiveDialog();
-                loadData();
-                if (saved?.id != null && materialOrderHasCertificate(selectedOrder)) {
-                    openValidationDialog({
-                        ...orderToReceptionContext(selectedOrder, saved.id),
-                        ...saved,
-                        materialDiameter: saved.materialDiameter ?? selectedOrder.materialDiameter,
-                        materialWeight: saved.materialWeight ?? selectedOrder.materialWeight,
-                        materialLength: saved.materialLength ?? selectedOrder.materialLength,
-                        materialWidth: saved.materialWidth ?? selectedOrder.materialWidth,
-                    });
-                }
-            },
-            () => setSubmittingReceive(false),
-        );
     };
 
     const submitInternalControl = (form: InternalControlSubmitData) => {
@@ -267,27 +248,27 @@ export function IncomingMaterialReceptionPage() {
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                    {orders.length === 0 ? (
+                                    {awaitingReceptionRows.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={6} align="center">
                                                 {t('incomingMaterialNoOrders')}
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        orders.map((o) => (
-                                            <TableRow key={o.id}>
-                                                <TableCell>{o.code || '—'}</TableCell>
-                                                <TableCell>{o.materialName || o.materialCode || '—'}</TableCell>
-                                                <TableCell>{o.materialProviderName || '—'}</TableCell>
-                                                <TableCell>{o.quantity ?? 0}</TableCell>
+                                        awaitingReceptionRows.map(({ order, line }) => (
+                                            <TableRow key={`${order.id}-${line.id ?? line.materialId}`}>
+                                                <TableCell>{order.code || '—'}</TableCell>
+                                                <TableCell>{lineMaterialLabel(line, order)}</TableCell>
+                                                <TableCell>{order.materialProviderName || '—'}</TableCell>
+                                                <TableCell>{line.quantity ?? 0}</TableCell>
                                                 <TableCell>
-                                                    {o.status ? t(`materialOrderStatus_${o.status}`) : '—'}
+                                                    {order.status ? t(`materialOrderStatus_${order.status}`) : '—'}
                                                 </TableCell>
                                                 <TableCell align="right">
                                                     <Button
                                                         variant="contained"
                                                         size="small"
-                                                        onClick={() => openReceiveDialog(o)}
+                                                        onClick={() => openReceiveDialog(order, line)}
                                                     >
                                                         {t('receiveMaterial')}
                                                     </Button>
@@ -383,52 +364,14 @@ export function IncomingMaterialReceptionPage() {
                 </Box>
             )}
 
-            <Dialog open={selectedOrder != null} onClose={closeReceiveDialog} maxWidth="md" fullWidth>
-                <DialogTitle>{t('receiveMaterialDialogTitle')}</DialogTitle>
-                <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-                    <Typography variant="body2" color="text.secondary">
-                        {selectedOrder?.code ? `${selectedOrder.code} — ` : ''}
-                        {selectedOrder?.materialName || selectedOrder?.materialCode} —{' '}
-                        {selectedOrder?.materialProviderName}
-                    </Typography>
-                    <TextField
-                        label={t('receptionDate')}
-                        type="datetime-local"
-                        value={receivedAt}
-                        onChange={(e) => setReceivedAt(e.target.value)}
-                        InputLabelProps={{ shrink: true }}
-                        fullWidth
-                    />
-                    <TextField
-                        label={t('receivedQuantity')}
-                        type="number"
-                        value={receivedQuantity}
-                        onChange={(e) => setReceivedQuantity(e.target.value)}
-                        fullWidth
-                        inputProps={{ min: 1 }}
-                        helperText={t('receivedQuantityMustMatchOrder')}
-                    />
-                    <ReceiveMaterialStockAllocationSection
-                        rows={allocationRows}
-                        stockLocations={stockLocations}
-                        receivedQuantity={receivedQtyParsed}
-                        onRowsChange={setAllocationRows}
-                        onAddRow={() => setAllocationRows((prev) => [...prev, newAllocationRow()])}
-                    />
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={closeReceiveDialog} disabled={submittingReceive}>
-                        {t('cancel')}
-                    </Button>
-                    <Button
-                        variant="contained"
-                        onClick={confirmReceive}
-                        disabled={submittingReceive || !canConfirmReceive}
-                    >
-                        {t('confirmAction')}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+            <ReceiveMaterialDialog
+                open={receiveTarget != null}
+                order={receiveTarget?.order ?? null}
+                line={receiveTarget?.line ?? null}
+                stockLocations={stockLocations}
+                onClose={closeReceiveDialog}
+                onReceived={handleReceived}
+            />
 
             <MaterialInternalControlDialog
                 open={validationReception != null}

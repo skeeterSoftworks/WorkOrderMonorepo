@@ -1,8 +1,6 @@
 import Paper from '@mui/material/Paper';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import TextField from '@mui/material/TextField';
-import MenuItem from '@mui/material/MenuItem';
 import IconButton from '@mui/material/IconButton';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -11,55 +9,36 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
 import LinkIcon from '@mui/icons-material/Link';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
-import CloseIcon from '@mui/icons-material/Close';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ApplicationUserTO } from 'sf-common/src/models/ApiRequests';
 import { formatEuropeanDateTime } from 'sf-common/src/util/DateUtils';
 import { Server, ConfirmationModal } from 'sf-common';
-import {
-    TableActionsRow,
-    tableActionsTableCellSx,
-    tableActionIconButtonSx,
-} from '../shared/tableActions';
+import { TableActionsRow, tableActionsTableCellSx, tableActionIconButtonSx } from '../shared/tableActions';
 import { toastActionSuccess, toastServerError } from '../../util/actionToast';
+import { UserFormDialog } from './UserFormDialog';
 
 export function UsersManagementPanel() {
     const { t } = useTranslation();
-
     const [users, setUsers] = useState<ApplicationUserTO[]>([]);
-    const [selectedUserId, setSelectedUserId] = useState<string  | undefined>(undefined);
-    const [name, setName] = useState('');
-    const [surname, setSurname] = useState('');
-    const [qrCode, setQrCode] = useState('');
-    const [role, setRole] = useState<'ADMIN' | 'OPERATOR'>('OPERATOR');
+    const [editingUser, setEditingUser] = useState<ApplicationUserTO | null>(null);
     const [userToDelete, setUserToDelete] = useState<ApplicationUserTO | null>(null);
     const [formModalOpen, setFormModalOpen] = useState(false);
 
-    const formatCreatedDate = (value: any): string => {
-        if (!value) {
-            return '';
-        }
-
-        // If backend sends LocalDateTime as array [year, month, day, hour, minute, second,...]
+    const formatCreatedDate = (value: unknown): string => {
+        if (!value) return '';
         if (Array.isArray(value)) {
-            const [year, month = 1, day = 1, hour = 0, minute = 0, second = 0] = value;
+            const [year, month = 1, day = 1, hour = 0, minute = 0, second = 0] = value as number[];
             const d = new Date(year, month - 1, day, hour, minute, second);
             return Number.isNaN(d.getTime()) ? '' : formatEuropeanDateTime(d);
         }
-
-        // If backend sends ISO string
         if (typeof value === 'string') {
             const d = new Date(value);
             return Number.isNaN(d.getTime()) ? value : formatEuropeanDateTime(d);
         }
-
         return '';
     };
 
@@ -69,73 +48,24 @@ export function UsersManagementPanel() {
 
     const loadUsers = () => {
         Server.getAllUsers(
-            (response: any) => {
+            (response: { data?: ApplicationUserTO[] | { data?: ApplicationUserTO[] } }) => {
                 let data: ApplicationUserTO[] = [];
-
-                if (Array.isArray(response?.data)) {
-                    data = response.data;
-                } else if (Array.isArray(response?.data?.data)) {
-                    data = response.data.data;
-                }
-
+                if (Array.isArray(response?.data)) data = response.data;
+                else if (Array.isArray(response?.data?.data)) data = response.data.data;
                 setUsers(data);
             },
-            () => {
-            }
+            () => {},
         );
     };
 
-    const resetForm = () => {
-        setSelectedUserId(undefined);
-        setName('');
-        setSurname('');
-        setQrCode('');
-        setRole('OPERATOR');
-    };
-
     const openFormModal = () => {
-        resetForm();
+        setEditingUser(null);
         setFormModalOpen(true);
     };
 
     const closeFormModal = () => {
         setFormModalOpen(false);
-        resetForm();
-    };
-
-    const handleEditClick = (user: ApplicationUserTO) => {
-        setSelectedUserId(user.id);
-        setName(user.name || '');
-        setSurname(user.surname || '');
-        setQrCode(user.qrCode || '');
-        setRole(user.role || 'OPERATOR');
-        setFormModalOpen(true);
-    };
-
-    const handleSubmit = () => {
-        const payload: ApplicationUserTO = {
-            id: selectedUserId,
-            name,
-            surname,
-            qrCode,
-            role,
-        };
-
-        const onSuccess = () => {
-            loadUsers();
-            closeFormModal();
-            toastActionSuccess(selectedUserId ? t('toastUserUpdated') : t('toastUserAdded'));
-        };
-
-        if (selectedUserId) {
-            Server.editUser(payload, onSuccess, (err: unknown) => toastServerError(err, t));
-        } else {
-            Server.addUser(payload, onSuccess, (err: unknown) => toastServerError(err, t));
-        }
-    };
-
-    const handleDeleteClick = (user: ApplicationUserTO) => {
-        setUserToDelete(user);
+        setEditingUser(null);
     };
 
     const handleConfirmDelete = () => {
@@ -143,7 +73,6 @@ export function UsersManagementPanel() {
             setUserToDelete(null);
             return;
         }
-
         Server.deleteUser(
             Number(userToDelete.id),
             () => {
@@ -168,10 +97,7 @@ export function UsersManagementPanel() {
             </Box>
 
             <Paper sx={{ p: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                    {t('usersList')}
-                </Typography>
-
+                <Typography variant="h6" gutterBottom>{t('usersList')}</Typography>
                 <TableContainer>
                     <Table size="small">
                         <TableHead>
@@ -181,9 +107,7 @@ export function UsersManagementPanel() {
                                 <TableCell>{t('qrCode')}</TableCell>
                                 <TableCell>{t('role')}</TableCell>
                                 <TableCell>{t('createdDate')}</TableCell>
-                                <TableCell align="right" sx={tableActionsTableCellSx}>
-                                    {t('actions')}
-                                </TableCell>
+                                <TableCell align="right" sx={tableActionsTableCellSx}>{t('actions')}</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -193,23 +117,13 @@ export function UsersManagementPanel() {
                                     <TableCell>{user.surname}</TableCell>
                                     <TableCell>{user.qrCode}</TableCell>
                                     <TableCell>{user.role}</TableCell>
-                                    <TableCell>
-                                        {formatCreatedDate(user.createdDate as any)}
-                                    </TableCell>
+                                    <TableCell>{formatCreatedDate(user.createdDate)}</TableCell>
                                     <TableCell align="right" sx={tableActionsTableCellSx}>
                                         <TableActionsRow>
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleEditClick(user)}
-                                                sx={tableActionIconButtonSx.edit}
-                                            >
+                                            <IconButton size="small" onClick={() => { setEditingUser(user); setFormModalOpen(true); }} sx={tableActionIconButtonSx.edit}>
                                                 <LinkIcon fontSize="small" />
                                             </IconButton>
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleDeleteClick(user)}
-                                                sx={tableActionIconButtonSx.delete}
-                                            >
+                                            <IconButton size="small" onClick={() => setUserToDelete(user)} sx={tableActionIconButtonSx.delete}>
                                                 <DeleteIcon fontSize="small" />
                                             </IconButton>
                                         </TableActionsRow>
@@ -221,59 +135,7 @@ export function UsersManagementPanel() {
                 </TableContainer>
             </Paper>
 
-            <Dialog open={formModalOpen} onClose={closeFormModal} maxWidth="sm" fullWidth scroll="paper">
-                <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    {selectedUserId ? t('editUser') : t('addUser')}
-                    <IconButton size="small" onClick={closeFormModal} aria-label={t('close')}>
-                        <CloseIcon />
-                    </IconButton>
-                </DialogTitle>
-                <DialogContent dividers>
-                    <Box component="form" autoComplete="off" sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-                        <TextField
-                            label={t('name')}
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            size="small"
-                            fullWidth
-                        />
-                        <TextField
-                            label={t('surname')}
-                            value={surname}
-                            onChange={(e) => setSurname(e.target.value)}
-                            size="small"
-                            fullWidth
-                        />
-                        <TextField
-                            label={t('qrCode')}
-                            value={qrCode}
-                            onChange={(e) => setQrCode(e.target.value)}
-                            size="small"
-                            fullWidth
-                        />
-                        <TextField
-                            select
-                            label={t('role')}
-                            value={role}
-                            onChange={(e) => setRole(e.target.value as 'ADMIN' | 'OPERATOR')}
-                            size="small"
-                            fullWidth
-                        >
-                            <MenuItem value="OPERATOR">{t('operator')}</MenuItem>
-                            <MenuItem value="ADMIN">{t('admin')}</MenuItem>
-                        </TextField>
-
-                        <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                            <Button variant="contained" color="primary" onClick={handleSubmit}>
-                                {selectedUserId ? t('editUser') : t('addUser')}
-                            </Button>
-                            <Button variant="outlined" onClick={closeFormModal}>
-                                {t('cancel')}
-                            </Button>
-                        </Box>
-                    </Box>
-                </DialogContent>
-            </Dialog>
+            <UserFormDialog open={formModalOpen} user={editingUser} onClose={closeFormModal} onSaved={loadUsers} />
 
             <ConfirmationModal
                 open={!!userToDelete}
@@ -284,4 +146,3 @@ export function UsersManagementPanel() {
         </Box>
     );
 }
-

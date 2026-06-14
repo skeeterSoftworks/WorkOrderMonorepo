@@ -1,4 +1,5 @@
 import type {
+    MaterialOrderLineTO,
     MaterialOrderReceptionInternalControlTO,
     MaterialOrderReceptionTO,
     MaterialOrderTO,
@@ -146,17 +147,22 @@ export function isInternalControlFormComplete(
     return overallAcceptance !== null;
 }
 
-export function orderToReceptionContext(order: MaterialOrderTO, receptionId: number): MaterialOrderReceptionTO {
+export function orderToReceptionContext(
+    order: MaterialOrderTO,
+    line: MaterialOrderLineTO,
+    receptionId: number,
+): MaterialOrderReceptionTO {
     return {
         id: receptionId,
         materialOrderId: order.id,
+        materialOrderLineId: line.id,
         materialOrderCode: order.code,
-        materialCode: order.materialCode,
-        materialName: order.materialName,
+        materialCode: line.materialCode ?? order.materialCode,
+        materialName: line.materialName ?? order.materialName,
         materialProviderName: order.materialProviderName,
-        materialDiameter: order.materialDiameter,
-        materialWeight: order.materialWeight,
-        materialLength: order.materialLength,
-        materialWidth: order.materialWidth,
+        materialDiameter: line.materialDiameter ?? order.materialDiameter,
+        materialWeight: line.materialWeight ?? order.materialWeight,
+        materialLength: line.materialLength ?? order.materialLength,
+        materialWidth: line.materialWidth ?? order.materialWidth,
     };
 }

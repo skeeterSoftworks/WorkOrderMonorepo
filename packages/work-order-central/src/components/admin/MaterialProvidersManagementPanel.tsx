@@ -2,8 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
-import Button from '@mui/material/Button';
-import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -11,24 +9,15 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import Chip from '@mui/material/Chip';
-import Stack from '@mui/material/Stack';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import Alert from '@mui/material/Alert';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import FormHelperText from '@mui/material/FormHelperText';
-import MenuItem from '@mui/material/MenuItem';
-import CloseIcon from '@mui/icons-material/Close';
-import { alpha } from '@mui/material/styles';
 import type { MaterialProviderTO, MaterialTO, ProductTO } from 'sf-common/src/models/ApiRequests';
 import { Server, ConfirmationModal } from 'sf-common';
 import { useTranslation } from 'react-i18next';
-import { toastActionError, toastActionSuccess, toastServerError } from '../../util/actionToast';
+import { toastActionSuccess, toastServerError } from '../../util/actionToast';
 import { TableActionsRow, tableActionsTableCellSx, tableActionIconButtonSx } from '../shared/tableActions';
-import { filterDecimalNumericInput, parseDecimalNumericInputToNumber } from 'sf-common/src/util/DataUtils';
+import { MaterialProviderFormSection, type MaterialProviderFormValues } from './MaterialProviderFormSection';
+import { MaterialsCatalogDialog } from './MaterialsCatalogDialog';
 
 function providerKey(p: MaterialProviderTO): string {
     if (p.id != null) return `id:${p.id}`;
@@ -40,70 +29,25 @@ function materialProvidersOf(m: MaterialTO): MaterialProviderTO[] {
     return m.provider ? [m.provider] : [];
 }
 
-function hasAtLeastOneMaterialDimension(
-    diameter: string,
-    weight: string,
-    length: string,
-    width: string,
-): boolean {
-    return [diameter, weight, length, width].some(
-        (v) => parseDecimalNumericInputToNumber(v) !== undefined,
-    );
-}
-
 export function MaterialProvidersManagementPanel() {
     const { t } = useTranslation();
     const [products, setProducts] = useState<ProductTO[]>([]);
     const [providers, setProviders] = useState<MaterialProviderTO[]>([]);
     const [editingKey, setEditingKey] = useState<string | null>(null);
     const [providerToDelete, setProviderToDelete] = useState<MaterialProviderTO | null>(null);
-    const [providerName, setProviderName] = useState('');
-    const [providerContactPerson, setProviderContactPerson] = useState('');
-    const [providerEmailAddress, setProviderEmailAddress] = useState('');
-    const [providerPhoneNumber, setProviderPhoneNumber] = useState('');
     const [materialsDialogOpen, setMaterialsDialogOpen] = useState(false);
     const [materialsDialogProvider, setMaterialsDialogProvider] = useState<MaterialProviderTO | null>(null);
     const [materialsCatalog, setMaterialsCatalog] = useState<MaterialTO[]>([]);
-    const [editingMaterialIndex, setEditingMaterialIndex] = useState<number | null>(null);
-    const [materialName, setMaterialName] = useState('');
-    const [materialCode, setMaterialCode] = useState('');
-    const [materialProductsPerUnit, setMaterialProductsPerUnit] = useState('');
-    const [materialDiameter, setMaterialDiameter] = useState('');
-    const [materialWeight, setMaterialWeight] = useState('');
-    const [materialLength, setMaterialLength] = useState('');
-    const [materialWidth, setMaterialWidth] = useState('');
-    const [materialProviderKeysSelected, setMaterialProviderKeysSelected] = useState<string[]>([]);
-    const [materialDimensionsShowError, setMaterialDimensionsShowError] = useState(false);
-
-    const materialDimensionsValid = useMemo(
-        () =>
-            hasAtLeastOneMaterialDimension(
-                materialDiameter,
-                materialWeight,
-                materialLength,
-                materialWidth,
-            ),
-        [materialDiameter, materialWeight, materialLength, materialWidth],
-    );
 
     const sortedProviders = useMemo(
         () => [...providers].sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '')),
         [providers],
     );
-    const multiSelectMenuItemSx = (theme: any) => ({
-        py: 1,
-        '&.Mui-selected': {
-            backgroundColor: alpha(theme.palette.primary.main, 0.26),
-            fontWeight: 600,
-            borderLeft: `3px solid ${theme.palette.primary.main}`,
-        },
-        '&.Mui-selected.Mui-focusVisible': {
-            backgroundColor: alpha(theme.palette.primary.main, 0.32),
-        },
-        '&.Mui-selected:hover': {
-            backgroundColor: alpha(theme.palette.primary.main, 0.36),
-        },
-    });
+
+    const editingProvider = useMemo(
+        () => (editingKey ? providers.find((p) => providerKey(p) === editingKey) ?? null : null),
+        [editingKey, providers],
+    );
 
     const loadProducts = () => {
         Server.getAllProducts(
@@ -145,20 +89,6 @@ export function MaterialProvidersManagementPanel() {
         loadProducts();
     }, []);
 
-    const resetForm = () => {
-        setEditingKey(null);
-        setProviderName('');
-        setProviderContactPerson('');
-        setProviderEmailAddress('');
-        setProviderPhoneNumber('');
-    };
-
-    const isFormValid =
-        Boolean(providerName.trim()) &&
-        Boolean(providerContactPerson.trim()) &&
-        Boolean(providerEmailAddress.trim()) &&
-        Boolean(providerPhoneNumber.trim());
-
     const saveAllUpdatedProducts = (items: ProductTO[], onSuccess: () => void) => {
         const changed = items.filter((p, i) =>
             JSON.stringify(p.materials ?? []) !== JSON.stringify(products[i]?.materials ?? []),
@@ -180,16 +110,13 @@ export function MaterialProvidersManagementPanel() {
         }
     };
 
-    const addOrUpdateProvider = () => {
-        if (!isFormValid) return;
+    const addOrUpdateProvider = (values: MaterialProviderFormValues) => {
         const newProvider: MaterialProviderTO = {
-            id: editingKey
-                ? providers.find((p) => providerKey(p) === editingKey)?.id
-                : undefined,
-            name: providerName.trim(),
-            contactPerson: providerContactPerson.trim(),
-            emailAddress: providerEmailAddress.trim(),
-            phoneNumber: providerPhoneNumber.trim(),
+            id: editingKey ? providers.find((p) => providerKey(p) === editingKey)?.id : undefined,
+            name: values.name.trim(),
+            contactPerson: values.contactPerson.trim(),
+            emailAddress: values.emailAddress.trim(),
+            phoneNumber: values.phoneNumber.trim(),
             grade: editingKey ? providers.find((p) => providerKey(p) === editingKey)?.grade ?? 0 : 0,
         };
 
@@ -199,7 +126,6 @@ export function MaterialProvidersManagementPanel() {
                 () => {
                     loadProviders();
                     toastActionSuccess(t('toastMaterialProviderSaved'));
-                    resetForm();
                 },
                 (err: unknown) => toastServerError(err, t),
             );
@@ -209,10 +135,10 @@ export function MaterialProvidersManagementPanel() {
         const updated = products.map((product) => ({
             ...product,
             materials: (product.materials ?? []).map((m) => {
-                const providers = materialProvidersOf(m).map((x) =>
+                const nextProviders = materialProvidersOf(m).map((x) =>
                     providerKey(x) === editingKey ? { ...newProvider } : x,
                 );
-                return { ...m, providers, provider: undefined };
+                return { ...m, providers: nextProviders, provider: undefined };
             }),
         }));
 
@@ -222,20 +148,12 @@ export function MaterialProvidersManagementPanel() {
                 () => {
                     loadProviders();
                     loadProducts();
+                    setEditingKey(null);
                     toastActionSuccess(t('toastMaterialProviderSaved'));
-                    resetForm();
                 },
                 (err: unknown) => toastServerError(err, t),
             );
         });
-    };
-
-    const editProvider = (p: MaterialProviderTO) => {
-        setEditingKey(providerKey(p));
-        setProviderName(p.name ?? '');
-        setProviderContactPerson(p.contactPerson ?? '');
-        setProviderEmailAddress(p.emailAddress ?? '');
-        setProviderPhoneNumber(p.phoneNumber ?? '');
     };
 
     const confirmDeleteProvider = () => {
@@ -243,13 +161,11 @@ export function MaterialProvidersManagementPanel() {
         const key = providerKey(providerToDelete);
         const updated = products.map((product) => ({
             ...product,
-            materials: (product.materials ?? []).map((m) =>
-                ({
-                    ...m,
-                    providers: materialProvidersOf(m).filter((x) => providerKey(x) !== key),
-                    provider: undefined,
-                }),
-            ),
+            materials: (product.materials ?? []).map((m) => ({
+                ...m,
+                providers: materialProvidersOf(m).filter((x) => providerKey(x) !== key),
+                provider: undefined,
+            })),
         }));
         saveAllUpdatedProducts(updated, () => {
             if (!providerToDelete?.id) return;
@@ -260,133 +176,30 @@ export function MaterialProvidersManagementPanel() {
                     loadProviders();
                     loadProducts();
                     toastActionSuccess(t('toastMaterialProviderDeleted'));
-                    if (editingKey === key) resetForm();
+                    if (editingKey === key) setEditingKey(null);
                 },
                 (err: unknown) => toastServerError(err, t),
             );
         });
     };
 
-    const resetMaterialForm = () => {
-        setEditingMaterialIndex(null);
-        setMaterialName('');
-        setMaterialCode('');
-        setMaterialProductsPerUnit('');
-        setMaterialDiameter('');
-        setMaterialWeight('');
-        setMaterialLength('');
-        setMaterialWidth('');
-        setMaterialProviderKeysSelected([]);
-        setMaterialDimensionsShowError(false);
-    };
-
-    const onMaterialDimensionChange = (
-        setter: (v: string) => void,
-        value: string,
-    ) => {
-        setter(filterDecimalNumericInput(value));
-        setMaterialDimensionsShowError(false);
-    };
-
     const openMaterialsDialog = (provider: MaterialProviderTO) => {
         loadMaterialsCatalog(() => {
             setMaterialsDialogProvider(provider);
-            resetMaterialForm();
-            setMaterialProviderKeysSelected([providerKey(provider)]);
             setMaterialsDialogOpen(true);
         });
     };
 
-    const addOrUpdateMaterial = () => {
-        if (!materialName.trim() || !materialCode.trim() || !materialProductsPerUnit.trim() || materialProviderKeysSelected.length === 0) {
-            return;
-        }
-        if (!materialDimensionsValid) {
-            setMaterialDimensionsShowError(true);
-            toastActionError(t('materialDimensionsRequired'));
-            return;
-        }
-        const selectedProviders = materialProviderKeysSelected
-            .map((k) => providers.find((p) => providerKey(p) === k))
-            .filter((p): p is MaterialProviderTO => Boolean(p))
-            .map((p) => ({ ...p }));
-        const parsedPpu = Number(materialProductsPerUnit);
-        const row: MaterialTO = {
-            id: editingMaterialIndex !== null ? materialsCatalog[editingMaterialIndex]?.id : undefined,
-            name: materialName.trim(),
-            code: materialCode.trim(),
-            productsPerUnit: Number.isFinite(parsedPpu) ? Math.trunc(parsedPpu) : undefined,
-            diameter: parseDecimalNumericInputToNumber(materialDiameter),
-            weight: parseDecimalNumericInputToNumber(materialWeight),
-            length: parseDecimalNumericInputToNumber(materialLength),
-            width: parseDecimalNumericInputToNumber(materialWidth),
-            providers: selectedProviders,
-            provider: undefined,
-        };
-        Server.saveMaterial(
-            row,
-            () => {
-                loadMaterialsCatalog();
-                resetMaterialForm();
-                toastActionSuccess(t('toastMaterialSaved'));
-            },
-            (err: unknown) => toastServerError(err, t),
-        );
-    };
-
-    const beginEditMaterial = (idx: number) => {
-        const row = materialsCatalog[idx];
-        if (!row) return;
-        setEditingMaterialIndex(idx);
-        setMaterialName(row.name ?? '');
-        setMaterialCode(row.code ?? '');
-        setMaterialProductsPerUnit(row.productsPerUnit != null ? String(row.productsPerUnit) : '');
-        setMaterialDiameter(row.diameter != null ? String(row.diameter) : '');
-        setMaterialWeight(row.weight != null ? String(row.weight) : '');
-        setMaterialLength(row.length != null ? String(row.length) : '');
-        setMaterialWidth(row.width != null ? String(row.width) : '');
-        setMaterialProviderKeysSelected(materialProvidersOf(row).map((p) => providerKey(p)));
-    };
-
-    const removeMaterial = (idx: number) => {
-        const row = materialsCatalog[idx];
-        if (row?.id == null) return;
-        Server.deleteMaterial(
-            row.id,
-            () => {
-                loadMaterialsCatalog();
-                resetMaterialForm();
-                toastActionSuccess(t('toastMaterialDeleted'));
-            },
-            (err: unknown) => toastServerError(err, t),
-        );
-    };
-
     return (
         <Box sx={{ mt: 3 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-                {t('materialProvidersManagement')}
-            </Typography>
+            <Typography variant="h6" sx={{ mb: 2 }}>{t('materialProvidersManagement')}</Typography>
 
             <Paper sx={{ p: 2 }}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 2 }}>
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                        <TextField required label={t('materialProviderName')} value={providerName} onChange={(e) => setProviderName(e.target.value)} size="small" sx={{ flex: '1 1 180px' }} />
-                        <TextField required label={t('materialProviderContact')} value={providerContactPerson} onChange={(e) => setProviderContactPerson(e.target.value)} size="small" sx={{ flex: '1 1 180px' }} />
-                        <TextField required label={t('materialProviderEmail')} value={providerEmailAddress} onChange={(e) => setProviderEmailAddress(e.target.value)} size="small" sx={{ flex: '1 1 220px' }} />
-                        <TextField required label={t('materialProviderPhone')} value={providerPhoneNumber} onChange={(e) => setProviderPhoneNumber(e.target.value)} size="small" sx={{ flex: '1 1 160px' }} />
-                    </Box>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Button variant="contained" onClick={addOrUpdateProvider} disabled={!isFormValid}>
-                            {editingKey ? t('updateProvider') : t('addProvider')}
-                        </Button>
-                        {editingKey && (
-                            <Button variant="outlined" onClick={resetForm}>
-                                {t('cancel')}
-                            </Button>
-                        )}
-                    </Box>
-                </Box>
+                <MaterialProviderFormSection
+                    editingProvider={editingProvider}
+                    onSubmit={addOrUpdateProvider}
+                    onCancelEdit={() => setEditingKey(null)}
+                />
 
                 <TableContainer>
                     <Table size="small">
@@ -408,13 +221,11 @@ export function MaterialProvidersManagementPanel() {
                                     <TableCell>{p.phoneNumber ?? '—'}</TableCell>
                                     <TableCell align="right" sx={tableActionsTableCellSx}>
                                         <TableActionsRow>
-                                            <IconButton size="small" sx={tableActionIconButtonSx.edit} onClick={() => editProvider(p)} title={t('edit')}>
+                                            <IconButton size="small" sx={tableActionIconButtonSx.edit} onClick={() => setEditingKey(providerKey(p))} title={t('edit')}>
                                                 <EditIcon fontSize="small" />
                                             </IconButton>
                                             <IconButton size="small" sx={tableActionIconButtonSx.edit} onClick={() => openMaterialsDialog(p)} title={t('materialsEditTooltip')}>
-                                                <Typography component="span" sx={{ fontSize: '0.95rem', fontWeight: 800, color: 'secondary.main', lineHeight: 1 }}>
-                                                    M
-                                                </Typography>
+                                                <Typography component="span" sx={{ fontSize: '0.95rem', fontWeight: 800, color: 'secondary.main', lineHeight: 1 }}>M</Typography>
                                             </IconButton>
                                             <IconButton size="small" sx={tableActionIconButtonSx.delete} onClick={() => setProviderToDelete(p)} title={t('remove')}>
                                                 <DeleteIcon fontSize="small" />
@@ -434,199 +245,16 @@ export function MaterialProvidersManagementPanel() {
                 </TableContainer>
             </Paper>
 
-            <ConfirmationModal
-                open={!!providerToDelete}
-                modalMessage={t('confirmDeleteMaterialProvider')}
-                onConfirm={confirmDeleteProvider}
-                onModalClose={() => setProviderToDelete(null)}
-            />
+            <ConfirmationModal open={!!providerToDelete} modalMessage={t('confirmDeleteMaterialProvider')} onConfirm={confirmDeleteProvider} onModalClose={() => setProviderToDelete(null)} />
 
-            <Dialog
+            <MaterialsCatalogDialog
                 open={materialsDialogOpen}
-                onClose={() => {
-                    setMaterialsDialogOpen(false);
-                    setMaterialsDialogProvider(null);
-                }}
-                maxWidth="lg"
-                fullWidth
-            >
-                <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    {t('materialsEditorTitle')}
-                    {materialsDialogProvider?.name ? ` - ${materialsDialogProvider.name}` : ''}
-                    <IconButton
-                        size="small"
-                        onClick={() => {
-                            setMaterialsDialogOpen(false);
-                            setMaterialsDialogProvider(null);
-                        }}
-                        aria-label={t('close')}
-                    >
-                        <CloseIcon />
-                    </IconButton>
-                </DialogTitle>
-                <DialogContent dividers>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pt: 1 }}>
-                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                            <TextField required label={t('materialName')} value={materialName} onChange={(e) => setMaterialName(e.target.value)} size="small" sx={{ flex: '1 1 180px' }} />
-                            <TextField required label={t('materialCode')} value={materialCode} onChange={(e) => setMaterialCode(e.target.value)} size="small" sx={{ flex: '1 1 160px' }} />
-                            <TextField required label={t('materialProductsPerUnit')} value={materialProductsPerUnit} onChange={(e) => setMaterialProductsPerUnit(e.target.value.replace(/[^\d]/g, ''))} size="small" sx={{ width: 180 }} />
-                        </Box>
-                        <Alert severity="info" sx={{ py: 0.5 }}>
-                            {t('materialDimensionsHint')}
-                        </Alert>
-                        <Box>
-                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                <TextField
-                                    label={t('diameterMeasurement')}
-                                    value={materialDiameter}
-                                    onChange={(e) => onMaterialDimensionChange(setMaterialDiameter, e.target.value)}
-                                    size="small"
-                                    sx={{ width: 130 }}
-                                    error={materialDimensionsShowError && !materialDimensionsValid}
-                                />
-                                <TextField
-                                    label={t('weight')}
-                                    value={materialWeight}
-                                    onChange={(e) => onMaterialDimensionChange(setMaterialWeight, e.target.value)}
-                                    size="small"
-                                    sx={{ width: 130 }}
-                                    error={materialDimensionsShowError && !materialDimensionsValid}
-                                />
-                                <TextField
-                                    label={t('length')}
-                                    value={materialLength}
-                                    onChange={(e) => onMaterialDimensionChange(setMaterialLength, e.target.value)}
-                                    size="small"
-                                    sx={{ width: 130 }}
-                                    error={materialDimensionsShowError && !materialDimensionsValid}
-                                />
-                                <TextField
-                                    label={t('width')}
-                                    value={materialWidth}
-                                    onChange={(e) => onMaterialDimensionChange(setMaterialWidth, e.target.value)}
-                                    size="small"
-                                    sx={{ width: 130 }}
-                                    error={materialDimensionsShowError && !materialDimensionsValid}
-                                />
-                            </Box>
-                            {materialDimensionsShowError && !materialDimensionsValid && (
-                                <FormHelperText error sx={{ mx: 1.75 }}>
-                                    {t('materialDimensionsRequired')}
-                                </FormHelperText>
-                            )}
-                        </Box>
-                        <TextField
-                            select
-                            required
-                            label={t('materialProviderName')}
-                            SelectProps={{
-                                multiple: true,
-                                renderValue: (selected) =>
-                                    (
-                                        <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
-                                            {(selected as string[]).map((key) => {
-                                                const provider = providers.find((p) => providerKey(p) === key);
-                                                const isActive =
-                                                    !!materialsDialogProvider &&
-                                                    providerKey(materialsDialogProvider) === key;
-                                                return (
-                                                    <Chip
-                                                        key={key}
-                                                        size="small"
-                                                        label={
-                                                            isActive
-                                                                ? `${provider?.name ?? key} (${t('activeProvider')})`
-                                                                : (provider?.name ?? key)
-                                                        }
-                                                        color={isActive ? 'primary' : 'default'}
-                                                        variant="outlined"
-                                                    />
-                                                );
-                                            })}
-                                        </Stack>
-                                    ),
-                            }}
-                            value={materialProviderKeysSelected}
-                            onChange={(e) => {
-                                const v = e.target.value;
-                                const next = Array.isArray(v) ? v.map(String) : [String(v)];
-                                setMaterialProviderKeysSelected(next);
-                            }}
-                            size="small"
-                        >
-                            {sortedProviders.map((p) => (
-                                <MenuItem
-                                    key={providerKey(p)}
-                                    value={providerKey(p)}
-                                    sx={multiSelectMenuItemSx}
-                                >
-                                    {p.name || p.contactPerson || t('none')}
-                                </MenuItem>
-                            ))}
-                        </TextField>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Button variant="contained" onClick={addOrUpdateMaterial}>
-                                {editingMaterialIndex !== null ? t('updateMaterial') : t('addMaterial')}
-                            </Button>
-                            {editingMaterialIndex !== null && (
-                                <Button variant="outlined" onClick={resetMaterialForm}>
-                                    {t('cancel')}
-                                </Button>
-                            )}
-                        </Box>
-
-                        <Table size="small">
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell>{t('materialName')}</TableCell>
-                                    <TableCell>{t('materialCode')}</TableCell>
-                                    <TableCell>{t('materialProviderName')}</TableCell>
-                                    <TableCell align="right" sx={tableActionsTableCellSx}>{t('actions')}</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {materialsCatalog
-                                    .map((m, idx) => ({ m, idx }))
-                                    .filter(({ m }) => {
-                                        if (!materialsDialogProvider) return true;
-                                        const key = providerKey(materialsDialogProvider);
-                                        return materialProvidersOf(m).some((p) => providerKey(p) === key);
-                                    })
-                                    .length > 0 ? materialsCatalog
-                                    .map((m, idx) => ({ m, idx }))
-                                    .filter(({ m }) => {
-                                        if (!materialsDialogProvider) return true;
-                                        const key = providerKey(materialsDialogProvider);
-                                        return materialProvidersOf(m).some((p) => providerKey(p) === key);
-                                    })
-                                    .map(({ m, idx }) => (
-                                    <TableRow key={m.id ?? `${m.code}-${idx}`}>
-                                        <TableCell>{m.name ?? '—'}</TableCell>
-                                        <TableCell>{m.code ?? '—'}</TableCell>
-                                        <TableCell>{materialProvidersOf(m).map((p) => p.name || p.contactPerson).filter(Boolean).join(', ') || '—'}</TableCell>
-                                        <TableCell align="right" sx={tableActionsTableCellSx}>
-                                            <TableActionsRow>
-                                                <IconButton size="small" sx={tableActionIconButtonSx.edit} onClick={() => beginEditMaterial(idx)} title={t('edit')}>
-                                                    <EditIcon fontSize="small" />
-                                                </IconButton>
-                                                <IconButton size="small" sx={tableActionIconButtonSx.delete} onClick={() => removeMaterial(idx)} title={t('remove')}>
-                                                    <DeleteIcon fontSize="small" />
-                                                </IconButton>
-                                            </TableActionsRow>
-                                        </TableCell>
-                                    </TableRow>
-                                )) : (
-                                    <TableRow>
-                                        <TableCell colSpan={4}>
-                                            <Typography variant="body2" color="text.secondary">{t('materialsEmpty')}</Typography>
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </Box>
-                </DialogContent>
-            </Dialog>
+                provider={materialsDialogProvider}
+                providers={providers}
+                materialsCatalog={materialsCatalog}
+                onClose={() => { setMaterialsDialogOpen(false); setMaterialsDialogProvider(null); }}
+                onCatalogRefresh={loadMaterialsCatalog}
+            />
         </Box>
     );
 }
