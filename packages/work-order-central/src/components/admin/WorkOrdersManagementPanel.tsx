@@ -17,6 +17,7 @@ import Stack from '@mui/material/Stack';
 import CircularProgress from '@mui/material/CircularProgress';
 import LinearProgress from '@mui/material/LinearProgress';
 import Alert from '@mui/material/Alert';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import LinkIcon from '@mui/icons-material/Link';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EngineeringIcon from '@mui/icons-material/Engineering';
@@ -39,6 +40,7 @@ import { toastActionSuccess, toastServerError } from '../../util/actionToast';
 import {bookingStatusTranslationKey, bookingTypeTranslationKey} from '../../util/bookingI18n';
 import { WorkOrderFormDialog } from './WorkOrderFormDialog';
 import { WorkOrderScheduleDialog } from './WorkOrderScheduleDialog';
+import { downloadBase64Pdf } from '../../util/downloadBase64Pdf';
 
 function workOrderLineDisplay(wo: WorkOrderTO): string {
     const ref = wo.productReference?.trim();
@@ -271,6 +273,23 @@ export function WorkOrdersManagementPanel() {
         );
     };
 
+    const handleReprintStockAssignmentOrder = (wo: WorkOrderTO) => {
+        if (wo.id == null || !wo.stockAssignmentOrderCode) return;
+        Server.getStockAssignmentOrderPdf(
+            wo.id,
+            (response: { data?: { stockAssignmentOrderPdfBase64?: string } }) => {
+                const pdf = response?.data?.stockAssignmentOrderPdfBase64;
+                if (pdf) {
+                    downloadBase64Pdf(
+                        pdf,
+                        `stock-assignment-order-${wo.stockAssignmentOrderCode}.pdf`,
+                    );
+                }
+            },
+            (err: unknown) => toastServerError(err, t),
+        );
+    };
+
     const formatDate = (value: string | undefined): string => {
         if (!value) return '';
         const d = new Date(value);
@@ -376,6 +395,16 @@ export function WorkOrdersManagementPanel() {
                                             >
                                                 <InfoOutlinedIcon fontSize="small" />
                                             </IconButton>
+                                            {wo.stockAssignmentOrderCode && (
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => handleReprintStockAssignmentOrder(wo)}
+                                                    sx={tableActionIconButtonSx.view}
+                                                    title={t('reprintStockAssignmentOrder')}
+                                                >
+                                                    <PictureAsPdfIcon fontSize="small" />
+                                                </IconButton>
+                                            )}
                                             <IconButton
                                                 size="small"
                                                 onClick={() => handleEditClick(wo)}

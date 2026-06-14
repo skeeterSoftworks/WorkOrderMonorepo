@@ -443,6 +443,7 @@
   "workOrderStockAssignQuantity": "Dodeli količinu sa zaliha",
   "workOrderStockAssignmentHint": "Opciono. PDF Nalog za dodelu robe biće preuzet za operatera kada se dodeli roba sa zaliha.",
   "generatingStockAssignmentOrder": "Generisanje naloga za dodelu robe…",
+  "reprintStockAssignmentOrder": "Ponovo štampaj PDF naloga za dodelu robe",
   "workOrderMachineAssignmentNote": "Svaki radni nalog mora biti dodeljen odgovarajućoj mašini (narandžasta ikonica „Zakaži na mašini“) da bi proizvodnja počela.",
   "editWorkOrder": "Izmeni radni nalog",
   "confirmDeleteWorkOrder": "Potvrdite brisanje radnog naloga",

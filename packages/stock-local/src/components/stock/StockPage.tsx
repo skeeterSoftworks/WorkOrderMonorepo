@@ -8,6 +8,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { StockMaterialsByLocationPanel } from './StockMaterialsByLocationPanel';
 import { StockProductsAvailablePanel } from './StockProductsAvailablePanel';
+import { StockAssignmentFulfillPanel } from './StockAssignmentFulfillPanel';
 
 const StockTabs = {
     MATERIALS: 0,
@@ -19,6 +20,7 @@ type StockTabId = (typeof StockTabs)[keyof typeof StockTabs];
 export function StockPage() {
     const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState<StockTabId>(StockTabs.MATERIALS);
+    const [productsRefreshKey, setProductsRefreshKey] = useState(0);
 
     return (
         <Box sx={{ py: 2 }}>
@@ -37,7 +39,12 @@ export function StockPage() {
             </Box>
 
             {activeTab === StockTabs.MATERIALS && <StockMaterialsByLocationPanel />}
-            {activeTab === StockTabs.PRODUCTS && <StockProductsAvailablePanel />}
+            {activeTab === StockTabs.PRODUCTS && (
+                <>
+                    <StockAssignmentFulfillPanel onFulfilled={() => setProductsRefreshKey((k) => k + 1)} />
+                    <StockProductsAvailablePanel refreshKey={productsRefreshKey} />
+                </>
+            )}
         </Box>
     );
 }

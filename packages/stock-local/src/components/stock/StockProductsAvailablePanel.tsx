@@ -13,7 +13,11 @@ import { useTranslation } from 'react-i18next';
 import type { ProductAvailableStockTO } from 'sf-common/src/models/ApiRequests';
 import { Server } from '../../api/Server';
 
-export function StockProductsAvailablePanel() {
+type Props = {
+    refreshKey?: number;
+};
+
+export function StockProductsAvailablePanel({ refreshKey = 0 }: Props) {
     const { t } = useTranslation();
     const [rows, setRows] = useState<ProductAvailableStockTO[]>([]);
     const [loading, setLoading] = useState(true);
@@ -34,7 +38,7 @@ export function StockProductsAvailablePanel() {
                 setLoading(false);
             },
         );
-    }, [t]);
+    }, [t, refreshKey]);
 
     if (loading) {
         return (

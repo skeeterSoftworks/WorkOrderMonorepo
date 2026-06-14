@@ -430,6 +430,32 @@ export interface WorkOrderTO {
     stockAssignments?: WorkOrderStockAllocationTO[],
     /** Logged-in user QR code (create only); used on stock assignment PDF. */
     createdByUserQrCode?: string,
+    /** Denormalized: 8-digit stock assignment order code when present. */
+    stockAssignmentOrderCode?: string,
+    /** Denormalized: stock assignment order fulfillment status. */
+    stockAssignmentOrderStatus?: StockAssignmentOrderStatus,
+}
+
+export type StockAssignmentOrderStatus = 'UNASSIGNED' | 'ASSIGNED'
+
+export interface StockAssignmentOrderTO {
+    id?: number,
+    code?: string,
+    workOrderId?: number,
+    productId?: number,
+    productReference?: string,
+    productName?: string,
+    quantity?: number,
+    status?: StockAssignmentOrderStatus,
+    createdAt?: string,
+    createdByFullName?: string,
+    assignedAt?: string,
+    assignedByUserQr?: string,
+}
+
+export interface FulfillStockAssignmentOrderRequestTO {
+    code?: string,
+    operatorUserQrCode?: string,
 }
 
 export interface WorkOrderStockAllocationTO {

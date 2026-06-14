@@ -193,6 +193,15 @@ export class Server {
             });
     }
 
+    static getStockAssignmentOrderPdf(workOrderId: number, onSuccess: Function, onError: Function) {
+        axios.get(`${getServerUrl()}/workorders/${workOrderId}/stock-assignment-order/pdf`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
     static editWorkOrder(workOrder: WorkOrderTO, onSuccess: Function, onError: Function) {
         axios.post(`${getServerUrl()}/workorders/update`, workOrder)
             .then(response => onSuccess(response))

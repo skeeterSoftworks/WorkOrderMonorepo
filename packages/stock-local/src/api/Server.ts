@@ -337,4 +337,26 @@ export class Server {
             });
     }
 
+    static getStockAssignmentOrderByCode(code: string, onSuccess: Function, onError?: Function) {
+        axios.get(`${getServerUrl()}/stock/assignment-orders/${encodeURIComponent(code)}`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError && onError(error);
+            });
+    }
+
+    static fulfillStockAssignmentOrder(
+        body: { code?: string; operatorUserQrCode?: string },
+        onSuccess: Function,
+        onError?: Function,
+    ) {
+        axios.post(`${getServerUrl()}/stock/assignment-orders/fulfill`, body)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError && onError(error);
+            });
+    }
+
 }
