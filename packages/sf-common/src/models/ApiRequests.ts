@@ -428,6 +428,8 @@ export interface WorkOrderTO {
     state?: WorkOrderState,
     /** Optional finished-goods stock allocations when creating a work order. */
     stockAssignments?: WorkOrderStockAllocationTO[],
+    /** Logged-in user QR code (create only); used on stock assignment PDF. */
+    createdByUserQrCode?: string,
 }
 
 export interface WorkOrderStockAllocationTO {

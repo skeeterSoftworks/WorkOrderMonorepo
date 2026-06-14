@@ -83,6 +83,18 @@ function purchaseOrderLabel(po: PurchaseOrderTO): string {
     return cust ? `${core} (${cust})` : core;
 }
 
+function readLoggedInUserQr(): string | undefined {
+    const raw = sessionStorage.getItem('userData');
+    if (!raw) return undefined;
+    try {
+        const user = JSON.parse(raw) as { qrCode?: string };
+        const qr = user.qrCode?.trim();
+        return qr || undefined;
+    } catch {
+        return undefined;
+    }
+}
+
 type Props = {
     open: boolean;
     workOrder: WorkOrderTO | null;
@@ -115,7 +127,7 @@ export function WorkOrderFormDialog({
     const [productStockLoading, setProductStockLoading] = useState(false);
     const [stockAssignQuantity, setStockAssignQuantity] = useState('');
     const [submitting, setSubmitting] = useState(false);
-    
+
     const selectableLines = useMemo(
         () => getSelectableProductLines(purchaseOrderId, purchaseOrders, workOrders, editingId),
         [purchaseOrderId, purchaseOrders, workOrders, editingId],
@@ -224,6 +236,7 @@ export function WorkOrderFormDialog({
             endDate: endDate || undefined,
             comment: comment || undefined,
             stockAssignments: stockAssignmentsPayload.length > 0 ? stockAssignmentsPayload : undefined,
+            createdByUserQrCode: readLoggedInUserQr(),
         };
         const onSuccess = (response?: { data?: WorkOrderCreateResultTO }) => {
             const pdf = response?.data?.stockAssignmentOrderPdfBase64;
