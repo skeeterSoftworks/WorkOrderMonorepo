@@ -12,14 +12,17 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import TablePagination from '@mui/material/TablePagination';
+import Tooltip from '@mui/material/Tooltip';
 import CircularProgress from '@mui/material/CircularProgress';
 import AddIcon from '@mui/icons-material/Add';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import PublishedWithChangesOutlinedIcon from '@mui/icons-material/PublishedWithChangesOutlined';
 import BlockIcon from '@mui/icons-material/Block';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Server, ConfirmationModal } from 'sf-common';
 import type {
     MaterialOrderStatus,
@@ -33,6 +36,10 @@ import {
     MATERIAL_ORDER_STALE_ROW_BACKGROUND,
 } from '../../util/materialOrderStale';
 import { materialOrderStatusColor } from '../../util/materialOrderStatusColor';
+import {
+    partialMaterialReceptionByOrderId,
+    type PartialMaterialReceptionItem,
+} from '../../util/materialOrderPartialReception';
 import { MaterialOrderCertificateViewDialog } from './MaterialOrderCertificateViewDialog';
 import { MaterialOrderCreateDialog } from './MaterialOrderCreateDialog';
 import { MaterialOrderEmailPickerDialog } from './MaterialOrderEmailPickerDialog';
@@ -148,6 +155,34 @@ function formatMaterialOrderQuantity(order: MaterialOrderTO): string | number {
     return order.quantity ?? 0;
 }
 
+function unwrapMaterialOrders(response: unknown): MaterialOrderTO[] {
+    const r = response as { data?: MaterialOrderTO[] | { data?: MaterialOrderTO[] } };
+    if (Array.isArray(r?.data)) return r.data;
+    if (Array.isArray(r?.data?.data)) return r.data.data;
+    return [];
+}
+
+function partialReceptionTooltip(items: PartialMaterialReceptionItem[], t: TFunction) {
+    return (
+        <Box sx={{ maxWidth: 380 }}>
+            {items.map((item) => (
+                <Typography
+                    key={`${item.lineId ?? item.materialLabel}-${item.received}`}
+                    variant="caption"
+                    component="div"
+                >
+                    {t('healthPartialMaterialReceptionDetail', {
+                        code: item.orderCode,
+                        material: item.materialLabel,
+                        received: item.received,
+                        ordered: item.ordered,
+                    })}
+                </Typography>
+            ))}
+        </Box>
+    );
+}
+
 export function PurchasingPage() {
     const { t } = useTranslation();
     const [orders, setOrders] = useState<MaterialOrderTO[]>([]);
@@ -171,6 +206,20 @@ export function PurchasingPage() {
     const [certificateViewUrl, setCertificateViewUrl] = useState<string | undefined>(undefined);
     const [certificateViewLoading, setCertificateViewLoading] = useState(false);
     const [certificateViewError, setCertificateViewError] = useState(false);
+    const [partialReceptionsByOrderId, setPartialReceptionsByOrderId] = useState<
+        Map<number, PartialMaterialReceptionItem[]>
+    >(() => new Map());
+
+    const fetchPartialReceptions = useCallback(() => {
+        Server.getMaterialOrdersOpenForReception(
+            (response: unknown) => {
+                setPartialReceptionsByOrderId(
+                    partialMaterialReceptionByOrderId(unwrapMaterialOrders(response)),
+                );
+            },
+            () => setPartialReceptionsByOrderId(new Map()),
+        );
+    }, []);
 
     const fetchOrders = useCallback((
         filters: MaterialOrderSearchForm,
@@ -207,11 +256,16 @@ export function PurchasingPage() {
 
     const refreshOrders = useCallback(() => {
         fetchOrders(appliedFilters, tableQuery);
-    }, [appliedFilters, tableQuery, fetchOrders]);
+        fetchPartialReceptions();
+    }, [appliedFilters, tableQuery, fetchOrders, fetchPartialReceptions]);
 
     useEffect(() => {
         fetchOrders(appliedFilters, tableQuery);
     }, [appliedFilters, tableQuery, fetchOrders]);
+
+    useEffect(() => {
+        fetchPartialReceptions();
+    }, [fetchPartialReceptions]);
 
     useEffect(() => {
         loadMaterials();
@@ -488,13 +542,41 @@ export function PurchasingPage() {
                                         <TableCell>{formatMaterialOrderQuantity(o)}</TableCell>
                                         <TableCell>
                                             {o.status ? (
-                                                <Typography
-                                                    component="span"
-                                                    variant="body2"
-                                                    sx={{ color: materialOrderStatusColor(o.status), fontWeight: 600 }}
-                                                >
-                                                    {t(`materialOrderStatus_${o.status}`)}
-                                                </Typography>
+                                                <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                                                    <Typography
+                                                        component="span"
+                                                        variant="body2"
+                                                        sx={{
+                                                            color: materialOrderStatusColor(o.status),
+                                                            fontWeight: 600,
+                                                        }}
+                                                    >
+                                                        {t(`materialOrderStatus_${o.status}`)}
+                                                    </Typography>
+                                                    {o.id != null
+                                                        && partialReceptionsByOrderId.get(o.id)?.length ? (
+                                                        <Tooltip
+                                                            title={partialReceptionTooltip(
+                                                                partialReceptionsByOrderId.get(o.id)!,
+                                                                t,
+                                                            )}
+                                                            arrow
+                                                            placement="top"
+                                                        >
+                                                            <Box
+                                                                component="span"
+                                                                sx={{ display: 'inline-flex', alignItems: 'center' }}
+                                                            >
+                                                                <ErrorOutlineIcon
+                                                                    fontSize="small"
+                                                                    color="warning"
+                                                                    aria-label={t('materialOrderPartialReceptionIndicator')}
+                                                                    sx={{ cursor: 'help' }}
+                                                                />
+                                                            </Box>
+                                                        </Tooltip>
+                                                    ) : null}
+                                                </Box>
                                             ) : '—'}
                                         </TableCell>
                                         <TableCell>{formatMaterialOrderLastChanged(o.lastChanged)}</TableCell>

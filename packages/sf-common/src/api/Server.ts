@@ -359,6 +359,15 @@ export class Server {
             });
     }
 
+    static getMaterialOrdersOpenForReception(onSuccess: Function, onError: Function) {
+        axios.get(`${getServerUrl()}/material-orders/open-for-reception`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
     static transitionMaterialOrderStatus(
         id: number,
         status: MaterialOrderStatus,

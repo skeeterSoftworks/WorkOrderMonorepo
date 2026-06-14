@@ -17,6 +17,11 @@ import type {
 } from 'sf-common/src/models/ApiRequests';
 import { Server } from 'sf-common';
 import { MATERIAL_ORDER_STALE_LAST_CHANGE_DAYS } from '../../util/materialOrderStale';
+import {
+    partialMaterialReceptionItems,
+    partialMaterialReceptionSummaryLabel,
+    type PartialMaterialReceptionItem,
+} from '../../util/materialOrderPartialReception';
 
 function unwrapArray<T>(response: unknown): T[] {
     const r = response as { data?: T[] | { data?: T[] } };
@@ -67,6 +72,15 @@ function getStaleMonitoringMaterialOrdersAsync(): Promise<MaterialOrderTO[]> {
         Server.getStaleMonitoringMaterialOrders(
             (response: unknown) => resolve(unwrapArray(response)),
             () => reject(new Error('staleMaterialOrders')),
+        );
+    });
+}
+
+function getMaterialOrdersOpenForReceptionAsync(): Promise<MaterialOrderTO[]> {
+    return new Promise((resolve, reject) => {
+        Server.getMaterialOrdersOpenForReception(
+            (response: unknown) => resolve(unwrapArray(response)),
+            () => reject(new Error('openForReceptionMaterialOrders')),
         );
     });
 }
@@ -176,6 +190,7 @@ export function WorkOrdersHealthPanel() {
     const [productOrdersWithoutWorkOrder, setProductOrdersWithoutWorkOrder] = useState(0);
     const [productOrdersWithoutWorkOrderLabels, setProductOrdersWithoutWorkOrderLabels] = useState<string[]>([]);
     const [staleMaterialOrders, setStaleMaterialOrders] = useState<MaterialOrderTO[]>([]);
+    const [partialMaterialReceptions, setPartialMaterialReceptions] = useState<PartialMaterialReceptionItem[]>([]);
 
     useEffect(() => {
         let cancelled = false;
@@ -184,15 +199,17 @@ export function WorkOrdersHealthPanel() {
             setLoading(true);
             setError(null);
             try {
-                const [workOrders, purchaseOrders, machines, staleOrders] = await Promise.all([
+                const [workOrders, purchaseOrders, machines, staleOrders, openForReceptionOrders] = await Promise.all([
                     getAllWorkOrdersAsync(),
                     getAllPurchaseOrdersAsync(),
                     getAllMachinesAsync(),
                     getStaleMonitoringMaterialOrdersAsync(),
+                    getMaterialOrdersOpenForReceptionAsync(),
                 ]);
                 if (cancelled) return;
 
                 setStaleMaterialOrders(staleOrders);
+                setPartialMaterialReceptions(partialMaterialReceptionItems(openForReceptionOrders));
 
                 const assignedProductOrderIds = new Set<number>(
                     workOrders
@@ -344,6 +361,11 @@ export function WorkOrdersHealthPanel() {
                         productOrdersWithoutWorkOrderLabels,
                     )}
                     {healthRow(
+                        t('healthPartialMaterialReceptions'),
+                        partialMaterialReceptions.length,
+                        partialMaterialReceptions.map(partialMaterialReceptionSummaryLabel),
+                    )}
+                    {healthRow(
                         t('healthStaleMaterialOrders', { days: MATERIAL_ORDER_STALE_LAST_CHANGE_DAYS }),
                         staleMaterialOrders.length,
                         staleMaterialOrders.map(staleMaterialOrderLabel),
@@ -362,10 +384,24 @@ export function WorkOrdersHealthPanel() {
                 </Stack>
             </Paper>
 
-            {staleMaterialOrders.length > 0 && (
+            {(staleMaterialOrders.length > 0 || partialMaterialReceptions.length > 0) && (
                 <Paper sx={{ p: 2, mt: 2 }}>
                     <Typography variant="subtitle1">{t('materialOrdersHealth')}</Typography>
                     <Stack spacing={0.5} sx={{ mt: 1, alignItems: 'flex-start' }}>
+                        {partialMaterialReceptions.map((item) => (
+                            <Typography
+                                key={`partial-${item.orderId ?? item.orderCode}-${item.lineId ?? item.materialLabel}`}
+                                variant="body2"
+                                color="warning.dark"
+                            >
+                                {t('healthPartialMaterialReceptionDetail', {
+                                    code: item.orderCode,
+                                    material: item.materialLabel,
+                                    received: item.received,
+                                    ordered: item.ordered,
+                                })}
+                            </Typography>
+                        ))}
                         {staleMaterialOrders.map((order) => (
                             <Typography
                                 key={order.id ?? order.code ?? staleMaterialOrderLabel(order)}
