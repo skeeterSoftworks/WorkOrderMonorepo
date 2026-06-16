@@ -567,6 +567,7 @@
   "noMaterialOrders": "Još nema narudžbenica materijala.",
   "selectMaterialFirst": "Prvo izaberite materijal.",
   "uploadCertificate": "Otpremi sertifikat",
+  "materialOrderCertificateAbsent": "Sertifikat nije otpremljen za ovu narudžbinu materijala.",
   "viewCertificate": "Pregled sertifikata",
   "materialOrderCertificateTitle": "Sertifikat — {{code}}",
   "materialOrderCertificateTitleGeneric": "Sertifikat narudžbe materijala",

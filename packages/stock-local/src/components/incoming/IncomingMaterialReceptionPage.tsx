@@ -11,7 +11,6 @@ import {
     TableContainer,
     TableHead,
     TableRow,
-    Tooltip,
     Typography,
 } from '@mui/material';
 import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
@@ -45,14 +44,6 @@ function parseReceptionsResponse(response: unknown): MaterialOrderReceptionTO[] 
 function parseStockLocationsResponse(response: unknown): StockLocationTO[] {
     const r = response as { data?: StockLocationTO[] };
     return Array.isArray(r?.data) ? r.data : [];
-}
-
-function materialOrderHasCertificate(order: MaterialOrderTO): boolean {
-    return order.certificatePresent === true;
-}
-
-function receptionHasCertificate(reception: MaterialOrderReceptionTO): boolean {
-    return reception.certificatePresent === true;
 }
 
 type OpenReceptionRow = {
@@ -185,7 +176,7 @@ export function IncomingMaterialReceptionPage() {
 
     const handleReceived = (saved: MaterialOrderReceptionTO, order: MaterialOrderTO, line: MaterialOrderLineTO) => {
         loadData();
-        if (saved.lineFullyReceived && saved.id != null && materialOrderHasCertificate(order)) {
+        if (saved.lineFullyReceived && saved.id != null) {
             openValidationDialog({
                 ...orderToReceptionContext(order, line, saved.id),
                 ...saved,
@@ -331,27 +322,13 @@ export function IncomingMaterialReceptionPage() {
                                                 <TableCell>{r.receivedQuantity ?? '—'}</TableCell>
                                                 <TableCell>{t('materialOrderStatus_RECEIVED_IN_STOCK')}</TableCell>
                                                 <TableCell align="right">
-                                                    {receptionHasCertificate(r) ? (
-                                                        <IconButton
-                                                            size="small"
-                                                            title={t('openMaterialValidation')}
-                                                            onClick={() => openValidationDialog(r)}
-                                                        >
-                                                            <FactCheckOutlinedIcon fontSize="small" />
-                                                        </IconButton>
-                                                    ) : (
-                                                        <Tooltip title={t('materialOrderCertificateRequiredForInternalControl')}>
-                                                            <span>
-                                                                <IconButton
-                                                                    size="small"
-                                                                    disabled
-                                                                    aria-label={t('materialOrderCertificateRequiredForInternalControl')}
-                                                                >
-                                                                    <FactCheckOutlinedIcon fontSize="small" />
-                                                                </IconButton>
-                                                            </span>
-                                                        </Tooltip>
-                                                    )}
+                                                    <IconButton
+                                                        size="small"
+                                                        title={t('openMaterialValidation')}
+                                                        onClick={() => openValidationDialog(r)}
+                                                    >
+                                                        <FactCheckOutlinedIcon fontSize="small" />
+                                                    </IconButton>
                                                 </TableCell>
                                             </TableRow>
                                         ))

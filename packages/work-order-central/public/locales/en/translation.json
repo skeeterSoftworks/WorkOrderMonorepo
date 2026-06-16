@@ -570,6 +570,7 @@
   "noMaterialOrders": "No material orders yet.",
   "selectMaterialFirst": "Select material first.",
   "uploadCertificate": "Upload certificate",
+  "materialOrderCertificateAbsent": "Certificate has not been uploaded for this material order.",
   "viewCertificate": "View certificate",
   "materialOrderCertificateTitle": "Certificate — {{code}}",
   "materialOrderCertificateTitleGeneric": "Material order certificate",

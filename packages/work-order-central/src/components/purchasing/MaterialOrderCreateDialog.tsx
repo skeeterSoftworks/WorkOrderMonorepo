@@ -28,6 +28,12 @@ function newLineDraft(): LineDraft {
     return { materialId: undefined, quantity: '' };
 }
 
+function formatMaterialOptionLabel(material: MaterialTO): string {
+    const code = material.code?.trim() || '—';
+    const name = material.name?.trim() || '—';
+    return `${code} (${name})`;
+}
+
 type Props = {
     open: boolean;
     providers: MaterialProviderTO[];
@@ -146,7 +152,7 @@ export function MaterialOrderCreateDialog({ open, providers, materials, onClose,
                                                 <MenuItem value="">{t('none')}</MenuItem>
                                                 {materialsForProvider.map((material) => (
                                                     <MenuItem key={material.id} value={material.id}>
-                                                        {material.name || material.code || material.id}
+                                                        {formatMaterialOptionLabel(material)}
                                                     </MenuItem>
                                                 ))}
                                             </TextField>

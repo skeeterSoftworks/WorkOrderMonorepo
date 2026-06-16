@@ -135,6 +135,10 @@ function canRejectMaterialOrder(order: MaterialOrderTO): boolean {
     return status !== 'RECEIVED_IN_STOCK' && status !== 'VALIDATED' && status !== 'REJECTED';
 }
 
+function materialOrderCertificateAbsentWarning(status?: MaterialOrderTO['status']): boolean {
+    return status === 'RECEIVED_IN_STOCK' || status === 'VALIDATED';
+}
+
 function formatMaterialOrderMaterialsLabel(order: MaterialOrderTO): string {
     if (order.lines != null && order.lines.length > 0) {
         return order.lines
@@ -581,29 +585,47 @@ export function PurchasingPage() {
                                         </TableCell>
                                         <TableCell>{formatMaterialOrderLastChanged(o.lastChanged)}</TableCell>
                                         <TableCell align="center">
-                                            {o.certificatePresent ? (
-                                                <IconButton
-                                                    size="small"
-                                                    title={t('viewCertificate')}
-                                                    disabled={o.id == null}
-                                                    onClick={() => openCertificateView(o)}
-                                                >
-                                                    <VisibilityIcon fontSize="small" />
-                                                </IconButton>
-                                            ) : (
-                                                <IconButton
-                                                    size="small"
-                                                    title={t('uploadCertificate')}
-                                                    disabled={
-                                                        o.id == null
-                                                        || !canUploadCertificate(o)
-                                                        || uploadingCertificateId === o.id
-                                                    }
-                                                    onClick={() => triggerCertificateUpload(o)}
-                                                >
-                                                    <UploadFileIcon fontSize="small" />
-                                                </IconButton>
-                                            )}
+                                            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25 }}>
+                                                {!o.certificatePresent
+                                                    && materialOrderCertificateAbsentWarning(o.status) ? (
+                                                    <Tooltip title={t('materialOrderCertificateAbsent')} arrow>
+                                                        <Box
+                                                            component="span"
+                                                            sx={{ display: 'inline-flex', alignItems: 'center' }}
+                                                        >
+                                                            <ErrorOutlineIcon
+                                                                fontSize="small"
+                                                                color="warning"
+                                                                aria-label={t('materialOrderCertificateAbsent')}
+                                                                sx={{ cursor: 'help' }}
+                                                            />
+                                                        </Box>
+                                                    </Tooltip>
+                                                ) : null}
+                                                {o.certificatePresent ? (
+                                                    <IconButton
+                                                        size="small"
+                                                        title={t('viewCertificate')}
+                                                        disabled={o.id == null}
+                                                        onClick={() => openCertificateView(o)}
+                                                    >
+                                                        <VisibilityIcon fontSize="small" />
+                                                    </IconButton>
+                                                ) : (
+                                                    <IconButton
+                                                        size="small"
+                                                        title={t('uploadCertificate')}
+                                                        disabled={
+                                                            o.id == null
+                                                            || !canUploadCertificate(o)
+                                                            || uploadingCertificateId === o.id
+                                                        }
+                                                        onClick={() => triggerCertificateUpload(o)}
+                                                    >
+                                                        <UploadFileIcon fontSize="small" />
+                                                    </IconButton>
+                                                )}
+                                            </Box>
                                         </TableCell>
                                         <TableCell align="right">
                                             <IconButton
