@@ -176,7 +176,7 @@ export function IncomingMaterialReceptionPage() {
 
     const handleReceived = (saved: MaterialOrderReceptionTO, order: MaterialOrderTO, line: MaterialOrderLineTO) => {
         loadData();
-        if (saved.lineFullyReceived && saved.id != null) {
+        if (saved.id != null) {
             openValidationDialog({
                 ...orderToReceptionContext(order, line, saved.id),
                 ...saved,
@@ -301,6 +301,7 @@ export function IncomingMaterialReceptionPage() {
                                         <TableCell>{t('materialOrderCode')}</TableCell>
                                         <TableCell>{t('materialName')}</TableCell>
                                         <TableCell>{t('materialProviderName')}</TableCell>
+                                        <TableCell>{t('deliveryNoteNumber')}</TableCell>
                                         <TableCell>{t('receivedQuantity')}</TableCell>
                                         <TableCell>{t('status')}</TableCell>
                                         <TableCell align="right">{t('actions')}</TableCell>
@@ -309,16 +310,17 @@ export function IncomingMaterialReceptionPage() {
                                 <TableBody>
                                     {pendingValidations.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={6} align="center">
+                                            <TableCell colSpan={7} align="center">
                                                 {t('incomingMaterialNoPendingValidation')}
                                             </TableCell>
                                         </TableRow>
                                     ) : (
                                         pendingValidations.map((r) => (
-                                            <TableRow key={r.id ?? r.materialOrderId}>
+                                            <TableRow key={r.id ?? `${r.deliveryNoteId}-${r.materialOrderLineId}`}>
                                                 <TableCell>{r.materialOrderCode || '—'}</TableCell>
                                                 <TableCell>{r.materialName || r.materialCode || '—'}</TableCell>
                                                 <TableCell>{r.materialProviderName || '—'}</TableCell>
+                                                <TableCell>{r.deliveryNoteNumber || '—'}</TableCell>
                                                 <TableCell>{r.receivedQuantity ?? '—'}</TableCell>
                                                 <TableCell>{t('materialOrderStatus_RECEIVED_IN_STOCK')}</TableCell>
                                                 <TableCell align="right">

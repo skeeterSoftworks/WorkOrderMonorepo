@@ -95,6 +95,17 @@ export function MaterialInternalControlDialog({
                     {reception?.materialOrderCode ? `${reception.materialOrderCode} — ` : ''}
                     {reception?.materialName || reception?.materialCode} — {reception?.materialProviderName}
                 </Typography>
+                {(reception?.deliveryNoteNumber || reception?.receivedQuantity != null) && (
+                    <Typography variant="body2" color="text.secondary">
+                        {reception.deliveryNoteNumber
+                            ? `${t('deliveryNoteNumber')}: ${reception.deliveryNoteNumber}`
+                            : ''}
+                        {reception.deliveryNoteNumber && reception.receivedQuantity != null ? ' — ' : ''}
+                        {reception.receivedQuantity != null
+                            ? `${t('receivedQuantity')}: ${reception.receivedQuantity}`
+                            : ''}
+                    </Typography>
+                )}
                 {sampleDimensions.length === 0 ? (
                     <Typography variant="body2">{t('materialInternalControlNoDimensions')}</Typography>
                 ) : (
