@@ -13,8 +13,10 @@ import Typography from '@mui/material/Typography';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
 import { alpha } from '@mui/material/styles';
-import type { MaterialTO, ProductTO } from 'sf-common/src/models/ApiRequests';
+import type { MaterialTO, ProductMaterialTO, ProductMaterialUnitOfMeasure, ProductTO } from 'sf-common/src/models/ApiRequests';
+import { PRODUCT_MATERIAL_UNITS_OF_MEASURE } from 'sf-common/src/models/ApiRequests';
 import { Server } from 'sf-common';
+import { filterDecimalNumericInput, parseDecimalNumericInputToNumber } from 'sf-common/src/util/DataUtils';
 import { toastActionSuccess, toastServerError } from '../../util/actionToast';
 
 /** Stable row keys for server materials (handles duplicate code/name without id). */
@@ -29,10 +31,10 @@ function assignCatalogRowKeys(materials: MaterialTO[]): { key: string; material:
     });
 }
 
-function productMaterialMatchesCatalogRow(pm: MaterialTO, c: MaterialTO): boolean {
-    if (pm.id != null && c.id != null && pm.id === c.id) return true;
-    const pc = (pm.code ?? '').trim();
-    const pn = (pm.name ?? '').trim();
+function productMaterialMatchesCatalogRow(pm: ProductMaterialTO, c: MaterialTO): boolean {
+    if (pm.materialId != null && c.id != null && pm.materialId === c.id) return true;
+    const pc = (pm.materialCode ?? '').trim();
+    const pn = (pm.materialName ?? '').trim();
     const cc = (c.code ?? '').trim();
     const cn = (c.name ?? '').trim();
     if (pc !== '' && pc === cc && pn === cn) return true;
@@ -43,6 +45,19 @@ function productMaterialMatchesCatalogRow(pm: MaterialTO, c: MaterialTO): boolea
 function materialProvidersOf(material: MaterialTO): NonNullable<MaterialTO['providers']> {
     if (Array.isArray(material.providers)) return material.providers;
     return material.provider ? [material.provider] : [];
+}
+
+function materialLabel(m: MaterialTO): string {
+    return [m.name, m.code].filter((x) => (x ?? '').toString().trim()).join(' · ') || '—';
+}
+
+const DEFAULT_UNIT_OF_MEASURE: ProductMaterialUnitOfMeasure = 'PCS';
+
+function normalizeUnitOfMeasure(value: unknown): ProductMaterialUnitOfMeasure {
+    if (typeof value === 'string' && (PRODUCT_MATERIAL_UNITS_OF_MEASURE as readonly string[]).includes(value)) {
+        return value as ProductMaterialUnitOfMeasure;
+    }
+    return DEFAULT_UNIT_OF_MEASURE;
 }
 
 const multiSelectMenuItemSx = (theme: any) => ({
@@ -71,11 +86,15 @@ export function ProductMaterialsDialog({ open, product, onClose, onSaved }: Prop
     const { t } = useTranslation();
     const [catalogMaterialRows, setCatalogMaterialRows] = useState<{ key: string; material: MaterialTO }[]>([]);
     const [selectedCatalogMaterialKeys, setSelectedCatalogMaterialKeys] = useState<string[]>([]);
+    const [quantityByKey, setQuantityByKey] = useState<Record<string, string>>({});
+    const [unitByKey, setUnitByKey] = useState<Record<string, ProductMaterialUnitOfMeasure>>({});
 
     useEffect(() => {
         if (!open || !product?.id) {
             setCatalogMaterialRows([]);
             setSelectedCatalogMaterialKeys([]);
+            setQuantityByKey({});
+            setUnitByKey({});
             return;
         }
         Server.getAllMaterials(
@@ -86,36 +105,68 @@ export function ProductMaterialsDialog({ open, product, onClose, onSaved }: Prop
                 const rows = assignCatalogRowKeys(linked);
                 setCatalogMaterialRows(rows);
                 const initial: string[] = [];
+                const quantities: Record<string, string> = {};
+                const units: Record<string, ProductMaterialUnitOfMeasure> = {};
                 const seen = new Set<string>();
-                for (const pm of product.materials ?? []) {
+                for (const pm of product.productMaterials ?? []) {
                     const row = rows.find(({ material: c }) => productMaterialMatchesCatalogRow(pm, c));
                     if (row && !seen.has(row.key)) {
                         seen.add(row.key);
                         initial.push(row.key);
+                        const q = pm.quantityPerProductUnit;
+                        quantities[row.key] = q != null && Number.isFinite(q) && q > 0 ? String(q) : '1';
+                        units[row.key] = normalizeUnitOfMeasure(pm.unitOfMeasure);
                     }
                 }
                 setSelectedCatalogMaterialKeys(initial);
+                setQuantityByKey(quantities);
+                setUnitByKey(units);
             },
             (err: unknown) => toastServerError(err, t),
         );
     }, [open, product?.id]);
 
+    const handleSelectionChange = (keys: string[]) => {
+        setSelectedCatalogMaterialKeys(keys);
+        setQuantityByKey((prev) => {
+            const next = { ...prev };
+            for (const key of keys) {
+                if (!next[key]?.trim()) {
+                    next[key] = '1';
+                }
+            }
+            return next;
+        });
+        setUnitByKey((prev) => {
+            const next = { ...prev };
+            for (const key of keys) {
+                if (!next[key]) {
+                    next[key] = DEFAULT_UNIT_OF_MEASURE;
+                }
+            }
+            return next;
+        });
+    };
+
     const handleSave = () => {
         if (!product?.id) return;
         const byKey = new Map(catalogMaterialRows.map((r) => [r.key, r.material]));
-        const materials: MaterialTO[] = selectedCatalogMaterialKeys.flatMap((k) => {
+        const productMaterials: ProductMaterialTO[] = selectedCatalogMaterialKeys.flatMap((k) => {
             const src = byKey.get(k);
-            if (!src) return [];
-            const row: MaterialTO = {
-                ...src,
-                providers: materialProvidersOf(src).map((p) => ({ ...p })),
-                provider: undefined,
-            };
-            return [row];
+            if (!src?.id) return [];
+            const parsed = parseDecimalNumericInputToNumber(quantityByKey[k] ?? '1');
+            const quantity = parsed != null && parsed > 0 ? parsed : 1;
+            const existing = (product.productMaterials ?? []).find((pm) => pm.materialId === src.id);
+            return [{
+                id: existing?.id,
+                materialId: src.id,
+                quantityPerProductUnit: quantity,
+                unitOfMeasure: unitByKey[k] ?? DEFAULT_UNIT_OF_MEASURE,
+            }];
         });
         const payload: ProductTO = {
             ...product,
-            materials,
+            productMaterials,
         };
         Server.editProduct(
             payload,
@@ -161,9 +212,7 @@ export function ProductMaterialsDialog({ open, product, onClose, onSaved }: Prop
                                         {keys.map((key) => {
                                             const row = catalogMaterialRows.find((r) => r.key === key);
                                             const m = row?.material;
-                                            const label = m
-                                                ? [m.name, m.code].filter((x) => (x ?? '').toString().trim()).join(' · ') || key
-                                                : key;
+                                            const label = m ? materialLabel(m) : key;
                                             return <Chip key={key} size="small" label={label} variant="outlined" />;
                                         })}
                                     </Stack>
@@ -173,7 +222,7 @@ export function ProductMaterialsDialog({ open, product, onClose, onSaved }: Prop
                         value={selectedCatalogMaterialKeys}
                         onChange={(e) => {
                             const value = e.target.value;
-                            setSelectedCatalogMaterialKeys(Array.isArray(value) ? value.map(String) : [String(value)]);
+                            handleSelectionChange(Array.isArray(value) ? value.map(String) : [String(value)]);
                         }}
                         fullWidth
                         disabled={catalogMaterialRows.length === 0}
@@ -186,9 +235,7 @@ export function ProductMaterialsDialog({ open, product, onClose, onSaved }: Prop
                         {catalogMaterialRows.map(({ key, material: m }) => (
                             <MenuItem key={key} value={key} sx={multiSelectMenuItemSx}>
                                 <Stack direction="column" spacing={0.25} sx={{ alignItems: 'flex-start' }}>
-                                    <Typography variant="body2">
-                                        {[m.name, m.code].filter((x) => (x ?? '').toString().trim()).join(' · ') || '—'}
-                                    </Typography>
+                                    <Typography variant="body2">{materialLabel(m)}</Typography>
                                     <Typography variant="caption" color="text.secondary">
                                         {materialProvidersOf(m)
                                             .map((p) => p.name || p.contactPerson)
@@ -199,6 +246,52 @@ export function ProductMaterialsDialog({ open, product, onClose, onSaved }: Prop
                             </MenuItem>
                         ))}
                     </TextField>
+
+                    {selectedCatalogMaterialKeys.length > 0 && (
+                        <Stack spacing={1.5}>
+                            <Typography variant="subtitle2">{t('productMaterialQuantitiesTitle')}</Typography>
+                            {selectedCatalogMaterialKeys.map((key) => {
+                                const row = catalogMaterialRows.find((r) => r.key === key);
+                                const m = row?.material;
+                                return (
+                                    <Stack key={key} direction="row" spacing={1} alignItems="center">
+                                        <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }}>
+                                            {m ? materialLabel(m) : key}
+                                        </Typography>
+                                        <TextField
+                                            label={t('productMaterialQuantityPerProductUnit')}
+                                            value={quantityByKey[key] ?? '1'}
+                                            onChange={(e) => {
+                                                const next = filterDecimalNumericInput(e.target.value);
+                                                setQuantityByKey((prev) => ({ ...prev, [key]: next }));
+                                            }}
+                                            size="small"
+                                            sx={{ width: 120 }}
+                                        />
+                                        <TextField
+                                            select
+                                            label={t('productMaterialUnitOfMeasure')}
+                                            value={unitByKey[key] ?? DEFAULT_UNIT_OF_MEASURE}
+                                            onChange={(e) => {
+                                                setUnitByKey((prev) => ({
+                                                    ...prev,
+                                                    [key]: normalizeUnitOfMeasure(e.target.value),
+                                                }));
+                                            }}
+                                            size="small"
+                                            sx={{ width: 130 }}
+                                        >
+                                            {PRODUCT_MATERIAL_UNITS_OF_MEASURE.map((unit) => (
+                                                <MenuItem key={unit} value={unit}>
+                                                    {t(`unitOfMeasure_${unit}`)}
+                                                </MenuItem>
+                                            ))}
+                                        </TextField>
+                                    </Stack>
+                                );
+                            })}
+                        </Stack>
+                    )}
 
                     <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
                         <Button variant="contained" color="primary" onClick={handleSave}>

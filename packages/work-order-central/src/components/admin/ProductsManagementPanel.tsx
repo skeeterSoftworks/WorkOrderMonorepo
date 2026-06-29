@@ -191,7 +191,7 @@ export function ProductsManagementPanel() {
                                 const noMeasuringFeatures =
                                     (product.measuringFeaturePrototypes?.length ?? 0) === 0;
                                 const noQualitySteps = (product.qualityInfoSteps?.length ?? 0) === 0;
-                                const noMaterials = (product.materials?.length ?? 0) === 0;
+                                const noMaterials = (product.productMaterials?.length ?? 0) === 0;
                                 const chipSx = {
                                     height: 22,
                                     '& .MuiChip-label': { px: 1, fontSize: '0.7rem' },

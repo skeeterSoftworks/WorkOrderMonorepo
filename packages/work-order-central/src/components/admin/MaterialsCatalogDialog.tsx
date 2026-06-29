@@ -77,7 +77,6 @@ export function MaterialsCatalogDialog({
     const [editingMaterialIndex, setEditingMaterialIndex] = useState<number | null>(null);
     const [materialName, setMaterialName] = useState('');
     const [materialCode, setMaterialCode] = useState('');
-    const [materialProductsPerUnit, setMaterialProductsPerUnit] = useState('');
     const [materialDiameter, setMaterialDiameter] = useState('');
     const [materialWeight, setMaterialWeight] = useState('');
     const [materialLength, setMaterialLength] = useState('');
@@ -115,7 +114,6 @@ export function MaterialsCatalogDialog({
             setEditingMaterialIndex(null);
             setMaterialName('');
             setMaterialCode('');
-            setMaterialProductsPerUnit('');
             setMaterialDiameter('');
             setMaterialWeight('');
             setMaterialLength('');
@@ -161,7 +159,7 @@ export function MaterialsCatalogDialog({
     );
 
     const addOrUpdateMaterial = () => {
-        if (!materialName.trim() || !materialCode.trim() || !materialProductsPerUnit.trim() || materialProviderKeysSelected.length === 0) {
+        if (!materialName.trim() || !materialCode.trim() || materialProviderKeysSelected.length === 0) {
             return;
         }
         if (!materialDimensionsValid) {
@@ -173,12 +171,10 @@ export function MaterialsCatalogDialog({
             .map((k) => providers.find((p) => providerKey(p) === k))
             .filter((p): p is MaterialProviderTO => Boolean(p))
             .map((p) => ({ ...p }));
-        const parsedPpu = Number(materialProductsPerUnit);
         const row: MaterialTO = {
             id: editingMaterialIndex !== null ? materialsCatalog[editingMaterialIndex]?.id : undefined,
             name: materialName.trim(),
             code: materialCode.trim(),
-            productsPerUnit: Number.isFinite(parsedPpu) ? Math.trunc(parsedPpu) : undefined,
             diameter: parseDecimalNumericInputToNumber(materialDiameter),
             weight: parseDecimalNumericInputToNumber(materialWeight),
             length: parseDecimalNumericInputToNumber(materialLength),
@@ -203,7 +199,6 @@ export function MaterialsCatalogDialog({
         setEditingMaterialIndex(idx);
         setMaterialName(row.name ?? '');
         setMaterialCode(row.code ?? '');
-        setMaterialProductsPerUnit(row.productsPerUnit != null ? String(row.productsPerUnit) : '');
         setMaterialDiameter(row.diameter != null ? String(row.diameter) : '');
         setMaterialWeight(row.weight != null ? String(row.weight) : '');
         setMaterialLength(row.length != null ? String(row.length) : '');
@@ -248,7 +243,6 @@ export function MaterialsCatalogDialog({
                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                         <TextField required label={t('materialName')} value={materialName} onChange={(e) => setMaterialName(e.target.value)} size="small" sx={{ flex: '1 1 180px' }} />
                         <TextField required label={t('materialCode')} value={materialCode} onChange={(e) => setMaterialCode(e.target.value)} size="small" sx={{ flex: '1 1 160px' }} />
-                        <TextField required label={t('materialProductsPerUnit')} value={materialProductsPerUnit} onChange={(e) => setMaterialProductsPerUnit(e.target.value.replace(/[^\d]/g, ''))} size="small" sx={{ width: 180 }} />
                     </Box>
                     <Alert severity="info" sx={{ py: 0.5 }}>
                         {t('materialDimensionsHint')}

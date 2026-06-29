@@ -40,6 +40,19 @@ function parseMaterialsListResponse(response: unknown): MaterialTO[] {
     return [];
 }
 
+function centralMaterialById(materials: MaterialTO[], materialId?: number): MaterialTO | undefined {
+    if (materialId == null) return undefined;
+    return materials.find((m) => m.id === materialId);
+}
+
+function providersForProductMaterial(
+    pm: { materialId?: number },
+    centralMaterials: MaterialTO[],
+): MaterialProviderTO[] {
+    const material = centralMaterialById(centralMaterials, pm.materialId);
+    return material ? providersOf(material) : [];
+}
+
 export function CatalogOverviewPanel({ onOpenSection }: { onOpenSection: (section: CatalogSectionId) => void }) {
     const { t } = useTranslation();
     const [products, setProducts] = useState<ProductTO[]>([]);
@@ -104,7 +117,7 @@ export function CatalogOverviewPanel({ onOpenSection }: { onOpenSection: (sectio
         const linkedCustomerIds = new Set<number>();
         const linkedMachineIds = new Set<number>();
         for (const p of products) {
-            if ((p.materials?.length ?? 0) === 0) withoutProviders += 1;
+            if ((p.productMaterials?.length ?? 0) === 0) withoutProviders += 1;
             if ((p.measuringFeaturePrototypes?.length ?? 0) === 0) withoutMeasuringFeatures += 1;
             if ((p.qualityInfoSteps?.length ?? 0) === 0) withoutQualitySteps += 1;
             for (const cid of p.customerIds ?? []) {
@@ -113,9 +126,11 @@ export function CatalogOverviewPanel({ onOpenSection }: { onOpenSection: (sectio
             for (const mid of p.machineIds ?? []) {
                 if (typeof mid === 'number' && Number.isFinite(mid)) linkedMachineIds.add(mid);
             }
-            for (const m of p.materials ?? []) {
-                const key = m.id != null ? `id:${m.id}` : `code:${m.code ?? ''}|name:${m.name ?? ''}`;
-                if (!byMaterial.has(key)) byMaterial.set(key, m);
+            for (const pm of p.productMaterials ?? []) {
+                const material = centralMaterialById(centralMaterials, pm.materialId);
+                if (!material) continue;
+                const key = material.id != null ? `id:${material.id}` : `code:${material.code ?? ''}|name:${material.name ?? ''}`;
+                if (!byMaterial.has(key)) byMaterial.set(key, material);
             }
         }
         const buyersWithoutProducts = buyersExcludingInternal.filter(
@@ -129,13 +144,13 @@ export function CatalogOverviewPanel({ onOpenSection }: { onOpenSection: (sectio
             unlinkedBuyers: buyersWithoutProducts,
             unlinkedMachines: machinesWithoutProducts,
         };
-    }, [products, buyersExcludingInternal, machines]);
+    }, [products, buyersExcludingInternal, machines, centralMaterials]);
 
     const providersWithoutMaterials = useMemo(() => {
         const providersLinkedToAnyMaterial = new Set<string>();
         for (const p of products) {
-            for (const m of p.materials ?? []) {
-                for (const provider of providersOf(m)) {
+            for (const pm of p.productMaterials ?? []) {
+                for (const provider of providersForProductMaterial(pm, centralMaterials)) {
                     providersLinkedToAnyMaterial.add(providerKey(provider));
                 }
             }
@@ -157,7 +172,7 @@ export function CatalogOverviewPanel({ onOpenSection }: { onOpenSection: (sectio
         const productsNoQuality: string[] = [];
         for (const p of products) {
             const label = p.name || p.reference || `#${p.id ?? '?'}`;
-            if ((p.materials?.length ?? 0) === 0) productsNoProviders.push(label);
+            if ((p.productMaterials?.length ?? 0) === 0) productsNoProviders.push(label);
             if ((p.measuringFeaturePrototypes?.length ?? 0) === 0) productsNoMeasuring.push(label);
             if ((p.qualityInfoSteps?.length ?? 0) === 0) productsNoQuality.push(label);
         }
@@ -182,8 +197,8 @@ export function CatalogOverviewPanel({ onOpenSection }: { onOpenSection: (sectio
 
         const providersLinkedToAnyMaterial = new Set<string>();
         for (const p of products) {
-            for (const m of p.materials ?? []) {
-                for (const provider of providersOf(m)) {
+            for (const pm of p.productMaterials ?? []) {
+                for (const provider of providersForProductMaterial(pm, centralMaterials)) {
                     providersLinkedToAnyMaterial.add(providerKey(provider));
                 }
             }

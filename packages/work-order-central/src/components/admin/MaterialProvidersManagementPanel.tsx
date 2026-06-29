@@ -11,7 +11,7 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import type { MaterialProviderTO, MaterialTO, ProductTO } from 'sf-common/src/models/ApiRequests';
+import type { MaterialProviderTO, MaterialTO } from 'sf-common/src/models/ApiRequests';
 import { Server, ConfirmationModal } from 'sf-common';
 import { useTranslation } from 'react-i18next';
 import { toastActionSuccess, toastServerError } from '../../util/actionToast';
@@ -24,14 +24,8 @@ function providerKey(p: MaterialProviderTO): string {
     return `name:${(p.name ?? '').trim().toLowerCase()}`;
 }
 
-function materialProvidersOf(m: MaterialTO): MaterialProviderTO[] {
-    if (Array.isArray(m.providers)) return m.providers;
-    return m.provider ? [m.provider] : [];
-}
-
 export function MaterialProvidersManagementPanel() {
     const { t } = useTranslation();
-    const [products, setProducts] = useState<ProductTO[]>([]);
     const [providers, setProviders] = useState<MaterialProviderTO[]>([]);
     const [editingKey, setEditingKey] = useState<string | null>(null);
     const [providerToDelete, setProviderToDelete] = useState<MaterialProviderTO | null>(null);
@@ -48,17 +42,6 @@ export function MaterialProvidersManagementPanel() {
         () => (editingKey ? providers.find((p) => providerKey(p) === editingKey) ?? null : null),
         [editingKey, providers],
     );
-
-    const loadProducts = () => {
-        Server.getAllProducts(
-            (response: unknown) => {
-                const r = response as { data?: ProductTO[] | { data?: ProductTO[] } };
-                const data = Array.isArray(r?.data) ? r.data : Array.isArray(r?.data?.data) ? r.data.data : [];
-                setProducts(data);
-            },
-            () => {},
-        );
-    };
 
     const loadProviders = () => {
         Server.getAllMaterialProviders(
@@ -86,29 +69,7 @@ export function MaterialProvidersManagementPanel() {
     useEffect(() => {
         loadMaterialsCatalog();
         loadProviders();
-        loadProducts();
     }, []);
-
-    const saveAllUpdatedProducts = (items: ProductTO[], onSuccess: () => void) => {
-        const changed = items.filter((p, i) =>
-            JSON.stringify(p.materials ?? []) !== JSON.stringify(products[i]?.materials ?? []),
-        );
-        if (changed.length === 0) {
-            onSuccess();
-            return;
-        }
-        let remaining = changed.length;
-        for (const payload of changed) {
-            Server.editProduct(
-                payload,
-                () => {
-                    remaining -= 1;
-                    if (remaining === 0) onSuccess();
-                },
-                (err: unknown) => toastServerError(err, t),
-            );
-        }
-    };
 
     const addOrUpdateProvider = (values: MaterialProviderFormValues) => {
         const newProvider: MaterialProviderTO = {
@@ -132,55 +93,30 @@ export function MaterialProvidersManagementPanel() {
             return;
         }
 
-        const updated = products.map((product) => ({
-            ...product,
-            materials: (product.materials ?? []).map((m) => {
-                const nextProviders = materialProvidersOf(m).map((x) =>
-                    providerKey(x) === editingKey ? { ...newProvider } : x,
-                );
-                return { ...m, providers: nextProviders, provider: undefined };
-            }),
-        }));
-
-        saveAllUpdatedProducts(updated, () => {
-            Server.editMaterialProvider(
-                newProvider,
-                () => {
-                    loadProviders();
-                    loadProducts();
-                    setEditingKey(null);
-                    toastActionSuccess(t('toastMaterialProviderSaved'));
-                },
-                (err: unknown) => toastServerError(err, t),
-            );
-        });
+        Server.editMaterialProvider(
+            newProvider,
+            () => {
+                loadProviders();
+                setEditingKey(null);
+                toastActionSuccess(t('toastMaterialProviderSaved'));
+            },
+            (err: unknown) => toastServerError(err, t),
+        );
     };
 
     const confirmDeleteProvider = () => {
-        if (!providerToDelete) return;
+        if (!providerToDelete?.id) return;
         const key = providerKey(providerToDelete);
-        const updated = products.map((product) => ({
-            ...product,
-            materials: (product.materials ?? []).map((m) => ({
-                ...m,
-                providers: materialProvidersOf(m).filter((x) => providerKey(x) !== key),
-                provider: undefined,
-            })),
-        }));
-        saveAllUpdatedProducts(updated, () => {
-            if (!providerToDelete?.id) return;
-            Server.deleteMaterialProvider(
-                providerToDelete.id,
-                () => {
-                    setProviderToDelete(null);
-                    loadProviders();
-                    loadProducts();
-                    toastActionSuccess(t('toastMaterialProviderDeleted'));
-                    if (editingKey === key) setEditingKey(null);
-                },
-                (err: unknown) => toastServerError(err, t),
-            );
-        });
+        Server.deleteMaterialProvider(
+            providerToDelete.id,
+            () => {
+                setProviderToDelete(null);
+                loadProviders();
+                toastActionSuccess(t('toastMaterialProviderDeleted'));
+                if (editingKey === key) setEditingKey(null);
+            },
+            (err: unknown) => toastServerError(err, t),
+        );
     };
 
     const openMaterialsDialog = (provider: MaterialProviderTO) => {

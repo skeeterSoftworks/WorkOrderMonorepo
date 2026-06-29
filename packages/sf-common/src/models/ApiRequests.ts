@@ -45,7 +45,6 @@ export interface MaterialTO {
     id?: number,
     name?: string,
     code?: string,
-    productsPerUnit?: number,
     diameter?: number,
     weight?: number,
     length?: number,
@@ -225,6 +224,31 @@ export interface RenderedEmailTO {
     body?: string,
 }
 
+export const PRODUCT_MATERIAL_UNITS_OF_MEASURE = [
+    'PCS',
+    'KG',
+    'G',
+    'T',
+    'M',
+    'MM',
+    'CM',
+    'L',
+    'ML',
+    'M2',
+    'M3',
+] as const;
+
+export type ProductMaterialUnitOfMeasure = typeof PRODUCT_MATERIAL_UNITS_OF_MEASURE[number];
+
+export interface ProductMaterialTO {
+    id?: number,
+    materialId?: number,
+    materialName?: string,
+    materialCode?: string,
+    quantityPerProductUnit?: number,
+    unitOfMeasure?: ProductMaterialUnitOfMeasure,
+}
+
 export interface ProductTO {
     id?: number,
     name?: string,
@@ -234,8 +258,8 @@ export interface ProductTO {
     machineIds?: number[],
     /** Customers this product may be sold to (purchase orders). */
     customerIds?: number[],
-    /** Materials linked to this product. */
-    materials?: MaterialTO[],
+    /** Bill of materials: material quantity consumed per one product unit. */
+    productMaterials?: ProductMaterialTO[],
     technologyData?: TechnologyTO,
     /** Single embedded setup template for the product (central). */
     setupDataPrototype?: SetupDataPrototypeTO,
