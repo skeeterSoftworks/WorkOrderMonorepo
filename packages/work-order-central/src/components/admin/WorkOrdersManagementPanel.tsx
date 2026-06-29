@@ -18,6 +18,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import LinearProgress from '@mui/material/LinearProgress';
 import Alert from '@mui/material/Alert';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import LinkIcon from '@mui/icons-material/Link';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EngineeringIcon from '@mui/icons-material/Engineering';
@@ -290,6 +291,23 @@ export function WorkOrdersManagementPanel() {
         );
     };
 
+    const handleReprintMaterialRequirements = (wo: WorkOrderTO) => {
+        if (wo.id == null) return;
+        Server.getWorkOrderMaterialRequirementsPdf(
+            wo.id,
+            (response: { data?: { materialRequirementsPdfBase64?: string } }) => {
+                const pdf = response?.data?.materialRequirementsPdfBase64;
+                if (pdf) {
+                    downloadBase64Pdf(
+                        pdf,
+                        `material-requirements-${wo.id}.pdf`,
+                    );
+                }
+            },
+            (err: unknown) => toastServerError(err, t),
+        );
+    };
+
     const formatDate = (value: string | undefined): string => {
         if (!value) return '';
         const d = new Date(value);
@@ -395,6 +413,16 @@ export function WorkOrdersManagementPanel() {
                                             >
                                                 <InfoOutlinedIcon fontSize="small" />
                                             </IconButton>
+                                            {wo.id != null && (
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => handleReprintMaterialRequirements(wo)}
+                                                    sx={tableActionIconButtonSx.view}
+                                                    title={t('reprintMaterialRequirementsReport')}
+                                                >
+                                                    <Inventory2OutlinedIcon fontSize="small" />
+                                                </IconButton>
+                                            )}
                                             {wo.stockAssignmentOrderCode && (
                                                 <IconButton
                                                     size="small"

@@ -528,9 +528,30 @@ export interface ProductStockAvailabilityTO {
     availableQuantity?: number,
 }
 
+export interface WorkOrderMaterialRequirementLineTO {
+    materialId?: number,
+    materialCode?: string,
+    materialName?: string,
+    unitOfMeasure?: ProductMaterialUnitOfMeasure,
+    requiredQuantity?: number,
+    availableQuantity?: number,
+    missingQuantity?: number,
+}
+
+export interface WorkOrderMaterialRequirementsTO {
+    productId?: number,
+    productReference?: string,
+    productName?: string,
+    productQuantity?: number,
+    hasBillOfMaterials?: boolean,
+    fullyAvailable?: boolean,
+    lines?: WorkOrderMaterialRequirementLineTO[],
+}
+
 export interface WorkOrderCreateResultTO {
     workOrder?: WorkOrderTO,
     stockAssignmentOrderPdfBase64?: string,
+    materialRequirementsPdfBase64?: string,
 }
 
 export interface ProductProfileTO {

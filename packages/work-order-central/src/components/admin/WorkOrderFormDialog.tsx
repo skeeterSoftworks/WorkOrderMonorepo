@@ -18,6 +18,7 @@ import type {
     PurchaseOrderTO,
     ProductOrderTO,
     WorkOrderCreateResultTO,
+    WorkOrderMaterialRequirementsTO,
 } from 'sf-common/src/models/ApiRequests';
 import { Server } from 'sf-common';
 import { toastActionSuccess, toastServerError } from '../../util/actionToast';
@@ -95,6 +96,24 @@ function readLoggedInUserQr(): string | undefined {
     }
 }
 
+function materialRequirementLineLabel(
+    line: { materialCode?: string; materialName?: string; missingQuantity?: number; unitOfMeasure?: string },
+    t: (key: string) => string,
+): string {
+    const name = [line.materialCode?.trim(), line.materialName?.trim()].filter(Boolean).join(' · ') || '—';
+    const unit = line.unitOfMeasure ? t(`unitOfMeasure_${line.unitOfMeasure}`) : '';
+    const missing = line.missingQuantity ?? 0;
+    const qty = Number.isInteger(missing) ? String(missing) : missing.toFixed(3).replace(/\.?0+$/, '');
+    return unit ? `${name}: ${qty} ${unit}` : `${name}: ${qty}`;
+}
+
+function formatRequirementQuantity(value: number | undefined, unit: string | undefined, t: (key: string) => string): string {
+    if (value == null) return '—';
+    const qty = Number.isInteger(value) ? String(value) : value.toFixed(3).replace(/\.?0+$/, '');
+    const unitLabel = unit ? t(`unitOfMeasure_${unit}`) : '';
+    return unitLabel ? `${qty} ${unitLabel}` : qty;
+}
+
 type Props = {
     open: boolean;
     workOrder: WorkOrderTO | null;
@@ -126,6 +145,8 @@ export function WorkOrderFormDialog({
     const [productStockAvailable, setProductStockAvailable] = useState(0);
     const [productStockLoading, setProductStockLoading] = useState(false);
     const [stockAssignQuantity, setStockAssignQuantity] = useState('');
+    const [materialRequirements, setMaterialRequirements] = useState<WorkOrderMaterialRequirementsTO | null>(null);
+    const [materialRequirementsLoading, setMaterialRequirementsLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
     const selectableLines = useMemo(
@@ -150,6 +171,15 @@ export function WorkOrderFormDialog({
     const willGenerateStockAssignmentOrder =
         editingId == null && stockAssignmentsPayload.length > 0;
 
+    const willGenerateMaterialRequirementsReport = editingId == null && productOrderLineId != null;
+
+    const missingMaterialLines = useMemo(
+        () =>
+            (materialRequirements?.lines ?? []).filter(
+                (line) => (line.missingQuantity ?? 0) > 0.000_001,
+            ),
+        [materialRequirements],
+    );
 
     useEffect(() => {
         if (!open) return;
@@ -220,6 +250,32 @@ export function WorkOrderFormDialog({
     }, [open, editingId, selectedProductId]);
 
     useEffect(() => {
+        if (!open || editingId != null) {
+            setMaterialRequirements(null);
+            setMaterialRequirementsLoading(false);
+            return;
+        }
+        if (selectedProductId == null || requiredQuantity == null || requiredQuantity <= 0) {
+            setMaterialRequirements(null);
+            setMaterialRequirementsLoading(false);
+            return;
+        }
+        setMaterialRequirementsLoading(true);
+        Server.previewWorkOrderMaterialRequirements(
+            selectedProductId,
+            requiredQuantity,
+            (response: { data?: WorkOrderMaterialRequirementsTO }) => {
+                setMaterialRequirements(response?.data ?? null);
+                setMaterialRequirementsLoading(false);
+            },
+            () => {
+                setMaterialRequirements(null);
+                setMaterialRequirementsLoading(false);
+            },
+        );
+    }, [open, editingId, selectedProductId, requiredQuantity]);
+
+    useEffect(() => {
         if (!open) {
             setSubmitting(false);
         }
@@ -239,6 +295,14 @@ export function WorkOrderFormDialog({
             createdByUserQrCode: readLoggedInUserQr(),
         };
         const onSuccess = (response?: { data?: WorkOrderCreateResultTO }) => {
+            const materialPdf = response?.data?.materialRequirementsPdfBase64;
+            if (materialPdf) {
+                const workOrderId = response?.data?.workOrder?.id;
+                downloadBase64Pdf(
+                    materialPdf,
+                    `material-requirements-${workOrderId ?? 'new'}.pdf`,
+                );
+            }
             const pdf = response?.data?.stockAssignmentOrderPdfBase64;
             if (pdf) {
                 const workOrderId = response?.data?.workOrder?.id;
@@ -250,7 +314,11 @@ export function WorkOrderFormDialog({
             setSubmitting(false);
             onSaved();
             onClose();
-            toastActionSuccess(editingId ? t('toastWorkOrderUpdated') : t('toastWorkOrderAdded'));
+            if (!editingId && missingMaterialLines.length > 0) {
+                toastActionSuccess(t('toastWorkOrderAddedWithMaterialShortage'));
+            } else {
+                toastActionSuccess(editingId ? t('toastWorkOrderUpdated') : t('toastWorkOrderAdded'));
+            }
         };
         const onError = (err: unknown) => {
             setSubmitting(false);
@@ -352,6 +420,50 @@ export function WorkOrderFormDialog({
                             ) : null}
                         </>
                     )}
+                    {!editingId && productOrderLineId != null && (
+                        <>
+                            {materialRequirementsLoading ? (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <CircularProgress size={20} />
+                                    <Typography variant="body2" color="text.secondary">
+                                        {t('workOrderMaterialRequirementsChecking')}
+                                    </Typography>
+                                </Box>
+                            ) : materialRequirements?.hasBillOfMaterials === false ? (
+                                <Alert severity="info">{t('workOrderMaterialRequirementsNoBom')}</Alert>
+                            ) : materialRequirements?.fullyAvailable ? (
+                                <Alert severity="success">{t('workOrderMaterialRequirementsFullyAvailable')}</Alert>
+                            ) : missingMaterialLines.length > 0 ? (
+                                <Alert severity="warning">
+                                    <Typography variant="body2" sx={{ mb: 1 }}>
+                                        {t('workOrderMaterialRequirementsShortageNotice')}
+                                    </Typography>
+                                    <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+                                        {missingMaterialLines.map((line) => (
+                                            <Box component="li" key={line.materialId ?? `${line.materialCode}-${line.materialName}`}>
+                                                <Typography variant="body2">
+                                                    {materialRequirementLineLabel(line, t)}
+                                                    {' '}
+                                                    ({t('workOrderMaterialRequirementsRequiredAvailable', {
+                                                        required: formatRequirementQuantity(
+                                                            line.requiredQuantity,
+                                                            line.unitOfMeasure,
+                                                            t,
+                                                        ),
+                                                        available: formatRequirementQuantity(
+                                                            line.availableQuantity,
+                                                            line.unitOfMeasure,
+                                                            t,
+                                                        ),
+                                                    })})
+                                                </Typography>
+                                            </Box>
+                                        ))}
+                                    </Box>
+                                </Alert>
+                            ) : null}
+                        </>
+                    )}
                     <TextField
                         label={t('dueDate')}
                         type="date"
@@ -423,7 +535,9 @@ export function WorkOrderFormDialog({
                 <Typography variant="body1" component="p">
                     {willGenerateStockAssignmentOrder
                         ? t('generatingStockAssignmentOrder')
-                        : t('loadingDetails')}
+                        : willGenerateMaterialRequirementsReport
+                          ? t('generatingMaterialRequirementsReport')
+                          : t('loadingDetails')}
                 </Typography>
             </Backdrop>
         </>

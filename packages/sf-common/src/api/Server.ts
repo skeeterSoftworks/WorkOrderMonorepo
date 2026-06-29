@@ -202,6 +202,26 @@ export class Server {
             });
     }
 
+    static previewWorkOrderMaterialRequirements(productId: number, quantity: number, onSuccess: Function, onError: Function) {
+        axios.get(`${getServerUrl()}/workorders/material-requirements/preview`, {
+            params: { productId, quantity },
+        })
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static getWorkOrderMaterialRequirementsPdf(workOrderId: number, onSuccess: Function, onError: Function) {
+        axios.get(`${getServerUrl()}/workorders/${workOrderId}/material-requirements/pdf`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
     static editWorkOrder(workOrder: WorkOrderTO, onSuccess: Function, onError: Function) {
         axios.post(`${getServerUrl()}/workorders/update`, workOrder)
             .then(response => onSuccess(response))
