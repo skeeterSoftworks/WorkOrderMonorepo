@@ -92,6 +92,7 @@ export interface MaterialOrderLineTO {
     receivedQuantityTotal?: number,
     remainingQuantity?: number,
     deliveryNotes?: DeliveryNoteTO[],
+    materialUnitOfMeasure?: ProductMaterialUnitOfMeasure,
     materialDiameter?: number,
     materialWeight?: number,
     materialLength?: number,
@@ -120,6 +121,7 @@ export interface MaterialOrderTO {
     /** Raw Base64 or data URL for upload. */
     certificateBase64?: string,
     certificatePresent?: boolean,
+    materialUnitOfMeasure?: ProductMaterialUnitOfMeasure,
     /** Nominal diameter from first/only line material (0 = not defined). */
     materialDiameter?: number,
     /** Nominal weight from first/only line material (0 = not defined). */
@@ -191,6 +193,7 @@ export interface MaterialOrderReceptionTO {
     /** True when the order line is fully received after this batch. */
     lineFullyReceived?: boolean,
     internalControl?: MaterialOrderReceptionInternalControlTO,
+    materialUnitOfMeasure?: ProductMaterialUnitOfMeasure,
     /** Nominal diameter from linked material (0 = not defined). */
     materialDiameter?: number,
     /** Nominal weight from linked material (0 = not defined). */

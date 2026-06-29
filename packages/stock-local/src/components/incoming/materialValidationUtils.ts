@@ -164,5 +164,6 @@ export function orderToReceptionContext(
         materialWeight: line.materialWeight ?? order.materialWeight,
         materialLength: line.materialLength ?? order.materialLength,
         materialWidth: line.materialWidth ?? order.materialWidth,
+        materialUnitOfMeasure: line.materialUnitOfMeasure ?? order.materialUnitOfMeasure,
     };
 }

@@ -10,6 +10,11 @@ import {
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import type { MaterialOrderLineTO, MaterialOrderReceptionTO, MaterialOrderTO, StockLocationTO } from 'sf-common/src/models/ApiRequests';
+import {
+    formatQuantityWithUnit,
+    lineUnitOfMeasure,
+    materialUnitOfMeasureLabel,
+} from './materialUnitOfMeasure';
 import { Server } from '../../api/Server';
 import { ReceiveMaterialStockAllocationSection } from './ReceiveMaterialStockAllocationSection';
 import {
@@ -82,6 +87,9 @@ export function ReceiveMaterialDialog({ open, order, line, stockLocations, onClo
             allocationRows,
         });
 
+    const unit = line && order ? lineUnitOfMeasure(line, order) : undefined;
+    const unitLabel = materialUnitOfMeasureLabel(unit, t);
+
     const quantityHelperText =
         maxQuantity <= 0
             ? t('materialLineFullyReceived')
@@ -120,6 +128,7 @@ export function ReceiveMaterialDialog({ open, order, line, stockLocations, onClo
                 <Typography variant="body2" color="text.secondary">
                     {order?.code ? `${order.code} — ` : ''}
                     {line && order ? lineMaterialLabel(line, order) : ''} — {order?.materialProviderName}
+                    {unit ? ` · ${unitLabel}` : ''}
                 </Typography>
                 <TextField
                     label={t('deliveryNoteNumber')}
@@ -144,7 +153,11 @@ export function ReceiveMaterialDialog({ open, order, line, stockLocations, onClo
                     onChange={(e) => setReceivedQuantity(e.target.value)}
                     fullWidth
                     inputProps={{ min: 1, max: maxQuantity > 0 ? maxQuantity : undefined }}
-                    helperText={quantityHelperText}
+                    helperText={
+                        maxQuantity > 0 && receivedQtyParsed != null
+                            ? `${quantityHelperText} (${formatQuantityWithUnit(receivedQtyParsed, unit, t)})`
+                            : quantityHelperText
+                    }
                     disabled={maxQuantity <= 0}
                 />
                 <ReceiveMaterialStockAllocationSection

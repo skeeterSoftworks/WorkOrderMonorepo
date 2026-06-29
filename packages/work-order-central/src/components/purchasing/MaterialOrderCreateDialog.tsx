@@ -19,6 +19,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useTranslation } from 'react-i18next';
 import type { MaterialOrderLineTO, MaterialOrderTO, MaterialProviderTO, MaterialTO } from 'sf-common/src/models/ApiRequests';
+import { PRODUCT_MATERIAL_UNITS_OF_MEASURE } from 'sf-common/src/models/ApiRequests';
 import { Server } from 'sf-common';
 import { toastActionSuccess, toastServerError } from '../../util/actionToast';
 
@@ -32,6 +33,19 @@ function formatMaterialOptionLabel(material: MaterialTO): string {
     const code = material.code?.trim() || '—';
     const name = material.name?.trim() || '—';
     return `${code} (${name})`;
+}
+
+function materialUnitLabel(material: MaterialTO | undefined, t: (key: string) => string): string {
+    const unit = material?.unitOfMeasure;
+    if (unit && (PRODUCT_MATERIAL_UNITS_OF_MEASURE as readonly string[]).includes(unit)) {
+        return t(`unitOfMeasure_${unit}`);
+    }
+    return t('unitOfMeasure_PCS');
+}
+
+function findMaterialById(materials: MaterialTO[], materialId?: number): MaterialTO | undefined {
+    if (materialId == null) return undefined;
+    return materials.find((m) => m.id === materialId);
 }
 
 type Props = {
@@ -133,12 +147,15 @@ export function MaterialOrderCreateDialog({ open, providers, materials, onClose,
                             <TableHead>
                                 <TableRow>
                                     <TableCell>{t('materialName')}</TableCell>
+                                    <TableCell width={100}>{t('productMaterialUnitOfMeasure')}</TableCell>
                                     <TableCell width={140}>{t('quantity')}</TableCell>
                                     <TableCell width={56} />
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {createLines.map((line, index) => (
+                                {createLines.map((line, index) => {
+                                    const selectedMaterial = findMaterialById(materialsForProvider, line.materialId);
+                                    return (
                                     <TableRow key={`create-line-${index}`}>
                                         <TableCell>
                                             <TextField
@@ -157,6 +174,12 @@ export function MaterialOrderCreateDialog({ open, providers, materials, onClose,
                                                 ))}
                                             </TextField>
                                         </TableCell>
+
+                                        <TableCell>
+                                            <Typography variant="body2" color="text.secondary">
+                                                {line.materialId != null ? materialUnitLabel(selectedMaterial, t) : '—'}
+                                            </Typography>
+                                        </TableCell>
                                         <TableCell>
                                             <TextField
                                                 type="number"
@@ -174,7 +197,8 @@ export function MaterialOrderCreateDialog({ open, providers, materials, onClose,
                                             </IconButton>
                                         </TableCell>
                                     </TableRow>
-                                ))}
+                                    );
+                                })}
                             </TableBody>
                         </Table>
                     </TableContainer>

@@ -27,9 +27,13 @@ import {
     orderToReceptionContext,
     type InternalControlSubmitData,
 } from './materialValidationUtils';
+import { stockLocationsForSelect } from './materialReceptionStockAllocation';
 import {
-    stockLocationsForSelect,
-} from './materialReceptionStockAllocation';
+    formatQuantityWithUnit,
+    lineUnitOfMeasure,
+    materialUnitOfMeasureLabel,
+    receptionUnitOfMeasure,
+} from './materialUnitOfMeasure';
 
 function parseOrdersResponse(response: unknown): MaterialOrderTO[] {
     const r = response as { data?: MaterialOrderTO[] };
@@ -74,6 +78,7 @@ function openReceptionRows(orders: MaterialOrderTO[]): OpenReceptionRow[] {
                     materialWeight: order.materialWeight,
                     materialLength: order.materialLength,
                     materialWidth: order.materialWidth,
+                    materialUnitOfMeasure: order.materialUnitOfMeasure,
                 },
             });
         }
@@ -85,13 +90,14 @@ function lineMaterialLabel(line: MaterialOrderLineTO, order: MaterialOrderTO): s
     return line.materialName?.trim() || line.materialCode?.trim() || order.materialName || order.materialCode || '—';
 }
 
-function lineQuantityLabel(line: MaterialOrderLineTO): string {
+function lineQuantityLabel(line: MaterialOrderLineTO, order: MaterialOrderTO, t: (key: string) => string): string {
+    const unit = lineUnitOfMeasure(line, order);
     const ordered = line.quantity ?? 0;
     const received = line.receivedQuantityTotal ?? 0;
     if (received > 0 && received < ordered) {
-        return `${received} / ${ordered}`;
+        return formatQuantityWithUnit(`${received} / ${ordered}`, unit, t);
     }
-    return String(ordered);
+    return formatQuantityWithUnit(ordered, unit, t);
 }
 
 export function IncomingMaterialReceptionPage() {
@@ -184,6 +190,7 @@ export function IncomingMaterialReceptionPage() {
                 materialWeight: saved.materialWeight ?? line.materialWeight,
                 materialLength: saved.materialLength ?? line.materialLength,
                 materialWidth: saved.materialWidth ?? line.materialWidth,
+                materialUnitOfMeasure: saved.materialUnitOfMeasure ?? line.materialUnitOfMeasure ?? order.materialUnitOfMeasure,
             });
         }
     };
@@ -243,6 +250,7 @@ export function IncomingMaterialReceptionPage() {
                                         <TableCell>{t('materialOrderCode')}</TableCell>
                                         <TableCell>{t('materialName')}</TableCell>
                                         <TableCell>{t('materialProviderName')}</TableCell>
+                                        <TableCell>{t('productMaterialUnitOfMeasure')}</TableCell>
                                         <TableCell>{t('quantity')}</TableCell>
                                         <TableCell>{t('deliveryNotes')}</TableCell>
                                         <TableCell>{t('status')}</TableCell>
@@ -252,7 +260,7 @@ export function IncomingMaterialReceptionPage() {
                                 <TableBody>
                                     {awaitingReceptionRows.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={7} align="center">
+                                            <TableCell colSpan={8} align="center">
                                                 {t('incomingMaterialNoOrders')}
                                             </TableCell>
                                         </TableRow>
@@ -262,11 +270,13 @@ export function IncomingMaterialReceptionPage() {
                                                 <TableCell>{order.code || '—'}</TableCell>
                                                 <TableCell>{lineMaterialLabel(line, order)}</TableCell>
                                                 <TableCell>{order.materialProviderName || '—'}</TableCell>
-                                                <TableCell>{lineQuantityLabel(line)}</TableCell>
+                                                <TableCell>{materialUnitOfMeasureLabel(lineUnitOfMeasure(line, order), t)}</TableCell>
+                                                <TableCell>{lineQuantityLabel(line, order, t)}</TableCell>
                                                 <TableCell>
                                                     <MaterialDeliveryNotesPanel
                                                         notes={line.deliveryNotes ?? []}
                                                         rowKey={`${order.id}-${line.id ?? line.materialId}`}
+                                                        unitLabel={materialUnitOfMeasureLabel(lineUnitOfMeasure(line, order), t)}
                                                     />
                                                 </TableCell>
                                                 <TableCell>
@@ -301,6 +311,7 @@ export function IncomingMaterialReceptionPage() {
                                         <TableCell>{t('materialOrderCode')}</TableCell>
                                         <TableCell>{t('materialName')}</TableCell>
                                         <TableCell>{t('materialProviderName')}</TableCell>
+                                        <TableCell>{t('productMaterialUnitOfMeasure')}</TableCell>
                                         <TableCell>{t('deliveryNoteNumber')}</TableCell>
                                         <TableCell>{t('receivedQuantity')}</TableCell>
                                         <TableCell>{t('status')}</TableCell>
@@ -310,7 +321,7 @@ export function IncomingMaterialReceptionPage() {
                                 <TableBody>
                                     {pendingValidations.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={7} align="center">
+                                            <TableCell colSpan={8} align="center">
                                                 {t('incomingMaterialNoPendingValidation')}
                                             </TableCell>
                                         </TableRow>
@@ -320,8 +331,13 @@ export function IncomingMaterialReceptionPage() {
                                                 <TableCell>{r.materialOrderCode || '—'}</TableCell>
                                                 <TableCell>{r.materialName || r.materialCode || '—'}</TableCell>
                                                 <TableCell>{r.materialProviderName || '—'}</TableCell>
+                                                <TableCell>{materialUnitOfMeasureLabel(receptionUnitOfMeasure(r), t)}</TableCell>
                                                 <TableCell>{r.deliveryNoteNumber || '—'}</TableCell>
-                                                <TableCell>{r.receivedQuantity ?? '—'}</TableCell>
+                                                <TableCell>
+                                                    {r.receivedQuantity != null
+                                                        ? formatQuantityWithUnit(r.receivedQuantity, receptionUnitOfMeasure(r), t)
+                                                        : '—'}
+                                                </TableCell>
                                                 <TableCell>{t('materialOrderStatus_RECEIVED_IN_STOCK')}</TableCell>
                                                 <TableCell align="right">
                                                     <IconButton

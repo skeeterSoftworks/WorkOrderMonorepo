@@ -14,9 +14,10 @@ function formatDeliveryNoteDate(iso?: string): string {
 type Props = {
     notes: DeliveryNoteTO[];
     rowKey: string;
+    unitLabel?: string;
 };
 
-export function MaterialDeliveryNotesPanel({ notes, rowKey }: Props) {
+export function MaterialDeliveryNotesPanel({ notes, rowKey, unitLabel }: Props) {
     const { t } = useTranslation();
     const [open, setOpen] = useState(false);
     if (!notes.length) {
@@ -54,7 +55,7 @@ export function MaterialDeliveryNotesPanel({ notes, rowKey }: Props) {
                             <TableRow key={`${rowKey}-dn-${note.id ?? note.receivedAt}`}>
                                 <TableCell>{note.deliveryNoteNumber || '—'}</TableCell>
                                 <TableCell>{formatDeliveryNoteDate(note.receivedAt)}</TableCell>
-                                <TableCell align="right">{note.quantity ?? '—'}</TableCell>
+                                <TableCell align="right">{note.quantity != null && unitLabel ? `${note.quantity} ${unitLabel}` : (note.quantity ?? '—')}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>

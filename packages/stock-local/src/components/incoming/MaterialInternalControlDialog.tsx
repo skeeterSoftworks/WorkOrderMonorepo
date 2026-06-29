@@ -15,6 +15,7 @@ import {
     Typography,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import { materialUnitOfMeasureLabel, receptionUnitOfMeasure } from './materialUnitOfMeasure';
 import type { MaterialOrderReceptionTO } from 'sf-common/src/models/ApiRequests';
 import {
     emptySampleInputs,
@@ -79,6 +80,10 @@ export function MaterialInternalControlDialog({
         reception != null &&
         isInternalControlFormComplete(reception, samples, overallWeight, overallAcceptance);
 
+    const unitLabel = reception
+        ? materialUnitOfMeasureLabel(receptionUnitOfMeasure(reception), t)
+        : '';
+
     const updateSample = (dimension: MaterialDimensionKey, index: number, value: string) => {
         setSamples((prev) => {
             const row = [...prev[dimension]] as [string, string, string];
@@ -102,7 +107,7 @@ export function MaterialInternalControlDialog({
                             : ''}
                         {reception.deliveryNoteNumber && reception.receivedQuantity != null ? ' — ' : ''}
                         {reception.receivedQuantity != null
-                            ? `${t('receivedQuantity')}: ${reception.receivedQuantity}`
+                            ? `${t('receivedQuantity')}: ${reception.receivedQuantity}${unitLabel ? ` ${unitLabel}` : ''}`
                             : ''}
                     </Typography>
                 )}
