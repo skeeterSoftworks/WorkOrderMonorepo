@@ -45,10 +45,7 @@ export interface MaterialTO {
     id?: number,
     name?: string,
     code?: string,
-    diameter?: number,
-    weight?: number,
-    length?: number,
-    width?: number,
+    unitOfMeasure?: ProductMaterialUnitOfMeasure,
     providers?: MaterialProviderTO[],
     /** Backward compatibility for legacy payloads; prefer `providers`. */
     provider?: MaterialProviderTO,

@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
-import FormHelperText from '@mui/material/FormHelperText';
 import IconButton from '@mui/material/IconButton';
 import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
@@ -14,11 +12,20 @@ import TextField from '@mui/material/TextField';
 import CloseIcon from '@mui/icons-material/Close';
 import { alpha, type Theme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
-import type { MaterialProviderTO, MaterialTO } from 'sf-common/src/models/ApiRequests';
+import type { MaterialProviderTO, MaterialTO, ProductMaterialUnitOfMeasure } from 'sf-common/src/models/ApiRequests';
+import { PRODUCT_MATERIAL_UNITS_OF_MEASURE } from 'sf-common/src/models/ApiRequests';
 import { Server } from 'sf-common';
-import { filterDecimalNumericInput, parseDecimalNumericInputToNumber } from 'sf-common/src/util/DataUtils';
-import { toastActionError, toastActionSuccess, toastServerError } from '../../util/actionToast';
+import { toastActionSuccess, toastServerError } from '../../util/actionToast';
 import { MaterialCatalogTable } from './MaterialCatalogTable';
+
+const DEFAULT_UNIT_OF_MEASURE: ProductMaterialUnitOfMeasure = 'PCS';
+
+function normalizeUnitOfMeasure(value: unknown): ProductMaterialUnitOfMeasure {
+    if (typeof value === 'string' && (PRODUCT_MATERIAL_UNITS_OF_MEASURE as readonly string[]).includes(value)) {
+        return value as ProductMaterialUnitOfMeasure;
+    }
+    return DEFAULT_UNIT_OF_MEASURE;
+}
 
 const multiSelectMenuItemSx = (theme: Theme) => ({
     py: 1,
@@ -45,17 +52,6 @@ function materialProvidersOf(m: MaterialTO): MaterialProviderTO[] {
     return m.provider ? [m.provider] : [];
 }
 
-function hasAtLeastOneMaterialDimension(
-    diameter: string,
-    weight: string,
-    length: string,
-    width: string,
-): boolean {
-    return [diameter, weight, length, width].some(
-        (v) => parseDecimalNumericInputToNumber(v) !== undefined,
-    );
-}
-
 type Props = {
     open: boolean;
     provider: MaterialProviderTO | null;
@@ -77,27 +73,12 @@ export function MaterialsCatalogDialog({
     const [editingMaterialIndex, setEditingMaterialIndex] = useState<number | null>(null);
     const [materialName, setMaterialName] = useState('');
     const [materialCode, setMaterialCode] = useState('');
-    const [materialDiameter, setMaterialDiameter] = useState('');
-    const [materialWeight, setMaterialWeight] = useState('');
-    const [materialLength, setMaterialLength] = useState('');
-    const [materialWidth, setMaterialWidth] = useState('');
+    const [materialUnitOfMeasure, setMaterialUnitOfMeasure] = useState<ProductMaterialUnitOfMeasure>(DEFAULT_UNIT_OF_MEASURE);
     const [materialProviderKeysSelected, setMaterialProviderKeysSelected] = useState<string[]>([]);
-    const [materialDimensionsShowError, setMaterialDimensionsShowError] = useState(false);
 
     const sortedProviders = useMemo(
         () => [...providers].sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '')),
         [providers],
-    );
-
-    const materialDimensionsValid = useMemo(
-        () =>
-            hasAtLeastOneMaterialDimension(
-                materialDiameter,
-                materialWeight,
-                materialLength,
-                materialWidth,
-            ),
-        [materialDiameter, materialWeight, materialLength, materialWidth],
     );
 
     const dialogMaterials = useMemo(() => {
@@ -114,24 +95,15 @@ export function MaterialsCatalogDialog({
             setEditingMaterialIndex(null);
             setMaterialName('');
             setMaterialCode('');
-            setMaterialDiameter('');
-            setMaterialWeight('');
-            setMaterialLength('');
-            setMaterialWidth('');
+            setMaterialUnitOfMeasure(DEFAULT_UNIT_OF_MEASURE);
             if (options?.preserveActiveProvider && provider) {
                 setMaterialProviderKeysSelected([providerKey(provider)]);
             } else {
                 setMaterialProviderKeysSelected([]);
             }
-            setMaterialDimensionsShowError(false);
         },
         [provider],
     );
-
-    const onMaterialDimensionChange = (setter: (v: string) => void, value: string) => {
-        setter(filterDecimalNumericInput(value));
-        setMaterialDimensionsShowError(false);
-    };
 
     const renderProviderValue = useCallback(
         (selected: unknown) => (
@@ -162,11 +134,6 @@ export function MaterialsCatalogDialog({
         if (!materialName.trim() || !materialCode.trim() || materialProviderKeysSelected.length === 0) {
             return;
         }
-        if (!materialDimensionsValid) {
-            setMaterialDimensionsShowError(true);
-            toastActionError(t('materialDimensionsRequired'));
-            return;
-        }
         const selectedProviders = materialProviderKeysSelected
             .map((k) => providers.find((p) => providerKey(p) === k))
             .filter((p): p is MaterialProviderTO => Boolean(p))
@@ -175,10 +142,7 @@ export function MaterialsCatalogDialog({
             id: editingMaterialIndex !== null ? materialsCatalog[editingMaterialIndex]?.id : undefined,
             name: materialName.trim(),
             code: materialCode.trim(),
-            diameter: parseDecimalNumericInputToNumber(materialDiameter),
-            weight: parseDecimalNumericInputToNumber(materialWeight),
-            length: parseDecimalNumericInputToNumber(materialLength),
-            width: parseDecimalNumericInputToNumber(materialWidth),
+            unitOfMeasure: materialUnitOfMeasure,
             providers: selectedProviders,
             provider: undefined,
         };
@@ -199,10 +163,7 @@ export function MaterialsCatalogDialog({
         setEditingMaterialIndex(idx);
         setMaterialName(row.name ?? '');
         setMaterialCode(row.code ?? '');
-        setMaterialDiameter(row.diameter != null ? String(row.diameter) : '');
-        setMaterialWeight(row.weight != null ? String(row.weight) : '');
-        setMaterialLength(row.length != null ? String(row.length) : '');
-        setMaterialWidth(row.width != null ? String(row.width) : '');
+        setMaterialUnitOfMeasure(normalizeUnitOfMeasure(row.unitOfMeasure));
         setMaterialProviderKeysSelected(materialProvidersOf(row).map((p) => providerKey(p)));
     };
 
@@ -243,50 +204,21 @@ export function MaterialsCatalogDialog({
                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                         <TextField required label={t('materialName')} value={materialName} onChange={(e) => setMaterialName(e.target.value)} size="small" sx={{ flex: '1 1 180px' }} />
                         <TextField required label={t('materialCode')} value={materialCode} onChange={(e) => setMaterialCode(e.target.value)} size="small" sx={{ flex: '1 1 160px' }} />
-                    </Box>
-                    <Alert severity="info" sx={{ py: 0.5 }}>
-                        {t('materialDimensionsHint')}
-                    </Alert>
-                    <Box>
-                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                            <TextField
-                                label={t('diameterMeasurement')}
-                                value={materialDiameter}
-                                onChange={(e) => onMaterialDimensionChange(setMaterialDiameter, e.target.value)}
-                                size="small"
-                                sx={{ width: 130 }}
-                                error={materialDimensionsShowError && !materialDimensionsValid}
-                            />
-                            <TextField
-                                label={t('weight')}
-                                value={materialWeight}
-                                onChange={(e) => onMaterialDimensionChange(setMaterialWeight, e.target.value)}
-                                size="small"
-                                sx={{ width: 130 }}
-                                error={materialDimensionsShowError && !materialDimensionsValid}
-                            />
-                            <TextField
-                                label={t('length')}
-                                value={materialLength}
-                                onChange={(e) => onMaterialDimensionChange(setMaterialLength, e.target.value)}
-                                size="small"
-                                sx={{ width: 130 }}
-                                error={materialDimensionsShowError && !materialDimensionsValid}
-                            />
-                            <TextField
-                                label={t('width')}
-                                value={materialWidth}
-                                onChange={(e) => onMaterialDimensionChange(setMaterialWidth, e.target.value)}
-                                size="small"
-                                sx={{ width: 130 }}
-                                error={materialDimensionsShowError && !materialDimensionsValid}
-                            />
-                        </Box>
-                        {materialDimensionsShowError && !materialDimensionsValid && (
-                            <FormHelperText error sx={{ mx: 1.75 }}>
-                                {t('materialDimensionsRequired')}
-                            </FormHelperText>
-                        )}
+                        <TextField
+                            select
+                            required
+                            label={t('productMaterialUnitOfMeasure')}
+                            value={materialUnitOfMeasure}
+                            onChange={(e) => setMaterialUnitOfMeasure(normalizeUnitOfMeasure(e.target.value))}
+                            size="small"
+                            sx={{ width: 160 }}
+                        >
+                            {PRODUCT_MATERIAL_UNITS_OF_MEASURE.map((unit) => (
+                                <MenuItem key={unit} value={unit}>
+                                    {t(`unitOfMeasure_${unit}`)}
+                                </MenuItem>
+                            ))}
+                        </TextField>
                     </Box>
                     <TextField
                         select

@@ -53,11 +53,15 @@ function materialLabel(m: MaterialTO): string {
 
 const DEFAULT_UNIT_OF_MEASURE: ProductMaterialUnitOfMeasure = 'PCS';
 
-function normalizeUnitOfMeasure(value: unknown): ProductMaterialUnitOfMeasure {
-    if (typeof value === 'string' && (PRODUCT_MATERIAL_UNITS_OF_MEASURE as readonly string[]).includes(value)) {
-        return value as ProductMaterialUnitOfMeasure;
+function materialUnitLabel(
+    material: MaterialTO | undefined,
+    t: (key: string) => string,
+): string {
+    const unit = material?.unitOfMeasure;
+    if (unit && (PRODUCT_MATERIAL_UNITS_OF_MEASURE as readonly string[]).includes(unit)) {
+        return t(`unitOfMeasure_${unit}`);
     }
-    return DEFAULT_UNIT_OF_MEASURE;
+    return t(`unitOfMeasure_${DEFAULT_UNIT_OF_MEASURE}`);
 }
 
 const multiSelectMenuItemSx = (theme: any) => ({
@@ -87,14 +91,12 @@ export function ProductMaterialsDialog({ open, product, onClose, onSaved }: Prop
     const [catalogMaterialRows, setCatalogMaterialRows] = useState<{ key: string; material: MaterialTO }[]>([]);
     const [selectedCatalogMaterialKeys, setSelectedCatalogMaterialKeys] = useState<string[]>([]);
     const [quantityByKey, setQuantityByKey] = useState<Record<string, string>>({});
-    const [unitByKey, setUnitByKey] = useState<Record<string, ProductMaterialUnitOfMeasure>>({});
 
     useEffect(() => {
         if (!open || !product?.id) {
             setCatalogMaterialRows([]);
             setSelectedCatalogMaterialKeys([]);
             setQuantityByKey({});
-            setUnitByKey({});
             return;
         }
         Server.getAllMaterials(
@@ -106,7 +108,6 @@ export function ProductMaterialsDialog({ open, product, onClose, onSaved }: Prop
                 setCatalogMaterialRows(rows);
                 const initial: string[] = [];
                 const quantities: Record<string, string> = {};
-                const units: Record<string, ProductMaterialUnitOfMeasure> = {};
                 const seen = new Set<string>();
                 for (const pm of product.productMaterials ?? []) {
                     const row = rows.find(({ material: c }) => productMaterialMatchesCatalogRow(pm, c));
@@ -115,12 +116,10 @@ export function ProductMaterialsDialog({ open, product, onClose, onSaved }: Prop
                         initial.push(row.key);
                         const q = pm.quantityPerProductUnit;
                         quantities[row.key] = q != null && Number.isFinite(q) && q > 0 ? String(q) : '1';
-                        units[row.key] = normalizeUnitOfMeasure(pm.unitOfMeasure);
                     }
                 }
                 setSelectedCatalogMaterialKeys(initial);
                 setQuantityByKey(quantities);
-                setUnitByKey(units);
             },
             (err: unknown) => toastServerError(err, t),
         );
@@ -133,15 +132,6 @@ export function ProductMaterialsDialog({ open, product, onClose, onSaved }: Prop
             for (const key of keys) {
                 if (!next[key]?.trim()) {
                     next[key] = '1';
-                }
-            }
-            return next;
-        });
-        setUnitByKey((prev) => {
-            const next = { ...prev };
-            for (const key of keys) {
-                if (!next[key]) {
-                    next[key] = DEFAULT_UNIT_OF_MEASURE;
                 }
             }
             return next;
@@ -161,7 +151,6 @@ export function ProductMaterialsDialog({ open, product, onClose, onSaved }: Prop
                 id: existing?.id,
                 materialId: src.id,
                 quantityPerProductUnit: quantity,
-                unitOfMeasure: unitByKey[k] ?? DEFAULT_UNIT_OF_MEASURE,
             }];
         });
         const payload: ProductTO = {
@@ -268,25 +257,9 @@ export function ProductMaterialsDialog({ open, product, onClose, onSaved }: Prop
                                             size="small"
                                             sx={{ width: 120 }}
                                         />
-                                        <TextField
-                                            select
-                                            label={t('productMaterialUnitOfMeasure')}
-                                            value={unitByKey[key] ?? DEFAULT_UNIT_OF_MEASURE}
-                                            onChange={(e) => {
-                                                setUnitByKey((prev) => ({
-                                                    ...prev,
-                                                    [key]: normalizeUnitOfMeasure(e.target.value),
-                                                }));
-                                            }}
-                                            size="small"
-                                            sx={{ width: 130 }}
-                                        >
-                                            {PRODUCT_MATERIAL_UNITS_OF_MEASURE.map((unit) => (
-                                                <MenuItem key={unit} value={unit}>
-                                                    {t(`unitOfMeasure_${unit}`)}
-                                                </MenuItem>
-                                            ))}
-                                        </TextField>
+                                        <Typography variant="body2" color="text.secondary" sx={{ width: 72, flexShrink: 0 }}>
+                                            {materialUnitLabel(m, t)}
+                                        </Typography>
                                     </Stack>
                                 );
                             })}
