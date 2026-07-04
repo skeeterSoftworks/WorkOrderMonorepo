@@ -1490,7 +1490,7 @@ function SessionSummary({workOrder, session}: {workOrder: ProductionWorkOrderTO;
                         {t('workOrderOverproductionResidualStock', {count: residualOverOrder})}
                     </Typography>
                     <Typography variant="caption" color="text.secondary" display="block" sx={{mt: 0.75}}>
-                        {t('workOrderStockHandlingTbd')}
+                        {t('workOrderStockHandlingIncomingProducts')}
                     </Typography>
                 </Alert>
             )}

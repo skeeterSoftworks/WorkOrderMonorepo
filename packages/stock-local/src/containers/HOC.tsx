@@ -1,6 +1,6 @@
 import {useSelector} from 'react-redux';
 import {getCentralTheme} from '../util/ThemeUtils';
-import {Container, CssBaseline, Grid, LinearProgress, ThemeProvider} from '@mui/material';
+import {Container, CssBaseline, Grid, LinearProgress, ThemeProvider, Box} from '@mui/material';
 import {LoginForm} from '../components/shared/LoginForm';
 import {AppBarHeader} from '../components/shared/AppBarHeader';
 import "../i18n/I18n"
@@ -27,22 +27,25 @@ export function HOC(props: any) {
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline />
-            <Toaster position="top-center" />
-            <AppBarHeader/>
-            {userData && socketConnected &&
-                <Container style={{maxWidth: "100%"}}>
-                    {props.children}
-                </Container>}
-            {!userData && socketConnected &&
-                <LoginForm />
-            }
+            <Toaster position="top-center" containerStyle={{ top: 72 }} />
+            <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+                <AppBarHeader/>
+                <Box component="main" sx={{ flex: 1, position: 'relative', zIndex: 0 }}>
+                    {userData && socketConnected &&
+                        <Container style={{maxWidth: "100%"}}>
+                            {props.children}
+                        </Container>}
+                    {!userData && socketConnected &&
+                        <LoginForm />
+                    }
 
-
-            {!socketConnected &&
-                <Grid style={{ marginTop: 100, textAlign: "center" }}>
-                    <h4>{t("connectingToServer")}</h4>
-                    <LinearProgress />
-                </Grid>}
+                    {!socketConnected &&
+                        <Grid style={{ marginTop: 100, textAlign: "center" }}>
+                            <h4>{t("connectingToServer")}</h4>
+                            <LinearProgress />
+                        </Grid>}
+                </Box>
+            </Box>
         </ThemeProvider>
     )
 }

@@ -35,8 +35,8 @@ export function AppBarHeader() {
     }
 
     return (
-        <AppBar position="static">
-            <Toolbar variant="dense" sx={{ flexWrap: 'wrap', gap: 1 }}>
+        <AppBar position="sticky" sx={{ zIndex: (theme) => theme.zIndex.appBar + 1 }}>
+            <Toolbar variant="dense" sx={{ flexWrap: 'nowrap', gap: 1 }}>
                 <img src={cubeLogo} style={{ height: "auto", width: "3%", marginRight: "5vh" }} alt="" />
                 <Typography variant="h6" color="inherit" component="div" sx={{ mr: 1 }}>
                     {userData ? `${userData.role}: ${userData.name} ${userData.surname}` : t("notLoggedIn")}

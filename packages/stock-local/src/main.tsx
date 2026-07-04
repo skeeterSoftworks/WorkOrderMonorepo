@@ -7,6 +7,7 @@ import {BrowserRouter, Route, Routes} from "react-router-dom";
 import {HOC} from "./containers/HOC.tsx";
 import {Home} from "./components/home/Home.tsx";
 import {IncomingMaterialReceptionPage} from "./components/incoming/IncomingMaterialReceptionPage.tsx";
+import {IncomingProductsReceptionPage} from "./components/incoming/IncomingProductsReceptionPage.tsx";
 import {StockPage} from "./components/stock/StockPage.tsx";
 
 
@@ -28,6 +29,7 @@ root.render(
                     <Routes>
                         <Route path="/" element={<Home/>}/>
                         <Route path="/incoming-material" element={<IncomingMaterialReceptionPage/>}/>
+                        <Route path="/incoming-products" element={<IncomingProductsReceptionPage/>}/>
                         <Route path="/stock" element={<StockPage/>}/>
                         <Route path="/stock-by-location" element={<StockPage/>}/>
                     </Routes>

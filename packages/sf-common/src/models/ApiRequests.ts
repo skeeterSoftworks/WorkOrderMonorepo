@@ -641,7 +641,31 @@ export interface SampleDataGenerationResultTO {
     usersInserted: number,
 }
 
+export const PRODUCT_STOCK_INTAKE_UNITS_OF_MEASURE = [
+    'PIECES',
+    'GRAM',
+    'KILOGRAM',
+] as const;
 
+export type ProductStockIntakeUnitOfMeasure = typeof PRODUCT_STOCK_INTAKE_UNITS_OF_MEASURE[number];
+
+export interface ProductCatalogEntryTO {
+    id?: number,
+    reference?: string,
+    name?: string,
+}
+
+export interface ProductStockIntakeTO {
+    id?: number,
+    productId?: number,
+    productReference?: string,
+    productName?: string,
+    stickerNumber?: string,
+    unitOfMeasure?: ProductStockIntakeUnitOfMeasure,
+    quantity?: number,
+    /** ISO-8601 date-time. */
+    receivedAt?: string,
+}
 
 
 
