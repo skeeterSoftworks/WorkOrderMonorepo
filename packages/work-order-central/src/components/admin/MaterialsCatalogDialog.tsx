@@ -12,20 +12,10 @@ import TextField from '@mui/material/TextField';
 import CloseIcon from '@mui/icons-material/Close';
 import { alpha, type Theme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
-import type { MaterialProviderTO, MaterialTO, ProductMaterialUnitOfMeasure } from 'sf-common/src/models/ApiRequests';
-import { PRODUCT_MATERIAL_UNITS_OF_MEASURE } from 'sf-common/src/models/ApiRequests';
+import type { MaterialProviderTO, MaterialTO } from 'sf-common/src/models/ApiRequests';
 import { Server } from 'sf-common';
 import { toastActionSuccess, toastServerError } from '../../util/actionToast';
 import { MaterialCatalogTable } from './MaterialCatalogTable';
-
-const DEFAULT_UNIT_OF_MEASURE: ProductMaterialUnitOfMeasure = 'PCS';
-
-function normalizeUnitOfMeasure(value: unknown): ProductMaterialUnitOfMeasure {
-    if (typeof value === 'string' && (PRODUCT_MATERIAL_UNITS_OF_MEASURE as readonly string[]).includes(value)) {
-        return value as ProductMaterialUnitOfMeasure;
-    }
-    return DEFAULT_UNIT_OF_MEASURE;
-}
 
 const multiSelectMenuItemSx = (theme: Theme) => ({
     py: 1,
@@ -73,7 +63,6 @@ export function MaterialsCatalogDialog({
     const [editingMaterialIndex, setEditingMaterialIndex] = useState<number | null>(null);
     const [materialName, setMaterialName] = useState('');
     const [materialCode, setMaterialCode] = useState('');
-    const [materialUnitOfMeasure, setMaterialUnitOfMeasure] = useState<ProductMaterialUnitOfMeasure>(DEFAULT_UNIT_OF_MEASURE);
     const [materialProviderKeysSelected, setMaterialProviderKeysSelected] = useState<string[]>([]);
 
     const sortedProviders = useMemo(
@@ -95,7 +84,6 @@ export function MaterialsCatalogDialog({
             setEditingMaterialIndex(null);
             setMaterialName('');
             setMaterialCode('');
-            setMaterialUnitOfMeasure(DEFAULT_UNIT_OF_MEASURE);
             if (options?.preserveActiveProvider && provider) {
                 setMaterialProviderKeysSelected([providerKey(provider)]);
             } else {
@@ -142,7 +130,6 @@ export function MaterialsCatalogDialog({
             id: editingMaterialIndex !== null ? materialsCatalog[editingMaterialIndex]?.id : undefined,
             name: materialName.trim(),
             code: materialCode.trim(),
-            unitOfMeasure: materialUnitOfMeasure,
             providers: selectedProviders,
             provider: undefined,
         };
@@ -163,7 +150,6 @@ export function MaterialsCatalogDialog({
         setEditingMaterialIndex(idx);
         setMaterialName(row.name ?? '');
         setMaterialCode(row.code ?? '');
-        setMaterialUnitOfMeasure(normalizeUnitOfMeasure(row.unitOfMeasure));
         setMaterialProviderKeysSelected(materialProvidersOf(row).map((p) => providerKey(p)));
     };
 
@@ -204,21 +190,6 @@ export function MaterialsCatalogDialog({
                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                         <TextField required label={t('materialName')} value={materialName} onChange={(e) => setMaterialName(e.target.value)} size="small" sx={{ flex: '1 1 180px' }} />
                         <TextField required label={t('materialCode')} value={materialCode} onChange={(e) => setMaterialCode(e.target.value)} size="small" sx={{ flex: '1 1 160px' }} />
-                        <TextField
-                            select
-                            required
-                            label={t('productMaterialUnitOfMeasure')}
-                            value={materialUnitOfMeasure}
-                            onChange={(e) => setMaterialUnitOfMeasure(normalizeUnitOfMeasure(e.target.value))}
-                            size="small"
-                            sx={{ width: 160 }}
-                        >
-                            {PRODUCT_MATERIAL_UNITS_OF_MEASURE.map((unit) => (
-                                <MenuItem key={unit} value={unit}>
-                                    {t(`unitOfMeasure_${unit}`)}
-                                </MenuItem>
-                            ))}
-                        </TextField>
                     </Box>
                     <TextField
                         select

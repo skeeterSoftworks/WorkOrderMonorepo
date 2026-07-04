@@ -18,34 +18,40 @@ import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useTranslation } from 'react-i18next';
-import type { MaterialOrderLineTO, MaterialOrderTO, MaterialProviderTO, MaterialTO } from 'sf-common/src/models/ApiRequests';
+import type {
+    MaterialOrderLineTO,
+    MaterialOrderTO,
+    MaterialProviderTO,
+    MaterialTO,
+    ProductMaterialUnitOfMeasure,
+} from 'sf-common/src/models/ApiRequests';
 import { PRODUCT_MATERIAL_UNITS_OF_MEASURE } from 'sf-common/src/models/ApiRequests';
 import { Server } from 'sf-common';
 import { toastActionSuccess, toastServerError } from '../../util/actionToast';
 
-type LineDraft = { materialId?: number; quantity: string };
+const DEFAULT_UNIT: ProductMaterialUnitOfMeasure = 'PCS';
+
+type LineDraft = {
+    materialId?: number;
+    quantity: string;
+    unitOfMeasure: ProductMaterialUnitOfMeasure;
+};
 
 function newLineDraft(): LineDraft {
-    return { materialId: undefined, quantity: '' };
+    return { materialId: undefined, quantity: '', unitOfMeasure: DEFAULT_UNIT };
+}
+
+function normalizeUnit(value: unknown): ProductMaterialUnitOfMeasure {
+    if (typeof value === 'string' && (PRODUCT_MATERIAL_UNITS_OF_MEASURE as readonly string[]).includes(value)) {
+        return value as ProductMaterialUnitOfMeasure;
+    }
+    return DEFAULT_UNIT;
 }
 
 function formatMaterialOptionLabel(material: MaterialTO): string {
     const code = material.code?.trim() || '—';
     const name = material.name?.trim() || '—';
     return `${code} (${name})`;
-}
-
-function materialUnitLabel(material: MaterialTO | undefined, t: (key: string) => string): string {
-    const unit = material?.unitOfMeasure;
-    if (unit && (PRODUCT_MATERIAL_UNITS_OF_MEASURE as readonly string[]).includes(unit)) {
-        return t(`unitOfMeasure_${unit}`);
-    }
-    return t('unitOfMeasure_PCS');
-}
-
-function findMaterialById(materials: MaterialTO[], materialId?: number): MaterialTO | undefined {
-    if (materialId == null) return undefined;
-    return materials.find((m) => m.id === materialId);
 }
 
 type Props = {
@@ -98,6 +104,7 @@ export function MaterialOrderCreateDialog({ open, providers, materials, onClose,
         const linePayload: MaterialOrderLineTO[] = createLines.map((line) => ({
             materialId: line.materialId,
             quantity: Math.trunc(Number(line.quantity)),
+            materialUnitOfMeasure: line.unitOfMeasure,
         }));
         Server.addMaterialOrder(
             { materialProviderId, lines: linePayload },
@@ -147,21 +154,23 @@ export function MaterialOrderCreateDialog({ open, providers, materials, onClose,
                             <TableHead>
                                 <TableRow>
                                     <TableCell>{t('materialName')}</TableCell>
-                                    <TableCell width={100}>{t('productMaterialUnitOfMeasure')}</TableCell>
+                                    <TableCell width={120}>{t('productMaterialUnitOfMeasure')}</TableCell>
                                     <TableCell width={140}>{t('quantity')}</TableCell>
                                     <TableCell width={56} />
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {createLines.map((line, index) => {
-                                    const selectedMaterial = findMaterialById(materialsForProvider, line.materialId);
-                                    return (
+                                {createLines.map((line, index) => (
                                     <TableRow key={`create-line-${index}`}>
                                         <TableCell>
                                             <TextField
                                                 select
                                                 value={line.materialId ?? ''}
-                                                onChange={(e) => updateCreateLine(index, { materialId: e.target.value ? Number(e.target.value) : undefined })}
+                                                onChange={(e) =>
+                                                    updateCreateLine(index, {
+                                                        materialId: e.target.value ? Number(e.target.value) : undefined,
+                                                    })
+                                                }
                                                 size="small"
                                                 fullWidth
                                                 disabled={materialProviderId == null}
@@ -174,11 +183,25 @@ export function MaterialOrderCreateDialog({ open, providers, materials, onClose,
                                                 ))}
                                             </TextField>
                                         </TableCell>
-
                                         <TableCell>
-                                            <Typography variant="body2" color="text.secondary">
-                                                {line.materialId != null ? materialUnitLabel(selectedMaterial, t) : '—'}
-                                            </Typography>
+                                            <TextField
+                                                select
+                                                value={line.unitOfMeasure}
+                                                onChange={(e) =>
+                                                    updateCreateLine(index, {
+                                                        unitOfMeasure: normalizeUnit(e.target.value),
+                                                    })
+                                                }
+                                                size="small"
+                                                fullWidth
+                                                disabled={materialProviderId == null}
+                                            >
+                                                {PRODUCT_MATERIAL_UNITS_OF_MEASURE.map((unit) => (
+                                                    <MenuItem key={unit} value={unit}>
+                                                        {t(`unitOfMeasure_${unit}`)}
+                                                    </MenuItem>
+                                                ))}
+                                            </TextField>
                                         </TableCell>
                                         <TableCell>
                                             <TextField
@@ -192,22 +215,41 @@ export function MaterialOrderCreateDialog({ open, providers, materials, onClose,
                                             />
                                         </TableCell>
                                         <TableCell align="right">
-                                            <IconButton size="small" onClick={() => setCreateLines((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)))} disabled={createLines.length <= 1} aria-label={t('removeMaterialOrderLine')}>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() =>
+                                                    setCreateLines((prev) =>
+                                                        prev.length <= 1 ? prev : prev.filter((_, i) => i !== index),
+                                                    )
+                                                }
+                                                disabled={createLines.length <= 1}
+                                                aria-label={t('removeMaterialOrderLine')}
+                                            >
                                                 <DeleteOutlineIcon fontSize="small" />
                                             </IconButton>
                                         </TableCell>
                                     </TableRow>
-                                    );
-                                })}
+                                ))}
                             </TableBody>
                         </Table>
                     </TableContainer>
-                    <Button variant="outlined" size="small" startIcon={<AddIcon />} onClick={() => setCreateLines((prev) => [...prev, newLineDraft()])} disabled={materialProviderId == null} sx={{ alignSelf: 'flex-start' }}>
+                    <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<AddIcon />}
+                        onClick={() => setCreateLines((prev) => [...prev, newLineDraft()])}
+                        disabled={materialProviderId == null}
+                        sx={{ alignSelf: 'flex-start' }}
+                    >
                         {t('addMaterialOrderLine')}
                     </Button>
                     <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                        <Button variant="contained" onClick={handleCreate} disabled={!canCreate}>{t('saveAction')}</Button>
-                        <Button variant="outlined" onClick={onClose}>{t('cancel')}</Button>
+                        <Button variant="contained" onClick={handleCreate} disabled={!canCreate}>
+                            {t('saveAction')}
+                        </Button>
+                        <Button variant="outlined" onClick={onClose}>
+                            {t('cancel')}
+                        </Button>
                     </Box>
                 </Box>
             </DialogContent>

@@ -16,7 +16,6 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useTranslation } from 'react-i18next';
 import type { StockLocationTO } from 'sf-common/src/models/ApiRequests';
-import { materialUnitOfMeasureLabel } from '../incoming/materialUnitOfMeasure';
 import {
     collectStockCatalogueIds,
     filterStockLocationsByCatalogueId,
@@ -117,7 +116,6 @@ export function StockMaterialsByLocationPanel() {
                                                 <TableRow>
                                                     <TableCell>{t('materialName')}</TableCell>
                                                     <TableCell>{t('catalogueId')}</TableCell>
-                                                    <TableCell>{t('productMaterialUnitOfMeasure')}</TableCell>
                                                     <TableCell align="right">{t('quantity')}</TableCell>
                                                 </TableRow>
                                             </TableHead>
@@ -126,7 +124,6 @@ export function StockMaterialsByLocationPanel() {
                                                     <TableRow key={sm.id ?? `${sm.material?.code}-${sm.quantity}`}>
                                                         <TableCell>{sm.material?.name || '—'}</TableCell>
                                                         <TableCell>{sm.material?.code || '—'}</TableCell>
-                                                        <TableCell>{materialUnitOfMeasureLabel(sm.material?.unitOfMeasure, t)}</TableCell>
                                                         <TableCell align="right">{sm.quantity ?? '—'}</TableCell>
                                                     </TableRow>
                                                 ))}

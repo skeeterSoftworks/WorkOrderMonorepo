@@ -34,7 +34,6 @@ export const MaterialCatalogTable = memo(function MaterialCatalogTable({ rows, o
                 <TableRow>
                     <TableCell>{t('materialName')}</TableCell>
                     <TableCell>{t('materialCode')}</TableCell>
-                    <TableCell>{t('productMaterialUnitOfMeasure')}</TableCell>
                     <TableCell>{t('materialProviderName')}</TableCell>
                     <TableCell align="right" sx={tableActionsTableCellSx}>{t('actions')}</TableCell>
                 </TableRow>
@@ -44,7 +43,6 @@ export const MaterialCatalogTable = memo(function MaterialCatalogTable({ rows, o
                     <TableRow key={m.id ?? `${m.code}-${idx}`}>
                         <TableCell>{m.name ?? '—'}</TableCell>
                         <TableCell>{m.code ?? '—'}</TableCell>
-                        <TableCell>{m.unitOfMeasure ? t(`unitOfMeasure_${m.unitOfMeasure}`) : '—'}</TableCell>
                         <TableCell>{materialProvidersOf(m).map((p) => p.name || p.contactPerson).filter(Boolean).join(', ') || '—'}</TableCell>
                         <TableCell align="right" sx={tableActionsTableCellSx}>
                             <TableActionsRow>
@@ -59,7 +57,7 @@ export const MaterialCatalogTable = memo(function MaterialCatalogTable({ rows, o
                     </TableRow>
                 )) : (
                     <TableRow>
-                        <TableCell colSpan={5}>
+                        <TableCell colSpan={4}>
                             <Typography variant="body2" color="text.secondary">{t('materialsEmpty')}</Typography>
                         </TableCell>
                     </TableRow>

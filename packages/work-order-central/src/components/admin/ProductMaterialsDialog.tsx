@@ -13,8 +13,7 @@ import Typography from '@mui/material/Typography';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
 import { alpha } from '@mui/material/styles';
-import type { MaterialTO, ProductMaterialTO, ProductMaterialUnitOfMeasure, ProductTO } from 'sf-common/src/models/ApiRequests';
-import { PRODUCT_MATERIAL_UNITS_OF_MEASURE } from 'sf-common/src/models/ApiRequests';
+import type { MaterialTO, ProductMaterialTO, ProductTO } from 'sf-common/src/models/ApiRequests';
 import { Server } from 'sf-common';
 import { filterDecimalNumericInput, parseDecimalNumericInputToNumber } from 'sf-common/src/util/DataUtils';
 import { toastActionSuccess, toastServerError } from '../../util/actionToast';
@@ -49,19 +48,6 @@ function materialProvidersOf(material: MaterialTO): NonNullable<MaterialTO['prov
 
 function materialLabel(m: MaterialTO): string {
     return [m.name, m.code].filter((x) => (x ?? '').toString().trim()).join(' · ') || '—';
-}
-
-const DEFAULT_UNIT_OF_MEASURE: ProductMaterialUnitOfMeasure = 'PCS';
-
-function materialUnitLabel(
-    material: MaterialTO | undefined,
-    t: (key: string) => string,
-): string {
-    const unit = material?.unitOfMeasure;
-    if (unit && (PRODUCT_MATERIAL_UNITS_OF_MEASURE as readonly string[]).includes(unit)) {
-        return t(`unitOfMeasure_${unit}`);
-    }
-    return t(`unitOfMeasure_${DEFAULT_UNIT_OF_MEASURE}`);
 }
 
 const multiSelectMenuItemSx = (theme: any) => ({
@@ -255,11 +241,8 @@ export function ProductMaterialsDialog({ open, product, onClose, onSaved }: Prop
                                                 setQuantityByKey((prev) => ({ ...prev, [key]: next }));
                                             }}
                                             size="small"
-                                            sx={{ width: 120 }}
+                                            sx={{ width: 140 }}
                                         />
-                                        <Typography variant="body2" color="text.secondary" sx={{ width: 72, flexShrink: 0 }}>
-                                            {materialUnitLabel(m, t)}
-                                        </Typography>
                                     </Stack>
                                 );
                             })}
