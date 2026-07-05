@@ -15,6 +15,11 @@ import {
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import {
+    RoleAccessGuard,
+    canAccessStockLocalIncomingProducts,
+    readLoggedUser,
+} from 'sf-common';
 import type { ProductCatalogEntryTO, ProductStockIntakeTO } from 'sf-common/src/models/ApiRequests';
 import { Server } from '../../api/Server';
 import { AddProductsToStockDialog } from './AddProductsToStockDialog';
@@ -36,6 +41,7 @@ function parseCatalogResponse(response: unknown): ProductCatalogEntryTO[] {
 
 export function IncomingProductsReceptionPage() {
     const { t } = useTranslation();
+    const user = readLoggedUser();
     const [intakes, setIntakes] = useState<ProductStockIntakeTO[]>([]);
     const [catalog, setCatalog] = useState<ProductCatalogEntryTO[]>([]);
     const [loading, setLoading] = useState(true);
@@ -107,6 +113,7 @@ export function IncomingProductsReceptionPage() {
     };
 
     return (
+        <RoleAccessGuard user={user} allowed={canAccessStockLocalIncomingProducts(user)}>
         <Box sx={{ py: 2 }}>
             <Typography variant="h5" component="h1" gutterBottom>
                 {t('incomingProductsReception')}
@@ -205,5 +212,6 @@ export function IncomingProductsReceptionPage() {
                 onSaved={handleSaved}
             />
         </Box>
+        </RoleAccessGuard>
     );
 }

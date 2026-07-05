@@ -7,12 +7,19 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ProductionPanel } from './ProductionPanel';
+import {
+    RoleAccessGuard,
+    canAccessCentralProductionPanel,
+    readLoggedUser,
+} from 'sf-common';
 
 export function ProductionPage() {
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const user = readLoggedUser();
 
     return (
+        <RoleAccessGuard user={user} allowed={canAccessCentralProductionPanel(user)}>
         <Container>
             <AppBar position="static">
                 <Toolbar>
@@ -26,6 +33,7 @@ export function ProductionPage() {
             </AppBar>
             <ProductionPanel />
         </Container>
+        </RoleAccessGuard>
     );
 }
 

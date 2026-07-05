@@ -17,6 +17,11 @@ import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import {
+    RoleAccessGuard,
+    canAccessStockLocalIncomingMaterial,
+    readLoggedUser,
+} from 'sf-common';
 import type { MaterialOrderLineTO, MaterialOrderReceptionTO, MaterialOrderTO, StockLocationTO } from 'sf-common/src/models/ApiRequests';
 import { Server } from '../../api/Server';
 import { MaterialInternalControlDialog } from './MaterialInternalControlDialog';
@@ -102,6 +107,7 @@ function lineQuantityLabel(line: MaterialOrderLineTO, order: MaterialOrderTO, t:
 
 export function IncomingMaterialReceptionPage() {
     const { t } = useTranslation();
+    const user = readLoggedUser();
     const [orders, setOrders] = useState<MaterialOrderTO[]>([]);
     const [pendingValidations, setPendingValidations] = useState<MaterialOrderReceptionTO[]>([]);
     const [loading, setLoading] = useState(true);
@@ -221,6 +227,7 @@ export function IncomingMaterialReceptionPage() {
     const handleRefresh = () => loadData({ refresh: true });
 
     return (
+        <RoleAccessGuard user={user} allowed={canAccessStockLocalIncomingMaterial(user)}>
         <Box sx={{ py: 2 }}>
             <Typography variant="h5" component="h1" gutterBottom>
                 {t('incomingMaterialReception')}
@@ -395,5 +402,6 @@ export function IncomingMaterialReceptionPage() {
                 onMeasureLater={closeValidationDialog}
             />
         </Box>
+        </RoleAccessGuard>
     );
 }

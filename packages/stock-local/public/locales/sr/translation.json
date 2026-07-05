@@ -767,5 +767,15 @@
   "MATERIAL_ORDER_RECEPTION_STOCK_LOCATION_REQUIRED": "Izaberite lokaciju zaliha za svaki red raspodele.",
   "MATERIAL_ORDER_RECEPTION_STOCK_QUANTITY_INVALID": "Količina po lokaciji mora biti veća od nule.",
   "STOCK_LOCATION_NOT_FOUND": "Lokacija zaliha nije pronađena.",
-  "MATERIAL_ORDER_NOT_FOUND": "Narudžbina materijala nije pronađena."
+  "MATERIAL_ORDER_NOT_FOUND": "Narudžbina materijala nije pronađena.",
+  "noPanelsAvailableForUser": "Nema dostupnih panela za vaše dodeljene uloge.",
+  "applicationRole_ADMIN": "Administrator",
+  "applicationRole_OPERATOR": "Operater",
+  "applicationRole_ADMIN_TECHNOLOGY": "Tehnologija admin",
+  "applicationRole_ADMIN_STOCK_INBOUND": "Ulaz zaliha admin",
+  "applicationRole_ADMIN_STOCK_OUTBOUND": "Izlaz zaliha admin",
+  "applicationRole_ADMIN_PRODUCTION": "Proizvodnja admin",
+  "applicationRole_SALES_ADMIN": "Prodaja admin",
+  "applicationRole_PURCHASING_ADMIN": "Nabavka admin",
+  "applicationRole_PRODUCTION_PLANNING_ADMIN": "Planiranje proizvodnje admin"
 }

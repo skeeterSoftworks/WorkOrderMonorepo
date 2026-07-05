@@ -603,5 +603,15 @@
   "assessedValueGood": "Assessed value OK",
   "ok": "OK",
   "nok": "NOK",
-  "okNokChoice": "Result"
+  "okNokChoice": "Result",
+  "noPanelsAvailableForUser": "No panels are available for your assigned roles.",
+  "applicationRole_ADMIN": "Administrator",
+  "applicationRole_OPERATOR": "Operator",
+  "applicationRole_ADMIN_TECHNOLOGY": "Technology admin",
+  "applicationRole_ADMIN_STOCK_INBOUND": "Stock inbound admin",
+  "applicationRole_ADMIN_STOCK_OUTBOUND": "Stock outbound admin",
+  "applicationRole_ADMIN_PRODUCTION": "Production admin",
+  "applicationRole_SALES_ADMIN": "Sales admin",
+  "applicationRole_PURCHASING_ADMIN": "Purchasing admin",
+  "applicationRole_PRODUCTION_PLANNING_ADMIN": "Production planning admin"
 }

@@ -768,5 +768,15 @@
   "MATERIAL_ORDER_RECEPTION_STOCK_LOCATION_REQUIRED": "Select a stock location for each allocation row.",
   "MATERIAL_ORDER_RECEPTION_STOCK_QUANTITY_INVALID": "Each stock allocation quantity must be greater than zero.",
   "STOCK_LOCATION_NOT_FOUND": "Stock location not found.",
-  "MATERIAL_ORDER_NOT_FOUND": "Material order not found."
+  "MATERIAL_ORDER_NOT_FOUND": "Material order not found.",
+  "noPanelsAvailableForUser": "No panels are available for your assigned roles.",
+  "applicationRole_ADMIN": "Administrator",
+  "applicationRole_OPERATOR": "Operator",
+  "applicationRole_ADMIN_TECHNOLOGY": "Technology admin",
+  "applicationRole_ADMIN_STOCK_INBOUND": "Stock inbound admin",
+  "applicationRole_ADMIN_STOCK_OUTBOUND": "Stock outbound admin",
+  "applicationRole_ADMIN_PRODUCTION": "Production admin",
+  "applicationRole_SALES_ADMIN": "Sales admin",
+  "applicationRole_PURCHASING_ADMIN": "Purchasing admin",
+  "applicationRole_PRODUCTION_PLANNING_ADMIN": "Production planning admin"
 }

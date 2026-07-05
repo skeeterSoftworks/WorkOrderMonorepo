@@ -23,7 +23,7 @@ import UploadFileIcon from '@mui/icons-material/UploadFile';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { Server, ConfirmationModal } from 'sf-common';
+import { Server, ConfirmationModal, RoleAccessGuard, canAccessCentralPurchasing, readLoggedUser } from 'sf-common';
 import type {
     MaterialOrderStatus,
     MaterialOrderTO,
@@ -189,6 +189,7 @@ function partialReceptionTooltip(items: PartialMaterialReceptionItem[], t: TFunc
 
 export function PurchasingPage() {
     const { t } = useTranslation();
+    const user = readLoggedUser();
     const [orders, setOrders] = useState<MaterialOrderTO[]>([]);
     const [totalElements, setTotalElements] = useState(0);
     const [ordersLoading, setOrdersLoading] = useState(false);
@@ -492,6 +493,7 @@ export function PurchasingPage() {
     };
 
     return (
+        <RoleAccessGuard user={user} allowed={canAccessCentralPurchasing(user)}>
         <Box sx={{ p: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h5">{t('purchasing')}</Typography>
@@ -742,5 +744,6 @@ export function PurchasingPage() {
                 onClose={closeCertificateView}
             />
         </Box>
+        </RoleAccessGuard>
     );
 }

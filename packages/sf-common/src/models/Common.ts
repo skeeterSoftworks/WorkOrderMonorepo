@@ -16,6 +16,7 @@ export enum EClientMode {
 
 export interface LoggedUser {
     role?: string,
+    roles?: string[],
     name?: string,
     surname?: string,
     qrCode?: string

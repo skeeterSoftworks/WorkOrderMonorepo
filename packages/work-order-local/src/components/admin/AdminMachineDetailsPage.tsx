@@ -13,28 +13,22 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
 import {useNavigate} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
-import type {LoggedUser} from '../../models/Common.ts';
 import type {CentralMachineTO, WorkstationMachineConfigTO} from '../../models/ApiRequests.ts';
 import {Server} from '../../api/Server.ts';
+import { RoleAccessGuard, canAccessWorkOrderLocalAdmin, readLoggedUser } from 'sf-common';
 
 const NONE = '';
 
 export function AdminMachineDetailsPage() {
     const {t} = useTranslation();
     const navigate = useNavigate();
+    const user = readLoggedUser();
 
     const [machines, setMachines] = useState<CentralMachineTO[]>([]);
     const [selectedMachineId, setSelectedMachineId] = useState<string>(NONE);
     const [loadingMachines, setLoadingMachines] = useState(true);
     const [loadingSave, setLoadingSave] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    useEffect(() => {
-        const raw = sessionStorage.getItem('userData');
-        const user: LoggedUser | null = raw ? JSON.parse(raw) : null;
-        if (!user || user.role !== 'ADMIN') {
-            navigate('/', {replace: true});
-        }
-    }, [navigate]);
 
     const machinesWithId = useMemo(
         () => machines.filter((m) => m.id != null && m.machineName && m.machineName.trim().length > 0),
@@ -107,6 +101,7 @@ export function AdminMachineDetailsPage() {
     };
 
     return (
+        <RoleAccessGuard user={user} allowed={canAccessWorkOrderLocalAdmin(user)}>
         <Container maxWidth="sm" sx={{py: 2}}>
             <AppBar position="static" sx={{mb: 2}}>
                 <Toolbar>
@@ -156,5 +151,6 @@ export function AdminMachineDetailsPage() {
                 </>
             )}
         </Container>
+        </RoleAccessGuard>
     );
 }

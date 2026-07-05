@@ -1,14 +1,23 @@
 import { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Checkbox from '@mui/material/Checkbox';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import FormGroup from '@mui/material/FormGroup';
 import IconButton from '@mui/material/IconButton';
-import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+import Tooltip from '@mui/material/Tooltip';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
+import {
+    APPLICATION_ROLES,
+    normalizeUserRoles,
+    type ApplicationRole,
+} from 'sf-common/src/auth/applicationRoles';
 import type { ApplicationUserTO } from 'sf-common/src/models/ApiRequests';
 import { Server } from 'sf-common';
 import { toastActionSuccess, toastServerError } from '../../util/actionToast';
@@ -25,18 +34,28 @@ export function UserFormDialog({ open, user, onClose, onSaved }: Props) {
     const [name, setName] = useState('');
     const [surname, setSurname] = useState('');
     const [qrCode, setQrCode] = useState('');
-    const [role, setRole] = useState<'ADMIN' | 'OPERATOR'>('OPERATOR');
+    const [roles, setRoles] = useState<ApplicationRole[]>(['OPERATOR']);
 
     useEffect(() => {
         if (!open) return;
         setName(user?.name ?? '');
         setSurname(user?.surname ?? '');
         setQrCode(user?.qrCode ?? '');
-        setRole(user?.role ?? 'OPERATOR');
+        const existing = normalizeUserRoles(user ?? undefined);
+        setRoles(existing.length > 0 ? existing : ['OPERATOR']);
     }, [open, user?.id]);
 
+    const toggleRole = (role: ApplicationRole) => {
+        setRoles((prev) =>
+            prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role],
+        );
+    };
+
     const handleSubmit = () => {
-        const payload: ApplicationUserTO = { id: user?.id, name, surname, qrCode, role };
+        if (roles.length === 0) {
+            return;
+        }
+        const payload: ApplicationUserTO = { id: user?.id, name, surname, qrCode, roles };
         const onSuccess = () => {
             onSaved();
             onClose();
@@ -62,12 +81,35 @@ export function UserFormDialog({ open, user, onClose, onSaved }: Props) {
                     <TextField label={t('name')} value={name} onChange={(e) => setName(e.target.value)} size="small" fullWidth />
                     <TextField label={t('surname')} value={surname} onChange={(e) => setSurname(e.target.value)} size="small" fullWidth />
                     <TextField label={t('qrCode')} value={qrCode} onChange={(e) => setQrCode(e.target.value)} size="small" fullWidth />
-                    <TextField select label={t('role')} value={role} onChange={(e) => setRole(e.target.value as 'ADMIN' | 'OPERATOR')} size="small" fullWidth>
-                        <MenuItem value="OPERATOR">{t('operator')}</MenuItem>
-                        <MenuItem value="ADMIN">{t('admin')}</MenuItem>
-                    </TextField>
+
+                    <Typography variant="subtitle2">{t('roles')}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        {t('applicationRoleLegendIntro')}
+                    </Typography>
+                    <FormGroup>
+                        {APPLICATION_ROLES.map((role) => (
+                            <Tooltip
+                                key={role}
+                                title={t(`applicationRoleDescription_${role}`)}
+                                placement="right"
+                                arrow
+                            >
+                                <FormControlLabel
+                                    sx={{ width: 'fit-content' }}
+                                    control={
+                                        <Checkbox
+                                            checked={roles.includes(role)}
+                                            onChange={() => toggleRole(role)}
+                                        />
+                                    }
+                                    label={t(`applicationRole_${role}`)}
+                                />
+                            </Tooltip>
+                        ))}
+                    </FormGroup>
+
                     <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                        <Button variant="contained" color="primary" onClick={handleSubmit}>
+                        <Button variant="contained" color="primary" onClick={handleSubmit} disabled={roles.length === 0}>
                             {user?.id ? t('editUser') : t('addUser')}
                         </Button>
                         <Button variant="outlined" onClick={onClose}>{t('cancel')}</Button>

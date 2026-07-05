@@ -2,7 +2,7 @@ import {useEffect, useMemo, useState} from 'react';
 import {Box, CircularProgress, Grid, Paper, Typography} from '@mui/material';
 import PrecisionManufacturingIcon from '@mui/icons-material/PrecisionManufacturing';
 import {Client} from '@stomp/stompjs';
-import {SOCKET_URL, Server, normalizeBinaryDataUrl} from 'sf-common';
+import {SOCKET_URL, Server, normalizeBinaryDataUrl, RoleAccessGuard, canAccessCentralMonitoring, readLoggedUser} from 'sf-common';
 import type {MachineTO} from 'sf-common/src/models/ApiRequests';
 import {useTranslation} from 'react-i18next';
 
@@ -52,6 +52,7 @@ function staleEventLabelSx(minutes: number | null): object | undefined {
 
 export function MonitoringClientPanel() {
     const {t} = useTranslation();
+    const user = readLoggedUser();
     const [machines, setMachines] = useState<MachineTO[]>([]);
     const [loading, setLoading] = useState(true);
     const [tick, setTick] = useState(0);
@@ -98,6 +99,7 @@ export function MonitoringClientPanel() {
     const nowMs = useMemo(() => Date.now(), [tick, latestByMachineId]);
 
     return (
+        <RoleAccessGuard user={user} allowed={canAccessCentralMonitoring(user)}>
         <Box sx={{mt: 3}}>
             <Typography variant="h6" sx={{mb: 2}}>
                 {t('monitoringClient')}
@@ -167,5 +169,6 @@ export function MonitoringClientPanel() {
                 </Grid>
             )}
         </Box>
+        </RoleAccessGuard>
     );
 }

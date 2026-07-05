@@ -603,5 +603,15 @@
   "assessedValueGood": "Procena OK",
   "ok": "OK",
   "nok": "NOK",
-  "okNokChoice": "Rezultat"
+  "okNokChoice": "Rezultat",
+  "noPanelsAvailableForUser": "Nema dostupnih panela za vaše dodeljene uloge.",
+  "applicationRole_ADMIN": "Administrator",
+  "applicationRole_OPERATOR": "Operater",
+  "applicationRole_ADMIN_TECHNOLOGY": "Tehnologija admin",
+  "applicationRole_ADMIN_STOCK_INBOUND": "Ulaz zaliha admin",
+  "applicationRole_ADMIN_STOCK_OUTBOUND": "Izlaz zaliha admin",
+  "applicationRole_ADMIN_PRODUCTION": "Proizvodnja admin",
+  "applicationRole_SALES_ADMIN": "Prodaja admin",
+  "applicationRole_PURCHASING_ADMIN": "Nabavka admin",
+  "applicationRole_PRODUCTION_PLANNING_ADMIN": "Planiranje proizvodnje admin"
 }

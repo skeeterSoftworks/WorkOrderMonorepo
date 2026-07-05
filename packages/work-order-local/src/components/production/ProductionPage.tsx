@@ -21,6 +21,7 @@ import {formatEuropeanDate} from 'sf-common/src/util/DateUtils';
 import {normalizeBinaryDataUrl} from 'sf-common/src/util/mediaDataUrl';
 import {ProductionWorkSessionPanel} from './ProductionWorkSessionPanel.tsx';
 import {isWorkOrderClosedForProduction} from './workOrderProductionHelpers.ts';
+import { RoleAccessGuard, canAccessWorkOrderLocalProduction, readLoggedUser } from 'sf-common';
 
 const SELECT_NONE = '';
 
@@ -41,6 +42,7 @@ function workOrderLabel(wo: ProductionWorkOrderTO, t: TFunction): string {
 export function ProductionPage() {
     const {t} = useTranslation();
     const navigate = useNavigate();
+    const user = readLoggedUser();
 
     const [listLoading, setListLoading] = useState(true);
     const [errorKey, setErrorKey] = useState<string | null>(null);
@@ -140,6 +142,7 @@ export function ProductionPage() {
     }, []);
 
     return (
+        <RoleAccessGuard user={user} allowed={canAccessWorkOrderLocalProduction(user)}>
         <Container maxWidth="lg">
             {!hideProductionChrome && (
                 <AppBar position="static">
@@ -295,5 +298,6 @@ export function ProductionPage() {
                 )}
             </Box>
         </Container>
+        </RoleAccessGuard>
     );
 }

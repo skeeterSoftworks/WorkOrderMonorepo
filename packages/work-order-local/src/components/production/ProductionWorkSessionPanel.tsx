@@ -10,6 +10,7 @@ import LinearProgress from '@mui/material/LinearProgress';
 import {useTranslation} from 'react-i18next';
 import type {TFunction} from 'i18next';
 import {Server} from '../../api/Server';
+import {canResolveProductionHelp} from 'sf-common/src/auth/applicationRoles';
 import {DeclareFaultyProductDialog} from '../../modals/DeclareFaultyProductDialog';
 import {HelpRequestDialog} from '../../modals/HelpRequestDialog';
 import {InitialControlProductDialog} from '../../modals/InitialControlProductDialog';
@@ -990,10 +991,10 @@ export function ProductionWorkSessionPanel({
         setSubmitting(true);
         setActionError(null);
         try {
-            const admin = await new Promise<{role?: string}>((resolve, reject) => {
+            const admin = await new Promise<{roles?: string[]; role?: string}>((resolve, reject) => {
                 Server.fetchOperatorData(
                     adminQr,
-                    (response: {data?: {role?: string}}) => {
+                    (response: {data?: {roles?: string[]; role?: string}}) => {
                         if (response?.data) {
                             resolve(response.data);
                         } else {
@@ -1003,7 +1004,7 @@ export function ProductionWorkSessionPanel({
                     reject,
                 );
             });
-            if (admin.role !== 'ADMIN') {
+            if (!canResolveProductionHelp(admin)) {
                 setActionError(t('helpResolveAdminOnly'));
                 return;
             }

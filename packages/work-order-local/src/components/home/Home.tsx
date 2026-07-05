@@ -18,11 +18,14 @@ import {
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CloseIcon from '@mui/icons-material/Close';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
-import type {LoggedUser} from '../../models/Common.ts';
 import type {WorkStationPreconditionItem} from '../../models/ApiRequests.ts';
-import {useTranslation} from 'react-i18next';
-import {useNavigate} from 'react-router-dom';
 import {Server} from '../../api/Server.ts';
+import {
+    canAccessWorkOrderLocalAdmin,
+    canAccessWorkOrderLocalProduction,
+    canAccessWorkOrderLocalQualityInfo,
+    readLoggedUser,
+} from 'sf-common';
 
 const START_DELAY_MS = 5000;
 
@@ -48,7 +51,8 @@ function loadWorkstationMachineFlag(setReady: (v: boolean) => void) {
 
 export function Home() {
     const userDataString = sessionStorage.getItem('userData');
-    const userData: LoggedUser = userDataString && JSON.parse(userDataString);
+    const userData = userDataString && JSON.parse(userDataString);
+    const user = readLoggedUser() ?? userData;
     const {t, i18n} = useTranslation();
     const navigate = useNavigate();
 
@@ -134,11 +138,13 @@ export function Home() {
         navigate('/production');
     };
 
-    const isAdmin = userData && userData.role === 'ADMIN';
+    const showAdmin = canAccessWorkOrderLocalAdmin(user);
+    const showProduction = canAccessWorkOrderLocalProduction(user);
+    const showQualityInfo = canAccessWorkOrderLocalQualityInfo(user);
 
     return (
         <Box sx={{position: 'relative', width: '100%', minHeight: '60vh'}}>
-            {isAdmin && (
+            {showAdmin && (
                 <IconButton
                     component={Link}
                     to="/admin"
@@ -153,18 +159,22 @@ export function Home() {
             )}
 
             <Grid container sx={{minHeight: '60vh', alignItems: 'center', justifyContent: 'center'}}>
-                {workstationMachineReady && (
+                {workstationMachineReady && (showProduction || showQualityInfo) && (
                     <Grid container spacing={3} sx={{maxWidth: 1100, justifyContent: 'center'}}>
+                        {showProduction && (
                         <Grid item xs="auto" sx={{textAlign: 'center'}}>
                             <Button variant="contained" sx={homeButtonStyle} onClick={() => setPreModalOpen(true)}>
                                 {t('production')}
                             </Button>
                         </Grid>
+                        )}
+                        {showQualityInfo && (
                         <Grid item xs="auto" sx={{textAlign: 'center'}}>
                             <Button href="/quality-info-steps" variant="contained" sx={homeButtonStyle}>
                                 {t('qualityInfoStepsPage')}
                             </Button>
                         </Grid>
+                        )}
                     </Grid>
                 )}
             </Grid>

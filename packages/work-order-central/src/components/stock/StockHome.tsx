@@ -5,9 +5,15 @@ import Typography from '@mui/material/Typography';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import Box from '@mui/material/Box';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { LoggedUser } from 'work-order-local/src/models/Common.ts';
+import {
+    RoleAccessGuard,
+    canAccessCentralStock,
+    canAccessCentralStockMaterials,
+    canAccessCentralStockProducts,
+    readLoggedUser,
+} from 'sf-common';
 import { StockProductsAvailablePanel } from './StockProductsAvailablePanel';
 import { StockMaterialsByLocationPanel } from './StockMaterialsByLocationPanel';
 
@@ -20,33 +26,50 @@ type StockTabId = (typeof StockTabs)[keyof typeof StockTabs];
 
 export function StockHome() {
     const { t } = useTranslation();
+    const user = readLoggedUser();
 
-    const userDataString = sessionStorage.getItem('userData');
-    const userData: LoggedUser = userDataString && JSON.parse(userDataString);
+    const showMaterials = canAccessCentralStockMaterials(user);
+    const showProducts = canAccessCentralStockProducts(user);
 
-    const [activeTab, setActiveTab] = useState<StockTabId>(StockTabs.MATERIALS);
+    const defaultTab = useMemo(() => {
+        if (showMaterials) return StockTabs.MATERIALS;
+        if (showProducts) return StockTabs.PRODUCTS;
+        return StockTabs.MATERIALS;
+    }, [showMaterials, showProducts]);
+
+    const [activeTab, setActiveTab] = useState<StockTabId>(defaultTab);
+
+    useEffect(() => {
+        if (activeTab === StockTabs.MATERIALS && !showMaterials && showProducts) {
+            setActiveTab(StockTabs.PRODUCTS);
+        } else if (activeTab === StockTabs.PRODUCTS && !showProducts && showMaterials) {
+            setActiveTab(StockTabs.MATERIALS);
+        }
+    }, [activeTab, showMaterials, showProducts]);
 
     return (
-        <Container>
-            <AppBar position="static">
-                <Toolbar>
-                    <Typography variant="h6">
-                        {t('stock')} - {t('welcome')}, {userData.name} {userData.surname}
-                    </Typography>
-                </Toolbar>
-            </AppBar>
+        <RoleAccessGuard user={user} allowed={canAccessCentralStock(user)}>
+            <Container>
+                <AppBar position="static">
+                    <Toolbar>
+                        <Typography variant="h6">
+                            {t('stock')} - {t('welcome')}, {user?.name} {user?.surname}
+                        </Typography>
+                    </Toolbar>
+                </AppBar>
 
-            <Box sx={{ borderBottom: 1, borderColor: 'divider', mt: 2 }}>
-                <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue as StockTabId)}>
-                    <Tab label={t('stockMaterials')} value={StockTabs.MATERIALS} />
-                    <Tab label={t('products')} value={StockTabs.PRODUCTS} />
-                </Tabs>
-            </Box>
+                <Box sx={{ borderBottom: 1, borderColor: 'divider', mt: 2 }}>
+                    <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue as StockTabId)}>
+                        {showMaterials && <Tab label={t('stockMaterials')} value={StockTabs.MATERIALS} />}
+                        {showProducts && <Tab label={t('products')} value={StockTabs.PRODUCTS} />}
+                    </Tabs>
+                </Box>
 
-            <Box sx={{ py: 4 }}>
-                {activeTab === StockTabs.MATERIALS && <StockMaterialsByLocationPanel />}
-                {activeTab === StockTabs.PRODUCTS && <StockProductsAvailablePanel />}
-            </Box>
-        </Container>
+                <Box sx={{ py: 4 }}>
+                    {activeTab === StockTabs.MATERIALS && showMaterials && <StockMaterialsByLocationPanel />}
+                    {activeTab === StockTabs.PRODUCTS && showProducts && <StockProductsAvailablePanel />}
+                </Box>
+            </Container>
+        </RoleAccessGuard>
     );
 }

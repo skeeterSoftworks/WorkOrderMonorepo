@@ -15,6 +15,7 @@ import AddIcon from '@mui/icons-material/Add';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ApplicationUserTO } from 'sf-common/src/models/ApiRequests';
+import { formatUserRolesLabel } from 'sf-common/src/auth/applicationRoles';
 import { formatEuropeanDateTime } from 'sf-common/src/util/DateUtils';
 import { Server, ConfirmationModal } from 'sf-common';
 import { TableActionsRow, tableActionsTableCellSx, tableActionIconButtonSx } from '../shared/tableActions';
@@ -105,7 +106,7 @@ export function UsersManagementPanel() {
                                 <TableCell>{t('name')}</TableCell>
                                 <TableCell>{t('surname')}</TableCell>
                                 <TableCell>{t('qrCode')}</TableCell>
-                                <TableCell>{t('role')}</TableCell>
+                                <TableCell>{t('roles')}</TableCell>
                                 <TableCell>{t('createdDate')}</TableCell>
                                 <TableCell align="right" sx={tableActionsTableCellSx}>{t('actions')}</TableCell>
                             </TableRow>
@@ -116,7 +117,7 @@ export function UsersManagementPanel() {
                                     <TableCell>{user.name}</TableCell>
                                     <TableCell>{user.surname}</TableCell>
                                     <TableCell>{user.qrCode}</TableCell>
-                                    <TableCell>{user.role}</TableCell>
+                                    <TableCell>{formatUserRolesLabel(user, t)}</TableCell>
                                     <TableCell>{formatCreatedDate(user.createdDate)}</TableCell>
                                     <TableCell align="right" sx={tableActionsTableCellSx}>
                                         <TableActionsRow>

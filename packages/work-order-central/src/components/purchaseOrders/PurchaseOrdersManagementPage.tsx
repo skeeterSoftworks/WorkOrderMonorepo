@@ -7,12 +7,19 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { PurchaseOrdersManagementPanel } from '../admin/PurchaseOrdersManagementPanel';
+import {
+    RoleAccessGuard,
+    canAccessCentralPurchaseOrders,
+    readLoggedUser,
+} from 'sf-common';
 
 export function PurchaseOrdersManagementPage() {
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const user = readLoggedUser();
 
     return (
+        <RoleAccessGuard user={user} allowed={canAccessCentralPurchaseOrders(user)}>
         <Container>
             <AppBar position="static">
                 <Toolbar>
@@ -26,5 +33,6 @@ export function PurchaseOrdersManagementPage() {
             </AppBar>
             <PurchaseOrdersManagementPanel />
         </Container>
+        </RoleAccessGuard>
     );
 }

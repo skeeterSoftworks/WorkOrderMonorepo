@@ -359,10 +359,23 @@ export interface ApplicationUserTO {
     surname?: string,
     qrCode?: string,
     accountStatus?: string,
-    role?: "ADMIN" | "OPERATOR",
+    /** @deprecated Use roles. Kept for backward compatibility when reading session data. */
+    role?: string,
+    roles?: ApplicationRole[],
     createdDate?: number[],
-    id?: string
+    id?: string | number,
 }
+
+export type ApplicationRole =
+    | 'ADMIN'
+    | 'OPERATOR'
+    | 'ADMIN_TECHNOLOGY'
+    | 'ADMIN_STOCK_INBOUND'
+    | 'ADMIN_STOCK_OUTBOUND'
+    | 'ADMIN_PRODUCTION'
+    | 'SALES_ADMIN'
+    | 'PURCHASING_ADMIN'
+    | 'PRODUCTION_PLANNING_ADMIN'
 
 export interface CustomerTO {
     id?: number,

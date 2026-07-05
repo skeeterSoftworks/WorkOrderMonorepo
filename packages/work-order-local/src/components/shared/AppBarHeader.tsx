@@ -3,6 +3,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import HomeIcon from '@mui/icons-material/Home';
 import cubeLogo from "../../res/CubeLogo.png"
 import type {LoggedUser} from '../../models/Common';
+import { formatUserRolesLabel, canUseMockQr, readLoggedUser } from 'sf-common';
 import type { WorkstationMachineConfigTO } from '../../models/ApiRequests';
 import englishFlag from "../../res/england-flag-icon.png"
 import serbianFlag from "../../res/serbia-flag-icon.png"
@@ -18,6 +19,7 @@ export function AppBarHeader() {
 
     const userDataString =  sessionStorage.getItem("userData");
     const userData: LoggedUser = userDataString && JSON.parse(userDataString)
+    const displayUser = userData ?? readLoggedUser();
 
     const { i18n, t } = useTranslation();
 
@@ -70,7 +72,7 @@ export function AppBarHeader() {
             <Toolbar variant="dense" sx={{ flexWrap: 'wrap', gap: 1 }}>
                 <img src={cubeLogo} style={{ height: "auto", width: "3%", marginRight: "5vh" }} alt="" />
                 <Typography variant="h6" color="inherit" component="div" sx={{ mr: 1 }}>
-                    {userData ? `${userData.role}: ${userData.name} ${userData.surname}` : t("notLoggedIn")}
+                    {displayUser ? `${formatUserRolesLabel(displayUser, t)}: ${displayUser.name} ${displayUser.surname}` : t("notLoggedIn")}
                 </Typography>
                 <Typography
                     variant="subtitle2"
@@ -102,7 +104,7 @@ export function AppBarHeader() {
                     <img src={englishFlag} style={{ height: '20px', width: "auto" }} alt="" />
                 </IconButton>
 
-                {userData && userData.role === "ADMIN" && (
+                {canUseMockQr(displayUser) && (
                     <IconButton
                         size="small"
                         color="inherit"
