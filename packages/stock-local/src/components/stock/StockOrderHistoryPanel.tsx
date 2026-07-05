@@ -167,8 +167,6 @@ export function StockOrderHistoryPanel() {
         setDraftFilters((prev) => ({ ...prev, [key]: value }));
     };
 
-    const materialsOnlySelected = appliedFilters.productType === 'MATERIAL';
-
     return (
         <Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -228,12 +226,6 @@ export function StockOrderHistoryPanel() {
                     {t('stockOrderHistoryFilterCount', { count: rows.length, total: totalElements })}
                 </Typography>
             </Box>
-
-            {materialsOnlySelected && (
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    {t('stockOrderHistoryMaterialsComingSoon')}
-                </Typography>
-            )}
 
             {loadError && (
                 <Typography color="error" sx={{ mb: 2 }}>
@@ -323,7 +315,7 @@ export function StockOrderHistoryPanel() {
                             <TableRow>
                                 <TableCell colSpan={8} align="center">
                                     <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
-                                        {materialsOnlySelected
+                                        {appliedFilters.productType === 'MATERIAL'
                                             ? t('stockOrderHistoryMaterialsComingSoon')
                                             : t('stockOrderHistoryNoRows')}
                                     </Typography>

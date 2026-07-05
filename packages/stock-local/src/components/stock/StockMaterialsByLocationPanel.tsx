@@ -28,7 +28,7 @@ function parseStockLocationsResponse(response: unknown): StockLocationTO[] {
     return Array.isArray(r?.data) ? r.data : [];
 }
 
-export function StockMaterialsByLocationPanel() {
+export function StockMaterialsByLocationPanel({ refreshKey = 0 }: { refreshKey?: number }) {
     const { t } = useTranslation();
     const [locations, setLocations] = useState<StockLocationTO[]>([]);
     const [loading, setLoading] = useState(true);
@@ -47,7 +47,7 @@ export function StockMaterialsByLocationPanel() {
                 setLoading(false);
             },
         );
-    }, []);
+    }, [refreshKey]);
 
     const catalogueOptions = useMemo(() => collectStockCatalogueIds(locations), [locations]);
 

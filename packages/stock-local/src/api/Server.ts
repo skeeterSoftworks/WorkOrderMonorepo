@@ -4,6 +4,7 @@ import type {
     MaterialOrderTO,
     ProductCatalogEntryTO,
     ProductStockIntakeTO,
+    ProductStockIntakeWorkOrderOptionTO,
     StockLocationTO,
     StockOrderHistorySearchParams,
 } from "sf-common/src/models/ApiRequests";
@@ -362,6 +363,19 @@ export class Server {
             });
     }
 
+    static fulfillMaterialAssignmentOrder(
+        body: { code?: string; operatorUserQrCode?: string },
+        onSuccess: Function,
+        onError?: Function,
+    ) {
+        axios.post(`${getServerUrl()}/stock/material-assignment-orders/fulfill`, body)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError && onError(error);
+            });
+    }
+
     static searchStockOrderHistory(
         params: StockOrderHistorySearchParams,
         onSuccess: Function,
@@ -386,6 +400,18 @@ export class Server {
 
     static getRecentProductStockIntakes(onSuccess: Function, onError?: Function, limit = 50) {
         axios.get<ProductStockIntakeTO[]>(`${getServerUrl()}/stock/product-intakes/recent`, { params: { limit } })
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError && onError(error);
+            });
+    }
+
+    static getProductStockIntakeWorkOrders(productId: number, onSuccess: Function, onError?: Function) {
+        axios.get<ProductStockIntakeWorkOrderOptionTO[]>(
+            `${getServerUrl()}/stock/product-intakes/work-orders`,
+            { params: { productId } },
+        )
             .then(response => onSuccess(response))
             .catch(error => {
                 console.log(error);

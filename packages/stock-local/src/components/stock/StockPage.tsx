@@ -7,6 +7,7 @@ import Typography from '@mui/material/Typography';
 import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { StockMaterialsByLocationPanel } from './StockMaterialsByLocationPanel';
+import { MaterialAssignmentFulfillPanel } from './MaterialAssignmentFulfillPanel';
 import { StockProductsAvailablePanel } from './StockProductsAvailablePanel';
 import { StockAssignmentFulfillPanel } from './StockAssignmentFulfillPanel';
 import { StockOrderHistoryPanel } from './StockOrderHistoryPanel';
@@ -23,6 +24,7 @@ export function StockPage() {
     const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState<StockTabId>(StockTabs.MATERIALS);
     const [productsRefreshKey, setProductsRefreshKey] = useState(0);
+    const [materialsRefreshKey, setMaterialsRefreshKey] = useState(0);
 
     return (
         <Box sx={{ py: 2 }}>
@@ -41,7 +43,12 @@ export function StockPage() {
                 </Tabs>
             </Box>
 
-            {activeTab === StockTabs.MATERIALS && <StockMaterialsByLocationPanel />}
+            {activeTab === StockTabs.MATERIALS && (
+                <>
+                    <MaterialAssignmentFulfillPanel onFulfilled={() => setMaterialsRefreshKey((k) => k + 1)} />
+                    <StockMaterialsByLocationPanel refreshKey={materialsRefreshKey} />
+                </>
+            )}
             {activeTab === StockTabs.PRODUCTS && (
                 <>
                     <StockAssignmentFulfillPanel onFulfilled={() => setProductsRefreshKey((k) => k + 1)} />

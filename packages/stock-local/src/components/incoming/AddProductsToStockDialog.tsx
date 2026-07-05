@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+    Alert,
     Button,
     Dialog,
     DialogActions,
@@ -19,9 +20,15 @@ import {
     type ProductCatalogEntryTO,
     type ProductStockIntakeTO,
     type ProductStockIntakeUnitOfMeasure,
+    type ProductStockIntakeWorkOrderOptionTO,
 } from 'sf-common/src/models/ApiRequests';
 import { Server } from '../../api/Server';
-import { productStockIntakeUnitLabel } from './productStockIntakeDisplay';
+import {
+    computeSurplusQuantityPreview,
+    formatProductStockIntakeQuantity,
+    productStockIntakeUnitLabel,
+    productStockIntakeWorkOrderLabel,
+} from './productStockIntakeDisplay';
 
 type Props = {
     open: boolean;
@@ -42,9 +49,17 @@ function parseQuantity(value: string): number | null {
     return parsed;
 }
 
+function parseWorkOrdersResponse(response: unknown): ProductStockIntakeWorkOrderOptionTO[] {
+    const r = response as { data?: ProductStockIntakeWorkOrderOptionTO[] };
+    return Array.isArray(r?.data) ? r.data : [];
+}
+
 export function AddProductsToStockDialog({ open, catalog, onClose, onSaved }: Props) {
     const { t } = useTranslation();
     const [productId, setProductId] = useState<number | ''>('');
+    const [workOrderId, setWorkOrderId] = useState<number | ''>('');
+    const [workOrders, setWorkOrders] = useState<ProductStockIntakeWorkOrderOptionTO[]>([]);
+    const [loadingWorkOrders, setLoadingWorkOrders] = useState(false);
     const [stickerNumber, setStickerNumber] = useState('');
     const [unitOfMeasure, setUnitOfMeasure] = useState<ProductStockIntakeUnitOfMeasure>('PIECES');
     const [quantity, setQuantity] = useState('');
@@ -55,18 +70,52 @@ export function AddProductsToStockDialog({ open, catalog, onClose, onSaved }: Pr
         [catalog],
     );
 
+    const selectedWorkOrder = useMemo(
+        () => workOrders.find((wo) => wo.id === workOrderId),
+        [workOrders, workOrderId],
+    );
+
     useEffect(() => {
         if (!open) {
             return;
         }
         setProductId('');
+        setWorkOrderId('');
+        setWorkOrders([]);
         setStickerNumber('');
         setUnitOfMeasure('PIECES');
         setQuantity('');
     }, [open]);
 
+    useEffect(() => {
+        if (!open || typeof productId !== 'number' || productId <= 0) {
+            setWorkOrders([]);
+            setWorkOrderId('');
+            return;
+        }
+        setLoadingWorkOrders(true);
+        setWorkOrderId('');
+        Server.getProductStockIntakeWorkOrders(
+            productId,
+            (response: unknown) => {
+                setWorkOrders(parseWorkOrdersResponse(response));
+                setLoadingWorkOrders(false);
+            },
+            () => {
+                setWorkOrders([]);
+                setLoadingWorkOrders(false);
+            },
+        );
+    }, [open, productId]);
+
     const quantityParsed = parseQuantity(quantity);
-    const canConfirm = typeof productId === 'number' && productId > 0 && quantityParsed != null;
+    const surplusPreview = computeSurplusQuantityPreview(selectedWorkOrder, quantityParsed ?? 0);
+    const canConfirm =
+        typeof productId === 'number'
+        && productId > 0
+        && typeof workOrderId === 'number'
+        && workOrderId > 0
+        && quantityParsed != null;
 
     const confirmAdd = () => {
         if (!canConfirm) {
@@ -76,6 +125,7 @@ export function AddProductsToStockDialog({ open, catalog, onClose, onSaved }: Pr
         Server.recordProductStockIntake(
             {
                 productId,
+                workOrderId,
                 stickerNumber: stickerNumber.trim() || undefined,
                 unitOfMeasure,
                 quantity: quantityParsed,
@@ -120,6 +170,31 @@ export function AddProductsToStockDialog({ open, catalog, onClose, onSaved }: Pr
                         )}
                     </Select>
                 </FormControl>
+                <FormControl fullWidth margin="normal" required disabled={typeof productId !== 'number' || loadingWorkOrders}>
+                    <InputLabel id="product-stock-work-order-label">{t('workOrder')}</InputLabel>
+                    <Select
+                        labelId="product-stock-work-order-label"
+                        label={t('workOrder')}
+                        value={workOrderId}
+                        onChange={(event) => setWorkOrderId(event.target.value as number | '')}
+                    >
+                        {loadingWorkOrders ? (
+                            <MenuItem disabled value="">
+                                {t('loading')}
+                            </MenuItem>
+                        ) : workOrders.length === 0 ? (
+                            <MenuItem disabled value="">
+                                {t('productStockIntakeNoWorkOrders')}
+                            </MenuItem>
+                        ) : (
+                            workOrders.map((wo) => (
+                                <MenuItem key={wo.id} value={wo.id ?? ''}>
+                                    {productStockIntakeWorkOrderLabel(wo, t)}
+                                </MenuItem>
+                            ))
+                        )}
+                    </Select>
+                </FormControl>
                 <TextField
                     fullWidth
                     margin="normal"
@@ -154,6 +229,18 @@ export function AddProductsToStockDialog({ open, catalog, onClose, onSaved }: Pr
                         onChange={(event) => setQuantity(event.target.value)}
                     />
                 </Stack>
+                {selectedWorkOrder?.internalStockDemand && (
+                    <Alert severity="info" variant="outlined" sx={{ mt: 1 }}>
+                        {t('productStockIntakeInternalWorkOrderHint')}
+                    </Alert>
+                )}
+                {canConfirm && surplusPreview > 0 && (
+                    <Alert severity="info" variant="outlined" sx={{ mt: 1 }}>
+                        {t('productStockIntakeSurplusPreview', {
+                            surplus: formatProductStockIntakeQuantity(surplusPreview, unitOfMeasure, t),
+                        })}
+                    </Alert>
+                )}
             </DialogContent>
             <DialogActions sx={{ px: 3, pb: 2 }}>
                 <Button onClick={onClose} disabled={submitting}>

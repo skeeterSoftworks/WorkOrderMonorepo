@@ -21,6 +21,7 @@ import { AddProductsToStockDialog } from './AddProductsToStockDialog';
 import {
     formatProductStockIntakeQuantity,
     formatReceivedAt,
+    formatSurplusQuantity,
     productStockIntakeUnitLabel,
 } from './productStockIntakeDisplay';
 
@@ -141,16 +142,18 @@ export function IncomingProductsReceptionPage() {
                                     <TableRow>
                                         <TableCell>{t('productReference')}</TableCell>
                                         <TableCell>{t('productName')}</TableCell>
+                                        <TableCell>{t('workOrder')}</TableCell>
                                         <TableCell>{t('stickerNumber')}</TableCell>
                                         <TableCell>{t('productMaterialUnitOfMeasure')}</TableCell>
                                         <TableCell>{t('quantity')}</TableCell>
+                                        <TableCell>{t('productStockIntakeSurplusQuantity')}</TableCell>
                                         <TableCell>{t('receivedAt')}</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
                                     {intakes.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={6} align="center">
+                                            <TableCell colSpan={8} align="center">
                                                 {t('incomingProductsNoIntakes')}
                                             </TableCell>
                                         </TableRow>
@@ -159,10 +162,14 @@ export function IncomingProductsReceptionPage() {
                                             <TableRow key={row.id ?? `${row.productId}-${row.receivedAt}`}>
                                                 <TableCell>{row.productReference || '—'}</TableCell>
                                                 <TableCell>{row.productName || '—'}</TableCell>
+                                                <TableCell>{row.workOrderId != null ? `#${row.workOrderId}` : '—'}</TableCell>
                                                 <TableCell>{row.stickerNumber || '—'}</TableCell>
                                                 <TableCell>{productStockIntakeUnitLabel(row.unitOfMeasure, t)}</TableCell>
                                                 <TableCell>
                                                     {formatProductStockIntakeQuantity(row.quantity, row.unitOfMeasure, t)}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {formatSurplusQuantity(row.surplusQuantity, row.unitOfMeasure, t)}
                                                 </TableCell>
                                                 <TableCell>{formatReceivedAt(row.receivedAt)}</TableCell>
                                             </TableRow>

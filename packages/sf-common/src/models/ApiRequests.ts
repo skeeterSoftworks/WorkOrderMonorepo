@@ -438,6 +438,8 @@ export interface WorkOrderTO {
     productOrderId?: number,
     /** Denormalized: parent purchase order (read from API for display). */
     purchaseOrderId?: number,
+    /** Denormalized: true when parent PO is internal stock demand. */
+    internalStockDemand?: boolean,
     productName?: string,
     productReference?: string,
     dueDate?: string,
@@ -655,11 +657,24 @@ export interface ProductCatalogEntryTO {
     name?: string,
 }
 
+export interface ProductStockIntakeWorkOrderOptionTO {
+    id?: number,
+    productReference?: string,
+    productName?: string,
+    requiredQuantity?: number,
+    producedGoodQuantity?: number,
+    receivedToStockQuantity?: number,
+    internalStockDemand?: boolean,
+    state?: WorkOrderState,
+}
+
 export interface ProductStockIntakeTO {
     id?: number,
     productId?: number,
     productReference?: string,
     productName?: string,
+    workOrderId?: number,
+    surplusQuantity?: number,
     stickerNumber?: string,
     unitOfMeasure?: ProductStockIntakeUnitOfMeasure,
     quantity?: number,
