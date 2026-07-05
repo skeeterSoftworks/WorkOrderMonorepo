@@ -664,6 +664,7 @@ export interface ProductStockIntakeWorkOrderOptionTO {
     requiredQuantity?: number,
     producedGoodQuantity?: number,
     receivedToStockQuantity?: number,
+    receivedOrderQuantity?: number,
     internalStockDemand?: boolean,
     state?: WorkOrderState,
 }

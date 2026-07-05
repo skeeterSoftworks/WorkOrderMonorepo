@@ -36,6 +36,44 @@ export function formatReceivedAt(value: string | undefined): string {
     return parsed.toLocaleString();
 }
 
+export function computeRemainingReceivableQuantity(
+    option: ProductStockIntakeWorkOrderOptionTO | undefined,
+): number {
+    if (!option) {
+        return 0;
+    }
+    const produced = option.producedGoodQuantity ?? 0;
+    const alreadyReceived = option.receivedToStockQuantity ?? 0;
+    return Math.max(0, produced - alreadyReceived);
+}
+
+/** i18n key when intake is blocked, or undefined when receiving is still possible. */
+export function productStockIntakeBlockedMessageKey(
+    option: ProductStockIntakeWorkOrderOptionTO | undefined,
+): 'productStockIntakeNothingProduced' | 'productStockIntakeNothingLeftToReceive' | undefined {
+    if (!option || computeRemainingReceivableQuantity(option) > 0) {
+        return undefined;
+    }
+    const produced = option.producedGoodQuantity ?? 0;
+    if (produced <= 0) {
+        return 'productStockIntakeNothingProduced';
+    }
+    return 'productStockIntakeNothingLeftToReceive';
+}
+
+export function computeOrderQuantityPreview(
+    option: ProductStockIntakeWorkOrderOptionTO | undefined,
+    quantity: number,
+): number {
+    if (!option || quantity <= 0) {
+        return 0;
+    }
+    const required = option.requiredQuantity ?? 0;
+    const alreadyOrderFilled = option.receivedOrderQuantity ?? 0;
+    const remainingOrderNeed = Math.max(0, required - alreadyOrderFilled);
+    return Math.min(quantity, remainingOrderNeed);
+}
+
 export function computeSurplusQuantityPreview(
     option: ProductStockIntakeWorkOrderOptionTO | undefined,
     quantity: number,
@@ -43,14 +81,7 @@ export function computeSurplusQuantityPreview(
     if (!option || quantity <= 0) {
         return 0;
     }
-    if (option.internalStockDemand) {
-        return quantity;
-    }
-    const alreadyReceived = option.receivedToStockQuantity ?? 0;
-    const required = option.requiredQuantity ?? 0;
-    const remainingOrderNeed = Math.max(0, required - alreadyReceived);
-    const orderPortion = Math.min(quantity, remainingOrderNeed);
-    return quantity - orderPortion;
+    return quantity - computeOrderQuantityPreview(option, quantity);
 }
 
 export function productStockIntakeWorkOrderLabel(

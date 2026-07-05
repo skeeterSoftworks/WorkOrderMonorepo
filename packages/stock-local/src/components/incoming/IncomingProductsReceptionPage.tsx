@@ -22,7 +22,6 @@ import {
     formatProductStockIntakeQuantity,
     formatReceivedAt,
     formatSurplusQuantity,
-    productStockIntakeUnitLabel,
 } from './productStockIntakeDisplay';
 
 function parseIntakesResponse(response: unknown): ProductStockIntakeTO[] {
@@ -144,7 +143,6 @@ export function IncomingProductsReceptionPage() {
                                         <TableCell>{t('productName')}</TableCell>
                                         <TableCell>{t('workOrder')}</TableCell>
                                         <TableCell>{t('stickerNumber')}</TableCell>
-                                        <TableCell>{t('productMaterialUnitOfMeasure')}</TableCell>
                                         <TableCell>{t('quantity')}</TableCell>
                                         <TableCell>{t('productStockIntakeSurplusQuantity')}</TableCell>
                                         <TableCell>{t('receivedAt')}</TableCell>
@@ -153,7 +151,7 @@ export function IncomingProductsReceptionPage() {
                                 <TableBody>
                                     {intakes.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={8} align="center">
+                                            <TableCell colSpan={7} align="center">
                                                 {t('incomingProductsNoIntakes')}
                                             </TableCell>
                                         </TableRow>
@@ -164,7 +162,6 @@ export function IncomingProductsReceptionPage() {
                                                 <TableCell>{row.productName || '—'}</TableCell>
                                                 <TableCell>{row.workOrderId != null ? `#${row.workOrderId}` : '—'}</TableCell>
                                                 <TableCell>{row.stickerNumber || '—'}</TableCell>
-                                                <TableCell>{productStockIntakeUnitLabel(row.unitOfMeasure, t)}</TableCell>
                                                 <TableCell>
                                                     {formatProductStockIntakeQuantity(row.quantity, row.unitOfMeasure, t)}
                                                 </TableCell>

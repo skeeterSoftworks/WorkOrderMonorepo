@@ -24,8 +24,11 @@ import {
 } from 'sf-common/src/models/ApiRequests';
 import { Server } from '../../api/Server';
 import {
+    computeOrderQuantityPreview,
+    computeRemainingReceivableQuantity,
     computeSurplusQuantityPreview,
     formatProductStockIntakeQuantity,
+    productStockIntakeBlockedMessageKey,
     productStockIntakeUnitLabel,
     productStockIntakeWorkOrderLabel,
 } from './productStockIntakeDisplay';
@@ -109,13 +112,18 @@ export function AddProductsToStockDialog({ open, catalog, onClose, onSaved }: Pr
     }, [open, productId]);
 
     const quantityParsed = parseQuantity(quantity);
+    const remainingReceivable = computeRemainingReceivableQuantity(selectedWorkOrder);
+    const receiveBlockedMessageKey = productStockIntakeBlockedMessageKey(selectedWorkOrder);
+    const orderPreview = computeOrderQuantityPreview(selectedWorkOrder, quantityParsed ?? 0);
     const surplusPreview = computeSurplusQuantityPreview(selectedWorkOrder, quantityParsed ?? 0);
+    const withinProductionLimit = quantityParsed != null && quantityParsed <= remainingReceivable;
     const canConfirm =
         typeof productId === 'number'
         && productId > 0
         && typeof workOrderId === 'number'
         && workOrderId > 0
-        && quantityParsed != null;
+        && quantityParsed != null
+        && withinProductionLimit;
 
     const confirmAdd = () => {
         if (!canConfirm) {
@@ -223,20 +231,31 @@ export function AddProductsToStockDialog({ open, catalog, onClose, onSaved }: Pr
                         margin="normal"
                         required
                         type="number"
-                        inputProps={{ min: 1, step: 1 }}
+                        inputProps={{ min: 1, step: 1, max: remainingReceivable > 0 ? remainingReceivable : undefined }}
                         label={t('quantity')}
                         value={quantity}
                         onChange={(event) => setQuantity(event.target.value)}
+                        helperText={
+                            selectedWorkOrder
+                                ? remainingReceivable > 0
+                                    ? t('productStockIntakeMaxReceivable', { max: remainingReceivable })
+                                    : receiveBlockedMessageKey
+                                        ? t(receiveBlockedMessageKey)
+                                        : undefined
+                                : undefined
+                        }
+                        error={quantityParsed != null && !withinProductionLimit}
                     />
                 </Stack>
-                {selectedWorkOrder?.internalStockDemand && (
-                    <Alert severity="info" variant="outlined" sx={{ mt: 1 }}>
-                        {t('productStockIntakeInternalWorkOrderHint')}
+                {receiveBlockedMessageKey && (
+                    <Alert severity="warning" variant="outlined" sx={{ mt: 1 }}>
+                        {t(receiveBlockedMessageKey)}
                     </Alert>
                 )}
-                {canConfirm && surplusPreview > 0 && (
+                {canConfirm && (
                     <Alert severity="info" variant="outlined" sx={{ mt: 1 }}>
-                        {t('productStockIntakeSurplusPreview', {
+                        {t('productStockIntakeSplitPreview', {
+                            order: formatProductStockIntakeQuantity(orderPreview, unitOfMeasure, t),
                             surplus: formatProductStockIntakeQuantity(surplusPreview, unitOfMeasure, t),
                         })}
                     </Alert>
