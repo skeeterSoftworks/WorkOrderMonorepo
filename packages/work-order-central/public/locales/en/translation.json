@@ -502,6 +502,7 @@
   "createWorkOrderFromThis": "Create work order from this purchase order",
   "notYet": "Not yet",
   "purchaseOrderHasWorkOrderCannotDelete": "Purchase order has associated work order, cannot be deleted!",
+  "purchaseOrderHasWorkOrderCannotEdit": "Purchase order has associated work order, cannot be edited!",
   "msg_errorDeletingPurchaseOrder": "Error deleting purchase order!",
   "scheduleMachineForWorkOrder": "Schedule machine for work order",
   "scheduleOnMachine": "Schedule on machine",

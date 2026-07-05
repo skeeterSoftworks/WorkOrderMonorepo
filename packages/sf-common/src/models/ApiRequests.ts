@@ -419,6 +419,8 @@ export interface PurchaseOrderTO {
     completedAt?: string,
     deliveredAt?: string,
     rejectedAt?: string,
+    /** True when at least one work order exists for a line on this purchase order. */
+    hasWorkOrder?: boolean,
 }
 
 /** Aggregated finished-good stock from work orders (external surplus + internal demand), per product. */

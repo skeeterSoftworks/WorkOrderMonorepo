@@ -502,6 +502,7 @@
   "createWorkOrderFromThis": "Kreiraj radni nalog na osnovu ove narudžbenice",
   "notYet": "Još ne",
   "purchaseOrderHasWorkOrderCannotDelete": "Narudžbenica ima kreiran radni nalog, nije moguće obrisati.",
+  "purchaseOrderHasWorkOrderCannotEdit": "Narudžbenica ima kreiran radni nalog, nije moguće izmeniti.",
   "msg_errorDeletingPurchaseOrder": "Došlo je do greške prilikom brisanja narudžbenice!",
   "scheduleMachineForWorkOrder": "Zakaži mašinu za radni nalog",
   "scheduleOnMachine": "Zakaži na mašini",

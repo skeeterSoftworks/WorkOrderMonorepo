@@ -274,7 +274,18 @@ export function PurchaseOrderFormDialog({
 
         const savePurchaseOrder = () => {
             if (editingId) {
-                Server.editPurchaseOrder(payload, onSuccess, (err: unknown) => toastServerError(err, t));
+                Server.editPurchaseOrder(
+                    payload,
+                    onSuccess,
+                    (err: unknown) => {
+                        const body = (err as { response?: { data?: unknown } })?.response?.data;
+                        if (body === 'PURCHASE_ORDER_HAS_WORK_ORDER') {
+                            toastActionError(t('purchaseOrderHasWorkOrderCannotEdit'));
+                            return;
+                        }
+                        toastServerError(err, t);
+                    },
+                );
             } else {
                 Server.addPurchaseOrder(payload, onSuccess, (err: unknown) => toastServerError(err, t));
             }

@@ -99,8 +99,15 @@ function isCreatedWithinPeriod(created: Date | null, from: string, to: string): 
 }
 
 function canRejectPurchaseOrder(order: LocalPurchaseOrder): boolean {
+    if (order.hasWorkOrder) {
+        return false;
+    }
     const status = order.orderStatus ?? 'CREATED';
     return status === 'CREATED' || status === 'CONFIRMED';
+}
+
+function purchaseOrderLockedByWorkOrder(order: LocalPurchaseOrder): boolean {
+    return order.hasWorkOrder === true;
 }
 
 function purchaseOrderStatusLabel(status: string | undefined, translate: TFunction): string {
@@ -532,7 +539,8 @@ export function PurchaseOrdersManagementPanel() {
                                                 sx={tableActionIconButtonSx.edit}
                                                 title={t('editPurchaseOrder')}
                                                 disabled={
-                                                    order.orderStatus === 'REJECTED'
+                                                    purchaseOrderLockedByWorkOrder(order)
+                                                    || order.orderStatus === 'REJECTED'
                                                     || order.orderStatus === 'CANCELLED'
                                                 }
                                             >
@@ -552,6 +560,7 @@ export function PurchaseOrdersManagementPanel() {
                                                 onClick={() => handleDeleteClick(order)}
                                                 sx={tableActionIconButtonSx.delete}
                                                 title={t('deletePurchaseOrder')}
+                                                disabled={purchaseOrderLockedByWorkOrder(order)}
                                             >
                                                 <DeleteIcon fontSize="small" />
                                             </IconButton>
