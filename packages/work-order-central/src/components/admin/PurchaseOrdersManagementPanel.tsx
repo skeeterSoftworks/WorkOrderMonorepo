@@ -59,6 +59,16 @@ const PURCHASE_ORDER_STATUSES = [
     'REJECTED',
 ] as const;
 
+function formatPricePerUnit(value: number | null | undefined): string {
+    if (value == null) {
+        return '—';
+    }
+    if (!Number.isFinite(value)) {
+        return '—';
+    }
+    return value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 4 });
+}
+
 function toIsoDateInput(d: Date): string {
     const pad = (n: number) => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -674,7 +684,7 @@ export function PurchaseOrdersManagementPanel() {
                                             <TableCell>{po.product?.name ?? '—'}</TableCell>
                                             <TableCell>{po.product?.reference ?? '—'}</TableCell>
                                             <TableCell align="right">{po.quantity ?? 0}</TableCell>
-                                            <TableCell align="right">{po.pricePerUnit ?? 0}</TableCell>
+                                            <TableCell align="right">{formatPricePerUnit(po.pricePerUnit)}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>

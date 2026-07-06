@@ -541,6 +541,7 @@
   "productOrders": "Narudžbine proizvoda",
   "quantity": "Količina",
   "pricePerUnit": "Cena po komadu",
+  "pricePerUnitInvalid": "Unesite ispravnu cenu po komadu za svaku stavku (zarez ili tačka za decimale).",
   "remove": "Ukloni",
   "productsManagement": "Upravljanje proizvodima",
   "productNoMeasuringFeaturesBadge": "Bez merih karakteristika",

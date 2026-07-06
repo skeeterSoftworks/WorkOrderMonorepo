@@ -541,6 +541,7 @@
   "productOrders": "Product orders",
   "quantity": "Quantity",
   "pricePerUnit": "Price per unit",
+  "pricePerUnitInvalid": "Enter a valid price per unit for every product line (comma or dot for decimals).",
   "remove": "Remove",
   "productsManagement": "Products management",
   "productNoMeasuringFeaturesBadge": "No measuring features",

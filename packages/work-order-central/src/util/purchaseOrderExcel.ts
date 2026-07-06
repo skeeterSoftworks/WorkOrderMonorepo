@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx-js-style';
+import { parseDecimalNumericInputToNumber } from 'sf-common';
 
 const TEMPLATE_ORDER_ROW = 1; // 0-based: row 2 in Excel (order header data)
 
@@ -82,8 +83,7 @@ function cell(sheet: XLSX.WorkSheet, r: number, c: number): string | number | un
 function safeNum(val: string | number | undefined): number {
   if (val === undefined || val === null || val === '') return 0;
   if (typeof val === 'number' && !Number.isNaN(val)) return val;
-  const n = Number(String(val).replace(/,/g, '.'));
-  return Number.isNaN(n) ? 0 : n;
+  return parseDecimalNumericInputToNumber(String(val)) ?? 0;
 }
 
 /**

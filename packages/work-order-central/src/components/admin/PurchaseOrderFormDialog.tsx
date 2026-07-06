@@ -14,7 +14,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useTranslation } from 'react-i18next';
 import type { PurchaseOrderTO, ProductOrderTO, CustomerTO, ProductTO } from 'sf-common/src/models/ApiRequests';
-import { Server } from 'sf-common';
+import { Server, filterDecimalNumericInput, parseDecimalNumericInputToNumber } from 'sf-common';
 import { toastActionError, toastActionSuccess, toastServerError } from '../../util/actionToast';
 import { isInternalStockOrdererCustomer } from '../../util/internalStockOrderer';
 import { tableActionIconButtonSx } from '../shared/tableActions';
@@ -242,14 +242,25 @@ export function PurchaseOrderFormDialog({
             toastActionError(t('purchaseOrderAtLeastOneProductOrderRequired'));
             return;
         }
-        const productOrderList: ProductOrderTO[] = productOrderRows
-            .filter((row) => row.productId != null && row.productId > 0)
-            .map((row) => ({
-                id: row.id,
-                product: { id: row.productId },
-                quantity: Number(row.quantity) || 0,
-                pricePerUnit: internalStockOrdererSelected ? 0 : Number(row.pricePerUnit) || 0,
-            }));
+        const rowsWithProduct = productOrderRows.filter((row) => row.productId != null && row.productId > 0);
+        if (!internalStockOrdererSelected) {
+            const missingPrice = rowsWithProduct.some((row) => {
+                const price = parseDecimalNumericInputToNumber(row.pricePerUnit);
+                return price === undefined || price < 0;
+            });
+            if (missingPrice) {
+                toastActionError(t('pricePerUnitInvalid'));
+                return;
+            }
+        }
+        const productOrderList: ProductOrderTO[] = rowsWithProduct.map((row) => ({
+            id: row.id,
+            product: { id: row.productId },
+            quantity: Number(row.quantity) || 0,
+            pricePerUnit: internalStockOrdererSelected
+                ? 0
+                : parseDecimalNumericInputToNumber(row.pricePerUnit) ?? 0,
+        }));
         const customerId = selectedCustomerId && Number(selectedCustomerId);
         const internalStockDemand = internalStockOrdererSelected;
         const omitDeliveryFieldsForPayload = isEditingPurchaseOrder ? false : internalStockOrdererSelected;
@@ -504,10 +515,16 @@ export function PurchaseOrderFormDialog({
                                 sx={{ width: 100 }}
                             />
                             <TextField
-                                type="number"
                                 label={t('pricePerUnit')}
                                 value={internalStockOrdererSelected ? '' : row.pricePerUnit}
-                                onChange={(e) => updateProductOrderRow(index, 'pricePerUnit', e.target.value)}
+                                onChange={(e) =>
+                                    updateProductOrderRow(
+                                        index,
+                                        'pricePerUnit',
+                                        filterDecimalNumericInput(e.target.value),
+                                    )
+                                }
+                                inputMode="decimal"
                                 size="small"
                                 sx={{ width: 120 }}
                                 disabled={internalStockOrdererSelected}
