@@ -1,4 +1,4 @@
-import {ProductTO} from "./ApiRequests";
+import type { ProductTO } from "./ApiRequests";
 
 export interface ProductVO {
     qr: string,
@@ -10,9 +10,12 @@ export type ProductType = "GENERIC" | "CALIBRATION" | "REJECT" | "CONTROL"
 export type SessionFilterMode = "Product" | "Operator" | "Date"
 
 
-export enum EClientMode {
-    Traceability, Dispenser
-}
+export const EClientMode = {
+    Traceability: "Traceability",
+    Dispenser: "Dispenser",
+} as const;
+
+export type EClientMode = (typeof EClientMode)[keyof typeof EClientMode];
 
 export interface LoggedUser {
     role?: string,

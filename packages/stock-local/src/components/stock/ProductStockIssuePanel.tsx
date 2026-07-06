@@ -8,6 +8,7 @@ import Paper from '@mui/material/Paper';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import toast from 'react-hot-toast';
 import type {
     ProductStockIssueRequestTO,
@@ -29,7 +30,7 @@ function readLoggedInUserQr(): string | undefined {
     }
 }
 
-function workOrderOptionLabel(option: ProductStockIssueWorkOrderOptionTO, t: (key: string) => string): string {
+function workOrderOptionLabel(option: ProductStockIssueWorkOrderOptionTO, t: TFunction): string {
     const wo = option.id != null ? `#${option.id}` : '—';
     const product = option.productReference || option.productName || '—';
     const remaining = option.remainingQuantity ?? 0;
