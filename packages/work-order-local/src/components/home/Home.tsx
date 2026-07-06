@@ -1,5 +1,5 @@
 import {useEffect, useState} from 'react';
-import {Link} from 'react-router-dom';
+import {Link, useNavigate} from 'react-router-dom';
 import {
     Box,
     Button,
@@ -26,6 +26,7 @@ import {
     canAccessWorkOrderLocalQualityInfo,
     readLoggedUser,
 } from 'sf-common';
+import {useTranslation} from "react-i18next";
 
 const START_DELAY_MS = 5000;
 
