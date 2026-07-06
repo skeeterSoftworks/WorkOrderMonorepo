@@ -15,7 +15,7 @@ export const APPLICATION_ROLES = [
 
 export type ApplicationRole = (typeof APPLICATION_ROLES)[number];
 
-export type UserWithRoles = Pick<LoggedUser, 'roles' | 'role'> | null | undefined;
+export type UserWithRoles = Pick<LoggedUser, 'roles' | 'role' | 'name' | 'surname'> | null | undefined;
 
 export function normalizeUserRoles(user: UserWithRoles): ApplicationRole[] {
     if (!user) {
