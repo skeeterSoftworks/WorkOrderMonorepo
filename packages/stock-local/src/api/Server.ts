@@ -5,6 +5,9 @@ import type {
     ProductCatalogEntryTO,
     ProductStockIntakeTO,
     ProductStockIntakeWorkOrderOptionTO,
+    ProductStockIssueRequestTO,
+    ProductStockIssueResultTO,
+    ProductStockIssueWorkOrderOptionTO,
     StockLocationTO,
     StockOrderHistorySearchParams,
 } from "sf-common/src/models/ApiRequests";
@@ -356,6 +359,28 @@ export class Server {
         onError?: Function,
     ) {
         axios.post(`${getServerUrl()}/stock/assignment-orders/fulfill`, body)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError && onError(error);
+            });
+    }
+
+    static listProductStockIssueWorkOrders(onSuccess: Function, onError?: Function) {
+        axios.get<ProductStockIssueWorkOrderOptionTO[]>(`${getServerUrl()}/stock/product-issues/work-orders`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError && onError(error);
+            });
+    }
+
+    static issueProductStock(
+        body: ProductStockIssueRequestTO,
+        onSuccess: Function,
+        onError?: Function,
+    ) {
+        axios.post<ProductStockIssueResultTO>(`${getServerUrl()}/stock/product-issues/issue`, body)
             .then(response => onSuccess(response))
             .catch(error => {
                 console.log(error);

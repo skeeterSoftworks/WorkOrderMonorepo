@@ -20,6 +20,7 @@ import { StockMaterialsByLocationPanel } from './StockMaterialsByLocationPanel';
 import { MaterialAssignmentFulfillPanel } from './MaterialAssignmentFulfillPanel';
 import { StockProductsAvailablePanel } from './StockProductsAvailablePanel';
 import { StockAssignmentFulfillPanel } from './StockAssignmentFulfillPanel';
+import { ProductStockIssuePanel } from './ProductStockIssuePanel';
 import { StockOrderHistoryPanel } from './StockOrderHistoryPanel';
 
 const StockTabs = {
@@ -90,7 +91,10 @@ export function StockPage() {
                 {activeTab === StockTabs.PRODUCTS && showProducts && (
                     <>
                         {canAccessStockLocalStockProductsIssue(user) && (
-                            <StockAssignmentFulfillPanel onFulfilled={() => setProductsRefreshKey((k) => k + 1)} />
+                            <>
+                                <ProductStockIssuePanel onIssued={() => setProductsRefreshKey((k) => k + 1)} />
+                                <StockAssignmentFulfillPanel onFulfilled={() => setProductsRefreshKey((k) => k + 1)} />
+                            </>
                         )}
                         {canAccessStockLocalStockProductsView(user) && (
                             <StockProductsAvailablePanel refreshKey={productsRefreshKey} />

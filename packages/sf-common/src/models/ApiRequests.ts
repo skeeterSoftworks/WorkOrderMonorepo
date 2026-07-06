@@ -698,5 +698,34 @@ export interface ProductStockIntakeTO {
     receivedAt?: string,
 }
 
+export interface ProductStockIssueWorkOrderOptionTO {
+    id?: number,
+    productReference?: string,
+    productName?: string,
+    purchaseOrderId?: number,
+    customerName?: string,
+    requiredQuantity?: number,
+    alreadyIssuedQuantity?: number,
+    remainingQuantity?: number,
+    availableStockQuantity?: number,
+}
+
+export interface ProductStockIssueRequestTO {
+    workOrderId?: number,
+    quantity?: number,
+    operatorUserQrCode?: string,
+}
+
+export interface ProductStockIssueResultTO {
+    id?: number,
+    workOrderId?: number,
+    productId?: number,
+    productReference?: string,
+    productName?: string,
+    quantity?: number,
+    issuedAt?: string,
+    issuedByFullName?: string,
+    issueReportPdfBase64?: string,
+}
 
 
