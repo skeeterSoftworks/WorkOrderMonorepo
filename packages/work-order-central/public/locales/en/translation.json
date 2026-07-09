@@ -428,6 +428,7 @@
   "sessionOverviewByRawContainer": "Sessions  by raw container",
   "sessionsOverview": "Sessions",
   "enterOrScanQR": "Please enter ID or scan QR:",
+  "enterUserQr": "Enter your user QR code:",
   "notLoggedIn": "You are not logged in",
   "loginButton": "Login",
   "Pregled sesija": "Sessions overview",

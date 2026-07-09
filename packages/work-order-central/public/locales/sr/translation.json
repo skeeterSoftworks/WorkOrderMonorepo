@@ -429,6 +429,7 @@
   "sessionOverviewByRawContainer": "Pregled sesija po kontejnerima odlivaka",
   "sessionsOverview": "Pregled sesija",
   "enterOrScanQR": "Unesite ID ili skenirajte QR:",
+  "enterUserQr": "Unesite svoj korisnički QR kod:",
   "notLoggedIn": "Niste ulogovani",
   "loginButton": "Uloguj se",
   "centralPanelAllStationsOverview": "Central panel: pregled svih stanica",

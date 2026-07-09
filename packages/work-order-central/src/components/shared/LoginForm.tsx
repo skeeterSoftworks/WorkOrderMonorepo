@@ -1,9 +1,7 @@
 import { Button, Paper } from '@mui/material'
-import { useEffect } from 'react';
 import { Form, Field } from 'react-final-form'
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { openErrorModal } from '../../actions/Actions';
-import type { QRData } from '../../models/ApiRequests';
 import { paddedContainer } from '../../styling/Custom';
 import { Server } from '../../api/Server';
 import { useTranslation } from 'react-i18next';
@@ -11,8 +9,6 @@ import {useNavigate} from "react-router-dom";
 
 
 export function LoginForm() {
-
-    const scannedQrData: QRData | undefined = useSelector((state: any) => state.applicationStore.QRData);
 
     const { t } = useTranslation()
 
@@ -44,21 +40,6 @@ export function LoginForm() {
         }
     }
 
-    useEffect(() => {
-
-        if (scannedQrData?.qrText) {
-
-            Server.fetchOperatorData(scannedQrData?.qrText, (response:any) => { handleGetUserByQRResponse(response) },
-                (error: any) => {
-                    dispatch(openErrorModal(t("msg_errorFetchingOperatorData") + " " + error))
-                })
-        }
-
-    }, [scannedQrData]);
-
-
-
-
     const submitLogin = (formValues: any) => {
 
         if (!formValues || !formValues.userID) {
@@ -82,8 +63,8 @@ export function LoginForm() {
                         <form onSubmit={handleSubmit} autoComplete="off">
                             <h2>Login</h2>
                             <div style={{ textAlign: "center", marginBottom: "5vh" }}>
-                                <label style={{ marginRight: "3vh" }}>{t("enterOrScanQR")}</label>
-                                <Field name="userID" component="input" autoComplete="off" />
+                                <label style={{ marginRight: "3vh" }}>{t("enterUserQr")}</label>
+                                <Field name="userID" component="input" autoComplete="off" autoFocus />
                             </div>
                             <Button variant="contained" type='submit'>{t("loginButton")}</Button>
                         </form>

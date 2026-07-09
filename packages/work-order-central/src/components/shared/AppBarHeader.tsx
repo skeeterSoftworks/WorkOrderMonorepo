@@ -3,13 +3,12 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import HomeIcon from '@mui/icons-material/Home';
 import cubeLogo from "../../res/CubeLogo.png"
 import type {LoggedUser} from '../../models/Common';
-import { formatUserRolesLabel, canUseMockQr, readLoggedUser } from 'sf-common';
+import { formatUserRolesLabel, readLoggedUser } from 'sf-common';
 import englishFlag from "../../res/england-flag-icon.png"
 import serbianFlag from "../../res/serbia-flag-icon.png"
 import { useTranslation } from 'react-i18next';
 import { useEffect } from 'react';
 import { useCookies } from 'react-cookie';
-import QrCodeIcon from '@mui/icons-material/QrCode';
 
 
 export function AppBarHeader() {
@@ -44,13 +43,6 @@ export function AppBarHeader() {
                 <Typography variant="h6" color="inherit" component="div">
                     {displayUser ? `${formatUserRolesLabel(displayUser, t)}: ${displayUser.name} ${displayUser.surname}` : t("notLoggedIn")}
                 </Typography>
-
-                {canUseMockQr(displayUser) &&
-                <IconButton size="small" aria-label="search" color="inherit" sx={{ marginLeft: 'auto' }}
-                    onClick={() => { window.location.href = "/mock-qr" }}>
-                    <QrCodeIcon />
-                </IconButton>
-                }
 
                 <IconButton size="small" aria-label="search" color="inherit" sx={{ marginLeft: 'auto' }}
                     onClick={() => { changeLanguageHandler("sr") }}>

@@ -8,6 +8,6 @@ export default defineConfig({
     port: 3000
   },
   define: {
-    'process.env': {}
+    'process.env.REACT_APP_API_PORT': JSON.stringify('10001'),
   }
 })

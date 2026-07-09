@@ -72,46 +72,6 @@ export class Server {
             });
     }
 
-    static getCustomQrCode(customQr: string, onSuccess: Function) {
-        axios.get(`${getServerUrl()}/qrcode/generate?qrData=${customQr}`)
-            .then(response => {
-                if (response?.data?.data != null) {
-                    onSuccess(response.data.data)
-                }
-            })
-            .catch(error => console.log(error));
-    }
-
-    static sendMockQr(mockQrCode: any, onError: Function) {
-
-        axios.post(`${getServerUrl()}/qrcode/simulate`, mockQrCode)
-            .then(() => {
-
-            })
-            .catch(error => {
-                console.error(error)
-                onError && onError(error)
-            });
-    }
-
-    static getProductBySicDataMatrix(sicDataMatrix: string, onSuccess: Function, onError: Function) {
-
-        axios.get(`${getServerUrl()}/qr_messages/find_by_sic_dmc?sicDmc=${sicDataMatrix}`)
-            .then(response => {
-
-                if (response?.data?.responseStatus === "ERROR") {
-                    onError(response?.data.errorMessage)
-                } else {
-                    onSuccess(response.data.data)
-
-                }
-            })
-            .catch(error => {
-                console.error(error)
-                onError(error)
-            });
-    }
-
     static getLicenseActivationInfo(onSuccess: (data: LicenseActivationInfoTO) => void, onError?: (e: unknown) => void) {
         axios.get<LicenseActivationInfoTO>(`${getServerUrl()}/license/activation-info`)
             .then(response => onSuccess(response.data))
