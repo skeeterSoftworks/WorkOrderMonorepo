@@ -476,6 +476,8 @@ export interface WorkOrderTO {
     stockAssignmentOrderCode?: string,
     /** Denormalized: stock assignment order fulfillment status. */
     stockAssignmentOrderStatus?: StockAssignmentOrderStatus,
+    /** Denormalized: true when at least one non-cancelled machine booking exists. */
+    machineAssigned?: boolean,
 }
 
 export type StockAssignmentOrderStatus = 'UNASSIGNED' | 'ASSIGNED'

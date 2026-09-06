@@ -456,6 +456,7 @@
   "toastWorkOrderAddedWithMaterialShortage": "Radni nalog je kreiran. Izveštaj o potrebnim materijalima je preuzet — neki materijali nisu u potpunosti dostupni na zalihama.",
   "reprintMaterialRequirementsReport": "Preuzmi izveštaj o potrebnim materijalima",
   "reprintWorkOrderReport": "Ponovo odštampaj PDF radnog naloga",
+  "workOrderAssignMachineHint": "Please assign a machine to this work order",
   "reprintStockAssignmentOrder": "Ponovo štampaj PDF naloga za dodelu robe",
   "workOrderMachineAssignmentNote": "Svaki radni nalog mora biti dodeljen odgovarajućoj mašini (narandžasta ikonica „Zakaži na mašini“) da bi proizvodnja počela.",
   "editWorkOrder": "Izmeni radni nalog",

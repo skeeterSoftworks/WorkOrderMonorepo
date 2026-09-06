@@ -22,7 +22,7 @@ import type {
 } from 'sf-common/src/models/ApiRequests';
 import { Server } from 'sf-common';
 import { toastActionSuccess, toastServerError } from '../../util/actionToast';
-import { downloadBase64Pdf, openBase64PdfInNewTab } from '../../util/downloadBase64Pdf';
+import { downloadBase64Pdf } from '../../util/downloadBase64Pdf';
 import {
     buildWorkOrderStockAssignmentsPayload,
     isWorkOrderStockAssignmentValid,
@@ -296,10 +296,6 @@ export function WorkOrderFormDialog({
         };
         const onSuccess = (response?: { data?: WorkOrderCreateResultTO }) => {
             const workOrderId = response?.data?.workOrder?.id;
-            const workOrderPdf = response?.data?.workOrderPdfBase64;
-            if (workOrderPdf) {
-                openBase64PdfInNewTab(workOrderPdf);
-            }
             const materialPdf = response?.data?.materialRequirementsPdfBase64;
             if (materialPdf) {
                 downloadBase64Pdf(

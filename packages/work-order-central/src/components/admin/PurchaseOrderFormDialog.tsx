@@ -118,6 +118,17 @@ export function PurchaseOrderFormDialog({
         return list;
     }, [customers, internalStockOrdererCustomerId]);
 
+    const selectedOrderer = useMemo(
+        () => ordererCustomersSorted.find((c) => c.id === selectedCustomerId) ?? null,
+        [ordererCustomersSorted, selectedCustomerId],
+    );
+
+    const ordererOptionLabel = (customer: CustomerTO): string => {
+        const name = customer.companyName?.trim() || '';
+        const buyerId = customer.buyerId?.trim();
+        return buyerId ? `${name} (${buyerId})` : name;
+    };
+
     const productsForSelectedCustomer = useMemo(() => {
         if (selectedCustomerId == null) return [];
         return products.filter((p) => (p.customerIds ?? []).includes(selectedCustomerId));
@@ -361,23 +372,30 @@ export function PurchaseOrderFormDialog({
             </DialogTitle>
             <DialogContent dividers>
                 <Box component="form" autoComplete="off" sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-                    <TextField
-                        select
-                        label={t('purchaseOrderOrderer')}
-                        value={selectedCustomerId ?? ''}
-                        onChange={(e) =>
-                            handleCustomerChange(e.target.value ? Number(e.target.value) : undefined)
-                        }
-                        size="small"
-                        fullWidth
-                    >
-                        <MenuItem value="">{t('none')}</MenuItem>
-                        {ordererCustomersSorted.map((c) => (
-                            <MenuItem key={c.id} value={c.id}>
-                                {c.companyName}
-                            </MenuItem>
-                        ))}
-                    </TextField>
+                    <Autocomplete
+                        options={ordererCustomersSorted}
+                        value={selectedOrderer}
+                        onChange={(_, value) => handleCustomerChange(value?.id)}
+                        getOptionLabel={ordererOptionLabel}
+                        isOptionEqualToValue={(a, b) => a.id === b.id}
+                        filterOptions={(options, state) => {
+                            const q = state.inputValue.trim().toLocaleLowerCase();
+                            if (!q) return options;
+                            return options.filter((c) => {
+                                const name = (c.companyName ?? '').toLocaleLowerCase();
+                                const buyerId = (c.buyerId ?? '').toLocaleLowerCase();
+                                return name.includes(q) || buyerId.includes(q);
+                            });
+                        }}
+                        renderOption={(props, option) => (
+                            <li {...props} key={option.id}>
+                                {ordererOptionLabel(option)}
+                            </li>
+                        )}
+                        renderInput={(params) => (
+                            <TextField {...params} label={t('purchaseOrderOrderer')} size="small" fullWidth />
+                        )}
+                    />
                     {internalStockOrdererCustomerId == null && (
                         <Typography variant="caption" color="warning.main">
                             {t('internalStockOrdererCustomerMissingHint')}

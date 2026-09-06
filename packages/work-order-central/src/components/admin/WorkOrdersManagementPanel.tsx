@@ -17,6 +17,7 @@ import Stack from '@mui/material/Stack';
 import CircularProgress from '@mui/material/CircularProgress';
 import LinearProgress from '@mui/material/LinearProgress';
 import Alert from '@mui/material/Alert';
+import Tooltip from '@mui/material/Tooltip';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
@@ -55,6 +56,12 @@ function workOrderLineDisplay(wo: WorkOrderTO): string {
 function isWorkOrderComplete(wo: WorkOrderTO): boolean {
     return wo.state === 'COMPLETE';
 }
+
+function isMachineAssigned(wo: WorkOrderTO): boolean {
+    return wo.machineAssigned === true;
+}
+
+const WORK_ORDER_UNASSIGNED_MACHINE_ROW_BACKGROUND = 'rgba(244, 67, 54, 0.14)';
 
 function workOrderStateDisplay(wo: WorkOrderTO, t: TFunction): string {
     if (wo.state === 'COMPLETE') return t('workOrderStateComplete');
@@ -276,7 +283,7 @@ export function WorkOrdersManagementPanel() {
     };
 
     const handleReprintWorkOrderPdf = (wo: WorkOrderTO) => {
-        if (wo.id == null) return;
+        if (wo.id == null || !isMachineAssigned(wo)) return;
         Server.getWorkOrderPdf(
             wo.id,
             (response: { data?: { workOrderPdfBase64?: string } }) => {
@@ -371,8 +378,18 @@ export function WorkOrdersManagementPanel() {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {workOrders.map((wo) => (
-                                <TableRow key={wo.id}>
+                            {workOrders.map((wo) => {
+                                const machineAssigned = isMachineAssigned(wo);
+                                return (
+                                    <Tooltip
+                                        key={wo.id}
+                                        title={t('workOrderAssignMachineHint')}
+                                        disableHoverListener={machineAssigned}
+                                        followCursor
+                                    >
+                                    <TableRow
+                                        sx={!machineAssigned ? { backgroundColor: WORK_ORDER_UNASSIGNED_MACHINE_ROW_BACKGROUND } : undefined}
+                                    >
                                     <TableCell>
                                         {purchaseOrderLabel(purchaseOrders.find((p) => p.id === wo.purchaseOrderId) || {id: wo.purchaseOrderId})}
                                     </TableCell>
@@ -429,14 +446,21 @@ export function WorkOrdersManagementPanel() {
                                                 <InfoOutlinedIcon fontSize="small" />
                                             </IconButton>
                                             {wo.id != null && (
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleReprintWorkOrderPdf(wo)}
-                                                    sx={tableActionIconButtonSx.view}
-                                                    title={t('reprintWorkOrderReport')}
-                                                >
-                                                    <DescriptionOutlinedIcon fontSize="small" />
-                                                </IconButton>
+                                                <span>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleReprintWorkOrderPdf(wo)}
+                                                        disabled={!machineAssigned}
+                                                        sx={tableActionIconButtonSx.view}
+                                                        title={
+                                                            machineAssigned
+                                                                ? t('reprintWorkOrderReport')
+                                                                : t('workOrderAssignMachineHint')
+                                                        }
+                                                    >
+                                                        <DescriptionOutlinedIcon fontSize="small" />
+                                                    </IconButton>
+                                                </span>
                                             )}
                                             {wo.id != null && (
                                                 <IconButton
@@ -499,8 +523,10 @@ export function WorkOrdersManagementPanel() {
                                             </IconButton>
                                         </TableActionsRow>
                                     </TableCell>
-                                </TableRow>
-                            ))}
+                                    </TableRow>
+                                    </Tooltip>
+                                );
+                            })}
                         </TableBody>
                     </Table>
                 </TableContainer>
@@ -646,7 +672,9 @@ export function WorkOrdersManagementPanel() {
                 purchaseOrders={purchaseOrders}
                 machines={machines}
                 onClose={closeScheduleModal}
-                onScheduled={() => {}}
+                onScheduled={() => {
+                    loadWorkOrders();
+                }}
             />
         </Box>
     );
