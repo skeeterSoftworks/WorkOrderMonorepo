@@ -18,6 +18,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import LinearProgress from '@mui/material/LinearProgress';
 import Alert from '@mui/material/Alert';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import LinkIcon from '@mui/icons-material/Link';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -41,7 +42,7 @@ import { toastActionSuccess, toastServerError } from '../../util/actionToast';
 import {bookingStatusTranslationKey, bookingTypeTranslationKey} from '../../util/bookingI18n';
 import { WorkOrderFormDialog } from './WorkOrderFormDialog';
 import { WorkOrderScheduleDialog } from './WorkOrderScheduleDialog';
-import { downloadBase64Pdf } from '../../util/downloadBase64Pdf';
+import { downloadBase64Pdf, openBase64PdfInNewTab } from '../../util/downloadBase64Pdf';
 
 function workOrderLineDisplay(wo: WorkOrderTO): string {
     const ref = wo.productReference?.trim();
@@ -274,6 +275,20 @@ export function WorkOrdersManagementPanel() {
         );
     };
 
+    const handleReprintWorkOrderPdf = (wo: WorkOrderTO) => {
+        if (wo.id == null) return;
+        Server.getWorkOrderPdf(
+            wo.id,
+            (response: { data?: { workOrderPdfBase64?: string } }) => {
+                const pdf = response?.data?.workOrderPdfBase64;
+                if (pdf) {
+                    openBase64PdfInNewTab(pdf);
+                }
+            },
+            (err: unknown) => toastServerError(err, t),
+        );
+    };
+
     const handleReprintStockAssignmentOrder = (wo: WorkOrderTO) => {
         if (wo.id == null || !wo.stockAssignmentOrderCode) return;
         Server.getStockAssignmentOrderPdf(
@@ -413,6 +428,16 @@ export function WorkOrdersManagementPanel() {
                                             >
                                                 <InfoOutlinedIcon fontSize="small" />
                                             </IconButton>
+                                            {wo.id != null && (
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => handleReprintWorkOrderPdf(wo)}
+                                                    sx={tableActionIconButtonSx.view}
+                                                    title={t('reprintWorkOrderReport')}
+                                                >
+                                                    <DescriptionOutlinedIcon fontSize="small" />
+                                                </IconButton>
+                                            )}
                                             {wo.id != null && (
                                                 <IconButton
                                                     size="small"

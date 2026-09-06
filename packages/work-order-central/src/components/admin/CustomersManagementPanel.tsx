@@ -129,6 +129,7 @@ export function CustomersManagementPanel() {
                         <TableHead>
                             <TableRow>
                                 <TableCell>{t('companyName')}</TableCell>
+                                <TableCell>{t('customerBuyerId')}</TableCell>
                                 <TableCell>{t('addressData')}</TableCell>
                                 <TableCell>{t('description')}</TableCell>
                                 <TableCell align="right" sx={tableActionsTableCellSx}>{t('actions')}</TableCell>
@@ -150,6 +151,7 @@ export function CustomersManagementPanel() {
                                                 )}
                                             </Stack>
                                         </TableCell>
+                                        <TableCell>{customer.buyerId || '—'}</TableCell>
                                         <TableCell>{customer.addressData}</TableCell>
                                         <TableCell>{customer.description}</TableCell>
                                         <TableCell align="right" sx={tableActionsTableCellSx}>

@@ -22,7 +22,7 @@ import type {
 } from 'sf-common/src/models/ApiRequests';
 import { Server } from 'sf-common';
 import { toastActionSuccess, toastServerError } from '../../util/actionToast';
-import { downloadBase64Pdf } from '../../util/downloadBase64Pdf';
+import { downloadBase64Pdf, openBase64PdfInNewTab } from '../../util/downloadBase64Pdf';
 import {
     buildWorkOrderStockAssignmentsPayload,
     isWorkOrderStockAssignmentValid,
@@ -295,9 +295,13 @@ export function WorkOrderFormDialog({
             createdByUserQrCode: readLoggedInUserQr(),
         };
         const onSuccess = (response?: { data?: WorkOrderCreateResultTO }) => {
+            const workOrderId = response?.data?.workOrder?.id;
+            const workOrderPdf = response?.data?.workOrderPdfBase64;
+            if (workOrderPdf) {
+                openBase64PdfInNewTab(workOrderPdf);
+            }
             const materialPdf = response?.data?.materialRequirementsPdfBase64;
             if (materialPdf) {
-                const workOrderId = response?.data?.workOrder?.id;
                 downloadBase64Pdf(
                     materialPdf,
                     `material-requirements-${workOrderId ?? 'new'}.pdf`,
@@ -305,7 +309,6 @@ export function WorkOrderFormDialog({
             }
             const pdf = response?.data?.stockAssignmentOrderPdfBase64;
             if (pdf) {
-                const workOrderId = response?.data?.workOrder?.id;
                 downloadBase64Pdf(
                     pdf,
                     `stock-assignment-order-${workOrderId ?? 'new'}.pdf`,

@@ -202,6 +202,15 @@ export class Server {
             });
     }
 
+    static getWorkOrderPdf(workOrderId: number, onSuccess: Function, onError: Function) {
+        axios.get(`${getServerUrl()}/workorders/${workOrderId}/pdf`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
     static previewWorkOrderMaterialRequirements(productId: number, quantity: number, onSuccess: Function, onError: Function) {
         axios.get(`${getServerUrl()}/workorders/material-requirements/preview`, {
             params: { productId, quantity },

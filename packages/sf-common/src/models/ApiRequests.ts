@@ -381,6 +381,7 @@ export type ApplicationRole =
 export interface CustomerTO {
     id?: number,
     companyName?: string,
+    buyerId?: string,
     addressData?: string,
     description?: string
 }
@@ -569,6 +570,7 @@ export interface WorkOrderCreateResultTO {
     workOrder?: WorkOrderTO,
     stockAssignmentOrderPdfBase64?: string,
     materialRequirementsPdfBase64?: string,
+    workOrderPdfBase64?: string,
 }
 
 export interface ProductProfileTO {

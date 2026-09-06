@@ -22,12 +22,14 @@ type Props = {
 export function CustomerFormDialog({ open, customer, onClose, onSaved }: Props) {
     const { t } = useTranslation();
     const [companyName, setCompanyName] = useState('');
+    const [buyerId, setBuyerId] = useState('');
     const [addressData, setAddressData] = useState('');
     const [description, setDescription] = useState('');
 
     useEffect(() => {
         if (!open) return;
         setCompanyName(customer?.companyName ?? '');
+        setBuyerId(customer?.buyerId ?? '');
         setAddressData(customer?.addressData ?? '');
         setDescription(customer?.description ?? '');
     }, [open, customer?.id]);
@@ -36,6 +38,7 @@ export function CustomerFormDialog({ open, customer, onClose, onSaved }: Props) 
         const payload: CustomerTO = {
             id: customer?.id,
             companyName: companyName || undefined,
+            buyerId: buyerId.trim() || undefined,
             addressData: addressData || undefined,
             description: description || undefined,
         };
@@ -62,6 +65,14 @@ export function CustomerFormDialog({ open, customer, onClose, onSaved }: Props) 
             <DialogContent dividers>
                 <Box component="form" autoComplete="off" sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
                     <TextField label={t('companyName')} value={companyName} onChange={(e) => setCompanyName(e.target.value)} size="small" fullWidth />
+                    <TextField
+                        label={t('customerBuyerId')}
+                        value={buyerId}
+                        onChange={(e) => setBuyerId(e.target.value)}
+                        size="small"
+                        fullWidth
+                        helperText={t('customerBuyerIdHint')}
+                    />
                     <TextField label={t('addressData')} value={addressData} onChange={(e) => setAddressData(e.target.value)} size="small" fullWidth multiline minRows={2} />
                     <TextField label={t('description')} value={description} onChange={(e) => setDescription(e.target.value)} size="small" fullWidth multiline minRows={2} />
                     <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
