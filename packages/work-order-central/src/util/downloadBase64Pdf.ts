@@ -14,10 +14,14 @@ export function downloadBase64Pdf(base64: string, filename: string): void {
 export function openBase64PdfInNewTab(base64: string): void {
     const blob = b64toBlob(base64, 'application/pdf');
     const url = URL.createObjectURL(blob);
-    const opened = window.open(url, '_blank', 'noopener,noreferrer');
-    if (!opened) {
-        // Popup blocked — fall back to download-style navigation.
-        window.location.href = url;
-    }
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.target = '_blank';
+    anchor.rel = 'noopener noreferrer';
+    // Avoid fallback navigation of the current tab: window.open(..., 'noopener') often returns null
+    // even when the new tab opened successfully.
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
     window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
