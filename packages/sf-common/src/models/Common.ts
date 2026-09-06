@@ -22,7 +22,8 @@ export interface LoggedUser {
     roles?: string[],
     name?: string,
     surname?: string,
-    qrCode?: string
+    qrCode?: string,
+    email?: string,
 }
 
 export interface UpdateProductRequest {

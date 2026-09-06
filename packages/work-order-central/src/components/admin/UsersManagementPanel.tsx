@@ -106,6 +106,7 @@ export function UsersManagementPanel() {
                                 <TableCell>{t('name')}</TableCell>
                                 <TableCell>{t('surname')}</TableCell>
                                 <TableCell>{t('qrCode')}</TableCell>
+                                <TableCell>{t('email')}</TableCell>
                                 <TableCell>{t('roles')}</TableCell>
                                 <TableCell>{t('createdDate')}</TableCell>
                                 <TableCell align="right" sx={tableActionsTableCellSx}>{t('actions')}</TableCell>
@@ -117,6 +118,7 @@ export function UsersManagementPanel() {
                                     <TableCell>{user.name}</TableCell>
                                     <TableCell>{user.surname}</TableCell>
                                     <TableCell>{user.qrCode}</TableCell>
+                                    <TableCell>{user.email || '—'}</TableCell>
                                     <TableCell>{formatUserRolesLabel(user, t)}</TableCell>
                                     <TableCell>{formatCreatedDate(user.createdDate)}</TableCell>
                                     <TableCell align="right" sx={tableActionsTableCellSx}>

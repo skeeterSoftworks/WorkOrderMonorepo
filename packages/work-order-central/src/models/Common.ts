@@ -8,7 +8,8 @@ export interface LoggedUser {
     role?: string,
     name?: string,
     surname?: string,
-    qrCode?: string
+    qrCode?: string,
+    email?: string,
 }
 
 export interface StationHeartbeat extends StationDTO{

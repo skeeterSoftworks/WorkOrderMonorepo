@@ -358,6 +358,7 @@ export interface ApplicationUserTO {
     name?: string,
     surname?: string,
     qrCode?: string,
+    email?: string,
     accountStatus?: string,
     /** @deprecated Use roles. Kept for backward compatibility when reading session data. */
     role?: string,

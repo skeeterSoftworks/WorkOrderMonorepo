@@ -89,6 +89,7 @@ export interface ApplicationUserTO {
     name?: string,
     surname?: string,
     qrCode?: string,
+    email?: string,
     accountStatus?: string,
     role?: "ADMIN" | "OPERATOR",
     createdDate?: number[],

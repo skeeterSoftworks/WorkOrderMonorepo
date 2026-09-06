@@ -16,6 +16,7 @@ import Tooltip from '@mui/material/Tooltip';
 import CircularProgress from '@mui/material/CircularProgress';
 import AddIcon from '@mui/icons-material/Add';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
+import MailOutlineIcon from '@mui/icons-material/MailOutline';
 import PublishedWithChangesOutlinedIcon from '@mui/icons-material/PublishedWithChangesOutlined';
 import BlockIcon from '@mui/icons-material/Block';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
@@ -45,6 +46,7 @@ import { MaterialOrderCreateDialog } from './MaterialOrderCreateDialog';
 import { MaterialOrderEmailPickerDialog } from './MaterialOrderEmailPickerDialog';
 import { MaterialOrderSearchFilters, type MaterialOrderSearchForm } from './MaterialOrderSearchFilters';
 import { MaterialOrderStatusDialog } from './MaterialOrderStatusDialog';
+import { MaterialProviderQueryDialog } from './MaterialProviderQueryDialog';
 
 const CERTIFICATE_ACCEPT = 'application/pdf,image/*';
 const DEFAULT_ROWS_PER_PAGE = 25;
@@ -201,6 +203,7 @@ export function PurchasingPage() {
     const [emailPickOpen, setEmailPickOpen] = useState(false);
     const [emailPickOrder, setEmailPickOrder] = useState<MaterialOrderTO | null>(null);
     const [emailPickProvider, setEmailPickProvider] = useState<MaterialProviderTO | undefined>(undefined);
+    const [providerQueryOpen, setProviderQueryOpen] = useState(false);
     const [appliedFilters, setAppliedFilters] = useState<MaterialOrderSearchForm>(defaultSearchForm);
     const [tableQuery, setTableQuery] = useState<MaterialOrderTableQuery>(defaultTableQuery);
     const [orderToReject, setOrderToReject] = useState<MaterialOrderTO | null>(null);
@@ -495,11 +498,20 @@ export function PurchasingPage() {
     return (
         <RoleAccessGuard user={user} allowed={canAccessCentralPurchasing(user)}>
         <Box sx={{ p: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, gap: 1, flexWrap: 'wrap' }}>
                 <Typography variant="h5">{t('purchasing')}</Typography>
-                <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>
-                    {t('createMaterialOrder')}
-                </Button>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    <Button
+                        variant="outlined"
+                        startIcon={<MailOutlineIcon />}
+                        onClick={() => setProviderQueryOpen(true)}
+                    >
+                        {t('sendMaterialQueryToNewProvider')}
+                    </Button>
+                    <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>
+                        {t('createMaterialOrder')}
+                    </Button>
+                </Box>
             </Box>
 
             <Paper sx={{ p: 2 }}>
@@ -700,6 +712,12 @@ export function PurchasingPage() {
                 materials={materials}
                 onClose={closeCreateDialog}
                 onCreated={handleCreateSuccess}
+            />
+
+            <MaterialProviderQueryDialog
+                open={providerQueryOpen}
+                materials={materials}
+                onClose={() => setProviderQueryOpen(false)}
             />
 
             <MaterialOrderEmailPickerDialog

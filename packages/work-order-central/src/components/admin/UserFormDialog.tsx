@@ -34,6 +34,7 @@ export function UserFormDialog({ open, user, onClose, onSaved }: Props) {
     const [name, setName] = useState('');
     const [surname, setSurname] = useState('');
     const [qrCode, setQrCode] = useState('');
+    const [email, setEmail] = useState('');
     const [roles, setRoles] = useState<ApplicationRole[]>(['OPERATOR']);
 
     useEffect(() => {
@@ -41,6 +42,7 @@ export function UserFormDialog({ open, user, onClose, onSaved }: Props) {
         setName(user?.name ?? '');
         setSurname(user?.surname ?? '');
         setQrCode(user?.qrCode ?? '');
+        setEmail(user?.email ?? '');
         const existing = normalizeUserRoles(user ?? undefined);
         setRoles(existing.length > 0 ? existing : ['OPERATOR']);
     }, [open, user?.id]);
@@ -55,7 +57,14 @@ export function UserFormDialog({ open, user, onClose, onSaved }: Props) {
         if (roles.length === 0) {
             return;
         }
-        const payload: ApplicationUserTO = { id: user?.id, name, surname, qrCode, roles };
+        const payload: ApplicationUserTO = {
+            id: user?.id,
+            name,
+            surname,
+            qrCode,
+            email: email.trim() || undefined,
+            roles,
+        };
         const onSuccess = () => {
             onSaved();
             onClose();
@@ -81,6 +90,14 @@ export function UserFormDialog({ open, user, onClose, onSaved }: Props) {
                     <TextField label={t('name')} value={name} onChange={(e) => setName(e.target.value)} size="small" fullWidth />
                     <TextField label={t('surname')} value={surname} onChange={(e) => setSurname(e.target.value)} size="small" fullWidth />
                     <TextField label={t('qrCode')} value={qrCode} onChange={(e) => setQrCode(e.target.value)} size="small" fullWidth />
+                    <TextField
+                        label={t('email')}
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        size="small"
+                        fullWidth
+                    />
 
                     <Typography variant="subtitle2">{t('roles')}</Typography>
                     <Typography variant="body2" color="text.secondary">
