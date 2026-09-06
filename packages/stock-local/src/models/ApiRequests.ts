@@ -243,8 +243,10 @@ export type ProductionWorkOrderState = 'INCOMPLETE' | 'COMPLETE';
 
 export interface ProductionWorkOrderTO {
     id?: number,
+    code?: string,
     productOrderId?: number,
     purchaseOrderId?: number,
+    purchaseOrderCode?: string,
     productName?: string,
     productReference?: string,
     requiredQuantity?: number,

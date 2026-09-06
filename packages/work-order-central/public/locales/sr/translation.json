@@ -582,6 +582,7 @@
   "materialName": "Materijal",
   "materialCode": "Šifra materijala",
   "materialOrderCode": "Br. narudžbine",
+  "orderNumber": "Br. naloga",
   "materialDimensionsHint": "Unesite bar jedno od polja: prečnik, težina, dužina ili širina.",
   "materialDimensionsRequired": "Obavezno je bar jedno od polja: prečnik, težina, dužina ili širina.",
   "materialProviderName": "Dobavljač",

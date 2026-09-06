@@ -89,7 +89,9 @@ export function productStockIntakeWorkOrderLabel(
     t: (key: string, opts?: Record<string, unknown>) => string,
 ): string {
     const ref = option.productReference?.trim() || option.productName?.trim() || `#${option.id ?? '?'}`;
+    const code = option.code?.trim() || (option.id != null ? `#${option.id}` : '?');
     const base = t('productStockIntakeWorkOrderOptionLabel', {
+        code,
         id: option.id ?? '?',
         ref,
         produced: option.producedGoodQuantity ?? 0,

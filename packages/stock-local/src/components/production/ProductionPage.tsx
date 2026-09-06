@@ -34,7 +34,8 @@ function workOrderLabel(wo: ProductionWorkOrderTO, t: TFunction): string {
     const ref = wo.productReference?.trim();
     const name = wo.productName?.trim();
     const core = [ref, name].filter(Boolean).join(' · ');
-    const base = wo.id != null ? `#${wo.id}${core ? ` — ${core}` : ''}` : core || '—';
+    const orderRef = wo.code?.trim() || (wo.id != null ? `#${wo.id}` : '');
+    const base = orderRef ? `${orderRef}${core ? ` — ${core}` : ''}` : core || '—';
     return isWorkOrderClosedForProduction(wo) ? `${base} (${t('workOrderStateComplete')})` : base;
 }
 

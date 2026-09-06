@@ -80,7 +80,8 @@ function purchaseOrderLabel(po: PurchaseOrderTO): string {
         lines[0]?.product?.name ||
         '';
     const cust = po.customer?.companyName || '';
-    const core = cat || `#${po.id}`;
+    const code = po.code?.trim();
+    const core = code || cat || (po.id != null ? `#${po.id}` : '—');
     return cust ? `${core} (${cust})` : core;
 }
 

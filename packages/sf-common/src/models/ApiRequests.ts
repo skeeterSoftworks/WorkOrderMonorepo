@@ -100,7 +100,7 @@ export interface MaterialOrderLineTO {
 
 export interface MaterialOrderTO {
     id?: number,
-    /** Server-generated order number (NM + MMddyyyyHHmm). */
+    /** Server-generated order number (NM + ddMMyyyyHHmm). */
     code?: string,
     /** Sum of line quantities. */
     quantity?: number,
@@ -417,6 +417,8 @@ export interface ProductOrderTO {
 
 export interface PurchaseOrderTO {
     id?: number,
+    /** Server-generated order number (NK + ddMMyyyyHHmm). */
+    code?: string,
     customerId?: number,
     customer?: CustomerTO,
     productOrderList?: ProductOrderTO[],
@@ -451,10 +453,14 @@ export type WorkOrderState = 'INCOMPLETE' | 'COMPLETE'
 
 export interface WorkOrderTO {
     id?: number,
+    /** Server-generated order number (RN + ddMMyyyyHHmm). */
+    code?: string,
     /** Purchase order line (product line) this work order belongs to. */
     productOrderId?: number,
     /** Denormalized: parent purchase order (read from API for display). */
     purchaseOrderId?: number,
+    /** Denormalized: parent purchase order code. */
+    purchaseOrderCode?: string,
     /** Denormalized: true when parent PO is internal stock demand. */
     internalStockDemand?: boolean,
     productName?: string,
@@ -679,6 +685,7 @@ export interface ProductCatalogEntryTO {
 
 export interface ProductStockIntakeWorkOrderOptionTO {
     id?: number,
+    code?: string,
     productReference?: string,
     productName?: string,
     requiredQuantity?: number,
@@ -705,6 +712,7 @@ export interface ProductStockIntakeTO {
 
 export interface ProductStockIssueWorkOrderOptionTO {
     id?: number,
+    code?: string,
     productReference?: string,
     productName?: string,
     purchaseOrderId?: number,

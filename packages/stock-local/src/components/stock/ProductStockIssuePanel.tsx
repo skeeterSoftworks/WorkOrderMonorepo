@@ -31,7 +31,7 @@ function readLoggedInUserQr(): string | undefined {
 }
 
 function workOrderOptionLabel(option: ProductStockIssueWorkOrderOptionTO, t: TFunction): string {
-    const wo = option.id != null ? `#${option.id}` : '—';
+    const wo = option.code?.trim() || (option.id != null ? `#${option.id}` : '—');
     const product = option.productReference || option.productName || '—';
     const remaining = option.remainingQuantity ?? 0;
     return t('productStockIssueWorkOrderOptionLabel', {

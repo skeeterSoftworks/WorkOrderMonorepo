@@ -155,7 +155,10 @@ function machineHasProductionInRange(
 }
 
 function workOrderLabel(wo: WorkOrderTO): string {
-    return wo.productReference?.trim() || wo.productName?.trim() || `#${wo.id ?? '?'}`;
+    const code = wo.code?.trim();
+    const product = wo.productReference?.trim() || wo.productName?.trim();
+    if (code && product) return `${code} — ${product}`;
+    return code || product || (wo.id != null ? `#${wo.id}` : '—');
 }
 
 function machineLabel(m: MachineTO): string {
@@ -164,7 +167,8 @@ function machineLabel(m: MachineTO): string {
 
 function productOrderLabel(po: PurchaseOrderTO, line: ProductOrderTO): string {
     const productLabel = line.product?.reference?.trim() || line.product?.name?.trim() || `#${line.id ?? '?'}`;
-    return `PO #${po.id ?? '?'} - ${productLabel}`;
+    const orderRef = po.code?.trim() || (po.id != null ? `PO #${po.id}` : 'PO');
+    return `${orderRef} - ${productLabel}`;
 }
 
 function staleMaterialOrderLabel(o: MaterialOrderTO): string {

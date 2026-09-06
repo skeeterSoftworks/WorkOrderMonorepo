@@ -582,6 +582,7 @@
   "materialName": "Material name",
   "materialCode": "Material code",
   "materialOrderCode": "Order no.",
+  "orderNumber": "Order no.",
   "materialDimensionsHint": "Enter at least one of diameter, weight, length, or width.",
   "materialDimensionsRequired": "At least one of diameter, weight, length, or width is required.",
   "materialProviderName": "Provider name",

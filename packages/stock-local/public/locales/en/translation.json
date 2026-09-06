@@ -638,7 +638,7 @@
   "toastProductStockIntakeRecorded": "Products added to stock.",
   "toastProductStockIntakeError": "Could not add products to stock.",
   "productStockIntakeNoWorkOrders": "No work orders for this product.",
-  "productStockIntakeWorkOrderOptionLabel": "WO #{{id}} · {{ref}} · {{received}}/{{required}} in stock · {{produced}} produced",
+  "productStockIntakeWorkOrderOptionLabel": "WO {{code}} · {{ref}} · {{received}}/{{required}} in stock · {{produced}} produced",
   "productStockIntakeInternalWorkOrder": "Internal stock",
   "productStockIntakeInternalWorkOrderHint": "This is an internal stock work order. The full received quantity will be registered as surplus.",
   "productStockIntakeSplitPreview": "{{order}} for work order · {{surplus}} as surplus",

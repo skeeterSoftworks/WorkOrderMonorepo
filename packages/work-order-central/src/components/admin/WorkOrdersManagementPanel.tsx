@@ -343,7 +343,8 @@ export function WorkOrdersManagementPanel() {
             lines[0]?.product?.name ||
             '';
         const cust = po.customer?.companyName || '';
-        const core = cat || `#${po.id}`;
+        const orderCode = po.code?.trim();
+        const core = orderCode || cat || (po.id != null ? `#${po.id}` : '—');
         return cust ? `${core} (${cust})` : core;
     };
 
@@ -365,6 +366,7 @@ export function WorkOrdersManagementPanel() {
                     <Table size="small">
                         <TableHead>
                             <TableRow>
+                                <TableCell>{t('orderNumber')}</TableCell>
                                 <TableCell>{t('purchaseOrder')}</TableCell>
                                 <TableCell>{t('productOrderLine')}</TableCell>
                                 <TableCell>{t('workOrderState')}</TableCell>
@@ -390,8 +392,12 @@ export function WorkOrdersManagementPanel() {
                                     <TableRow
                                         sx={!machineAssigned ? { backgroundColor: WORK_ORDER_UNASSIGNED_MACHINE_ROW_BACKGROUND } : undefined}
                                     >
+                                    <TableCell>{wo.code?.trim() || (wo.id != null ? `#${wo.id}` : '—')}</TableCell>
                                     <TableCell>
-                                        {purchaseOrderLabel(purchaseOrders.find((p) => p.id === wo.purchaseOrderId) || {id: wo.purchaseOrderId})}
+                                        {purchaseOrderLabel(purchaseOrders.find((p) => p.id === wo.purchaseOrderId) || {
+                                            id: wo.purchaseOrderId,
+                                            code: wo.purchaseOrderCode,
+                                        })}
                                     </TableCell>
                                     <TableCell>{workOrderLineDisplay(wo)}</TableCell>
                                     <TableCell sx={{minWidth: 160}}>

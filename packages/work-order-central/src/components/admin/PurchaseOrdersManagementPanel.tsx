@@ -498,6 +498,7 @@ export function PurchaseOrdersManagementPanel() {
                     <Table size="small">
                         <TableHead>
                             <TableRow>
+                                <TableCell>{t('orderNumber')}</TableCell>
                                 <TableCell>{t('purchaseOrderOrderer')}</TableCell>
                                 <TableCell>{t('catalogueId')}</TableCell>
                                 <TableCell>{t('currency')}</TableCell>
@@ -515,13 +516,14 @@ export function PurchaseOrdersManagementPanel() {
                         <TableBody>
                             {filteredOrders.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={10} align="center">
+                                    <TableCell colSpan={11} align="center">
                                         {t('purchaseOrderFilterEmpty')}
                                     </TableCell>
                                 </TableRow>
                             ) : (
                                 filteredOrders.map((order) => (
                                 <TableRow key={order.id}>
+                                    <TableCell>{order.code?.trim() || (order.id != null ? `#${order.id}` : '—')}</TableCell>
                                     <TableCell>{order.customer?.companyName}</TableCell>
                                     <TableCell>{catalogueSummary(order)}</TableCell>
                                     <TableCell>{order.currency}</TableCell>
@@ -652,7 +654,8 @@ export function PurchaseOrdersManagementPanel() {
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                             <Box sx={{ display: 'flex', flexDirection: 'row', gap: 3, flexWrap: 'wrap' }}>
                                 <Box sx={{ flex: 1, minWidth: 160 }}>
-                                    <Typography variant="body2"><strong>{t('purchaseOrderOrderer')}:</strong> {detailsOrder.customer?.companyName ?? '—'}</Typography>
+                                    <Typography variant="body2"><strong>{t('orderNumber')}:</strong> {detailsOrder.code?.trim() || (detailsOrder.id != null ? `#${detailsOrder.id}` : '—')}</Typography>
+                                    <Typography variant="body2" sx={{ mt: 0.5 }}><strong>{t('purchaseOrderOrderer')}:</strong> {detailsOrder.customer?.companyName ?? '—'}</Typography>
                                     <Typography variant="body2" sx={{ mt: 0.5 }}><strong>{t('currency')}:</strong> {detailsOrder.currency ?? '—'}</Typography>
                                 </Box>
                                 <Box sx={{ flex: 1, minWidth: 160 }}>

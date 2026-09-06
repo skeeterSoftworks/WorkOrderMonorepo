@@ -638,7 +638,7 @@
   "toastProductStockIntakeRecorded": "Proizvodi su dodati na zalihe.",
   "toastProductStockIntakeError": "Ne mogu da dodam proizvode na zalihe.",
   "productStockIntakeNoWorkOrders": "Nema radnih naloga za ovaj proizvod.",
-  "productStockIntakeWorkOrderOptionLabel": "RN #{{id}} · {{ref}} · {{received}}/{{required}} na zalihe · {{produced}} proizvedeno",
+  "productStockIntakeWorkOrderOptionLabel": "RN {{code}} · {{ref}} · {{received}}/{{required}} na zalihe · {{produced}} proizvedeno",
   "productStockIntakeInternalWorkOrder": "Interni magacin",
   "productStockIntakeInternalWorkOrderHint": "Ovo je radni nalog za interni magacin. Cela primljena količina biće evidentirana kao višak.",
   "productStockIntakeSplitPreview": "{{order}} za radni nalog · {{surplus}} kao višak",
