@@ -63,6 +63,7 @@ export {
     canAccessCentralPurchaseOrders,
     canAccessCentralWorkOrdersManagement,
     canAccessCentralProductionPanel,
+    canAccessCentralProductionOverview,
     canAccessCentralPurchasing,
     canAccessCentralStock,
     canAccessCentralStockMaterials,

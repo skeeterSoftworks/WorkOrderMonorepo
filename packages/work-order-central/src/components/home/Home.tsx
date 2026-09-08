@@ -3,10 +3,12 @@ import WorkOutlineIcon from '@mui/icons-material/WorkOutline';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
 import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined';
+import PrecisionManufacturingOutlinedIcon from '@mui/icons-material/PrecisionManufacturingOutlined';
 import { useTranslation } from 'react-i18next';
 import {
     canAccessCentralAdmin,
     canAccessCentralMonitoring,
+    canAccessCentralProductionOverview,
     canAccessCentralStock,
     canAccessCentralWorkOrdersHub,
     readLoggedUser,
@@ -30,8 +32,9 @@ export function Home() {
     const showStock = canAccessCentralStock(user);
     const showAdmin = canAccessCentralAdmin(user);
     const showMonitoring = canAccessCentralMonitoring(user);
+    const showProductionOverview = canAccessCentralProductionOverview(user);
 
-    if (!showWorkOrders && !showStock && !showAdmin && !showMonitoring) {
+    if (!showWorkOrders && !showStock && !showAdmin && !showMonitoring && !showProductionOverview) {
         return (
             <Grid container sx={{ minHeight: '60vh', alignItems: 'center', justifyContent: 'center' }}>
                 <Typography color="text.secondary">{t('noPanelsAvailableForUser')}</Typography>
@@ -50,6 +53,18 @@ export function Home() {
                                     {t('workOrders')}
                                 </Typography>
                                 <WorkOutlineIcon sx={{ fontSize: 34 }} />
+                            </Box>
+                        </Button>
+                    </Grid>
+                )}
+                {showProductionOverview && (
+                    <Grid item xs="auto" sx={{ textAlign: 'center' }}>
+                        <Button href="/production-overview" variant="contained" sx={homeButtonStyle}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                                <Typography component="span" sx={{ fontSize: '1.2rem', fontWeight: 600, lineHeight: 1.2 }}>
+                                    {t('productionOverview')}
+                                </Typography>
+                                <PrecisionManufacturingOutlinedIcon sx={{ fontSize: 34 }} />
                             </Box>
                         </Button>
                     </Grid>

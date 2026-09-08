@@ -61,7 +61,8 @@ export function canAccessCentralHome(user: UserWithRoles): boolean {
     return canAccessCentralWorkOrdersHub(user)
         || canAccessCentralStock(user)
         || canAccessCentralAdmin(user)
-        || canAccessCentralMonitoring(user);
+        || canAccessCentralMonitoring(user)
+        || canAccessCentralProductionOverview(user);
 }
 
 export function canAccessCentralWorkOrdersHub(user: UserWithRoles): boolean {
@@ -88,6 +89,10 @@ export function canAccessCentralWorkOrdersManagement(user: UserWithRoles): boole
 }
 
 export function canAccessCentralProductionPanel(user: UserWithRoles): boolean {
+    return hasAnyRole(user, 'ADMIN', 'ADMIN_PRODUCTION', 'PRODUCTION_PLANNING_ADMIN');
+}
+
+export function canAccessCentralProductionOverview(user: UserWithRoles): boolean {
     return hasAnyRole(user, 'ADMIN', 'ADMIN_PRODUCTION', 'PRODUCTION_PLANNING_ADMIN');
 }
 

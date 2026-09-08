@@ -21,6 +21,7 @@ import type {
     EmailTemplateTO,
     EmailTemplateCode,
     RenderedEmailTO,
+    WorkSessionTO,
 } from "../models/ApiRequests";
 import axios from "axios";
 import { getServerUrl } from "../util/EnvUtils";
@@ -596,6 +597,28 @@ export class Server {
 
     static getAllMachines(onSuccess: Function, onError: Function) {
         axios.get(`${getServerUrl()}/machines/all`)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static searchWorkSessions(
+        params: { date?: string; machineId?: number; userId?: number },
+        onSuccess: Function,
+        onError: Function,
+    ) {
+        axios.get(`${getServerUrl()}/work-sessions`, { params })
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static getWorkSession(id: number, onSuccess: Function, onError: Function) {
+        axios.get<WorkSessionTO>(`${getServerUrl()}/work-sessions/${id}`)
             .then(response => onSuccess(response))
             .catch(error => {
                 console.log(error);

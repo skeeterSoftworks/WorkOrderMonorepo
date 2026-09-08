@@ -486,6 +486,72 @@ export interface WorkOrderTO {
     machineAssigned?: boolean,
 }
 
+export interface WorkSessionProductsRecordTO {
+    id?: number,
+    goodProductsCount?: number,
+    timestamp?: string | number[],
+}
+
+export interface WorkSessionSetupProductTO {
+    id?: number,
+    recordedAt?: string | number[],
+    prototypeSnapshot?: SetupDataPrototypeTO,
+    measuredHeight?: string,
+    measuredHeightOk?: boolean,
+    measuredDiameter?: string,
+    measuredDiameterOk?: boolean,
+}
+
+export interface WorkSessionControlMeasuringFeatureTO {
+    id?: number,
+    catalogueId?: string,
+    description?: string,
+    refValue?: number,
+    minTolerance?: number,
+    maxTolerance?: number,
+    classType?: string,
+    frequency?: string,
+    checkType?: string,
+    measuringTool?: string,
+    assessedValue?: string,
+    assessedValueGood?: boolean,
+}
+
+export interface WorkSessionControlProductTO {
+    id?: number,
+    createdAt?: string | number[],
+    measuringFeatures?: WorkSessionControlMeasuringFeatureTO[],
+}
+
+export interface WorkSessionFaultyProductTO {
+    id?: number,
+    rejectReason?: string,
+    rejectCause?: string,
+    rejectComment?: string,
+    createdAt?: string | number[],
+}
+
+export interface WorkSessionTO {
+    id?: number,
+    workOrderId?: number,
+    workOrderCode?: string,
+    sessionStart?: string | number[],
+    sessionEnd?: string | number[],
+    productCount?: number,
+    controlProductCount?: number,
+    faultyProductCount?: number,
+    setupProductCount?: number,
+    setupProducts?: WorkSessionSetupProductTO[],
+    productRecords?: WorkSessionProductsRecordTO[],
+    controlProducts?: WorkSessionControlProductTO[],
+    faultyProducts?: WorkSessionFaultyProductTO[],
+    productReferenceID?: string,
+    operatorQrCode?: string,
+    operatorName?: string,
+    operatorSurname?: string,
+    stationId?: string,
+}
+
 export type StockAssignmentOrderStatus = 'UNASSIGNED' | 'ASSIGNED'
 
 export interface StockAssignmentOrderTO {

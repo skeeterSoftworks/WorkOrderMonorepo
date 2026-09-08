@@ -12,6 +12,7 @@ import {WorkOrdersHome} from "./components/workOrders/WorkOrdersHome.tsx";
 import {StockHome} from "./components/stock/StockHome.tsx";
 import {AdminHome} from "./components/admin/AdminHome.tsx";
 import {ProductionPage} from "./components/production/ProductionPage.tsx";
+import {ProductionOverviewPage} from "./components/production/ProductionOverviewPage.tsx";
 import {MonitoringClientPanel} from "./components/monitoring/MonitoringClientPanel.tsx";
 import {PurchasingPage} from "./components/purchasing/PurchasingPage.tsx";
 
@@ -32,6 +33,7 @@ root.render(
                         <Route path="/purchase-orders" element={<PurchaseOrdersManagementPage/>}/>
                         <Route path="/purchasing" element={<PurchasingPage/>}/>
                         <Route path="/work-orders" element={<WorkOrdersHome/>}/>
+                        <Route path="/production-overview" element={<ProductionOverviewPage/>}/>
                         <Route path="/production" element={<ProductionPage/>}/>
                         <Route path="/stock" element={<StockHome/>}/>
                         <Route path="/admin" element={<AdminHome/>}/>
