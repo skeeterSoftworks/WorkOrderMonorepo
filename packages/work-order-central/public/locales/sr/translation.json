@@ -546,6 +546,7 @@
   "ordersHistoryMaterialsTab": "Materijali",
   "ordersHistoryEmpty": "Nema naloga za izabrane filtere.",
   "ordersHistoryLoadError": "Nije moguće učitati istoriju naloga.",
+  "ordersHistoryTotalPrice": "Ukupna cena",
   "productionOverviewEmpty": "Nema proizvodnih sesija za izabrane filtere.",
   "productionOverviewLoadError": "Nije moguće učitati proizvodne sesije.",
   "productionOverviewDetailsLoadError": "Nije moguće učitati detalje sesije.",

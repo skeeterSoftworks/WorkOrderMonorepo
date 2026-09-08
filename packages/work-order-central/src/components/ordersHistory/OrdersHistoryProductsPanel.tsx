@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { Server } from 'sf-common';
 import type { CustomerTO, ProductOrderHistoryRowTO } from 'sf-common/src/models/ApiRequests';
-import { customerHistoryLabel, formatHistoryDateTime } from './ordersHistoryDisplay';
+import { customerHistoryLabel, formatHistoryDateTime, formatHistoryLineTotal, formatHistoryPrice } from './ordersHistoryDisplay';
 
 const DEFAULT_ROWS_PER_PAGE = 25;
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50, 100] as const;
@@ -172,13 +172,15 @@ export function OrdersHistoryProductsPanel() {
                             <TableCell>{t('product')}</TableCell>
                             <TableCell>{t('purchaseOrderOrderer')}</TableCell>
                             <TableCell align="right">{t('quantity')}</TableCell>
+                            <TableCell align="right">{t('pricePerUnit')}</TableCell>
+                            <TableCell align="right">{t('ordersHistoryTotalPrice')}</TableCell>
                             <TableCell>{t('status')}</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {rows.length === 0 && !loading ? (
                             <TableRow>
-                                <TableCell colSpan={7}>
+                                <TableCell colSpan={9}>
                                     <Typography variant="body2" color="text.secondary">
                                         {t('ordersHistoryEmpty')}
                                     </Typography>
@@ -202,6 +204,12 @@ export function OrdersHistoryProductsPanel() {
                                         })}
                                     </TableCell>
                                     <TableCell align="right">{row.quantity ?? 0}</TableCell>
+                                    <TableCell align="right">
+                                        {formatHistoryPrice(row.pricePerUnit, row.currency)}
+                                    </TableCell>
+                                    <TableCell align="right">
+                                        {formatHistoryLineTotal(row.quantity, row.pricePerUnit, row.currency)}
+                                    </TableCell>
                                     <TableCell>{purchaseOrderStatusLabel(row.orderStatus, t)}</TableCell>
                                 </TableRow>
                             ))

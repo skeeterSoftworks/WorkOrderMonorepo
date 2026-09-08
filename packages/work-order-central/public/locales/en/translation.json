@@ -546,6 +546,7 @@
   "ordersHistoryMaterialsTab": "Materials",
   "ordersHistoryEmpty": "No orders match the selected filters.",
   "ordersHistoryLoadError": "Could not load order history.",
+  "ordersHistoryTotalPrice": "Total price",
   "productionOverviewEmpty": "No production sessions for the selected filters.",
   "productionOverviewLoadError": "Could not load production sessions.",
   "productionOverviewDetailsLoadError": "Could not load session details.",

@@ -17,3 +17,30 @@ export function customerHistoryLabel(customer: { companyName?: string; buyerId?:
     if (name && buyerId) return `${name} (${buyerId})`;
     return name || buyerId || (customer.id != null ? `#${customer.id}` : '—');
 }
+
+function parseHistoryAmount(value: number | string | null | undefined): number | null {
+    if (value == null || value === '') return null;
+    const amount = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(amount) ? amount : null;
+}
+
+export function formatHistoryPrice(
+    pricePerUnit: number | string | null | undefined,
+    currency?: string | null,
+): string {
+    const value = parseHistoryAmount(pricePerUnit);
+    if (value == null) return '—';
+    const amount = value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 4 });
+    const code = currency?.trim();
+    return code ? `${amount} ${code}` : amount;
+}
+
+export function formatHistoryLineTotal(
+    quantity: number | null | undefined,
+    pricePerUnit: number | string | null | undefined,
+    currency?: string | null,
+): string {
+    const unit = parseHistoryAmount(pricePerUnit);
+    if (unit == null) return '—';
+    return formatHistoryPrice((quantity ?? 0) * unit, currency);
+}
