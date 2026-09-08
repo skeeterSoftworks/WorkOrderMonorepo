@@ -17,6 +17,8 @@ import type {
     MaterialOrderStatus,
     MaterialOrderSearchParams,
     MaterialOrderPageTO,
+    ProductOrderHistoryPageTO,
+    MaterialOrderHistoryPageTO,
     MaterialOrderCertificateTO,
     EmailTemplateTO,
     EmailTemplateCode,
@@ -382,6 +384,32 @@ export class Server {
         onError: Function,
     ) {
         axios.get<MaterialOrderPageTO>(`${getServerUrl()}/material-orders/search`, { params })
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static searchProductOrderHistory(
+        params: { page?: number; size?: number; productReference?: string; customerId?: number },
+        onSuccess: Function,
+        onError: Function,
+    ) {
+        axios.get<ProductOrderHistoryPageTO>(`${getServerUrl()}/orders-history/products`, { params })
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static searchMaterialOrderHistory(
+        params: { page?: number; size?: number; materialCode?: string; materialProviderId?: number },
+        onSuccess: Function,
+        onError: Function,
+    ) {
+        axios.get<MaterialOrderHistoryPageTO>(`${getServerUrl()}/orders-history/materials`, { params })
             .then(response => onSuccess(response))
             .catch(error => {
                 console.log(error);

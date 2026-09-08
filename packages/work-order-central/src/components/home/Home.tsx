@@ -4,10 +4,12 @@ import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
 import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined';
 import PrecisionManufacturingOutlinedIcon from '@mui/icons-material/PrecisionManufacturingOutlined';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import { useTranslation } from 'react-i18next';
 import {
     canAccessCentralAdmin,
     canAccessCentralMonitoring,
+    canAccessCentralOrdersHistory,
     canAccessCentralProductionOverview,
     canAccessCentralStock,
     canAccessCentralWorkOrdersHub,
@@ -33,8 +35,9 @@ export function Home() {
     const showAdmin = canAccessCentralAdmin(user);
     const showMonitoring = canAccessCentralMonitoring(user);
     const showProductionOverview = canAccessCentralProductionOverview(user);
+    const showOrdersHistory = canAccessCentralOrdersHistory(user);
 
-    if (!showWorkOrders && !showStock && !showAdmin && !showMonitoring && !showProductionOverview) {
+    if (!showWorkOrders && !showStock && !showAdmin && !showMonitoring && !showProductionOverview && !showOrdersHistory) {
         return (
             <Grid container sx={{ minHeight: '60vh', alignItems: 'center', justifyContent: 'center' }}>
                 <Typography color="text.secondary">{t('noPanelsAvailableForUser')}</Typography>
@@ -65,6 +68,18 @@ export function Home() {
                                     {t('productionOverview')}
                                 </Typography>
                                 <PrecisionManufacturingOutlinedIcon sx={{ fontSize: 34 }} />
+                            </Box>
+                        </Button>
+                    </Grid>
+                )}
+                {showOrdersHistory && (
+                    <Grid item xs="auto" sx={{ textAlign: 'center' }}>
+                        <Button href="/orders-history" variant="contained" sx={homeButtonStyle}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                                <Typography component="span" sx={{ fontSize: '1.2rem', fontWeight: 600, lineHeight: 1.2 }}>
+                                    {t('ordersHistory')}
+                                </Typography>
+                                <HistoryOutlinedIcon sx={{ fontSize: 34 }} />
                             </Box>
                         </Button>
                     </Grid>

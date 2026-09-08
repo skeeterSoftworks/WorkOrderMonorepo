@@ -62,7 +62,8 @@ export function canAccessCentralHome(user: UserWithRoles): boolean {
         || canAccessCentralStock(user)
         || canAccessCentralAdmin(user)
         || canAccessCentralMonitoring(user)
-        || canAccessCentralProductionOverview(user);
+        || canAccessCentralProductionOverview(user)
+        || canAccessCentralOrdersHistory(user);
 }
 
 export function canAccessCentralWorkOrdersHub(user: UserWithRoles): boolean {
@@ -97,6 +98,18 @@ export function canAccessCentralProductionOverview(user: UserWithRoles): boolean
 }
 
 export function canAccessCentralPurchasing(user: UserWithRoles): boolean {
+    return hasAnyRole(user, 'ADMIN', 'PURCHASING_ADMIN');
+}
+
+export function canAccessCentralOrdersHistory(user: UserWithRoles): boolean {
+    return canAccessCentralOrdersHistoryProducts(user) || canAccessCentralOrdersHistoryMaterials(user);
+}
+
+export function canAccessCentralOrdersHistoryProducts(user: UserWithRoles): boolean {
+    return hasAnyRole(user, 'ADMIN', 'SALES_ADMIN', 'PRODUCTION_PLANNING_ADMIN');
+}
+
+export function canAccessCentralOrdersHistoryMaterials(user: UserWithRoles): boolean {
     return hasAnyRole(user, 'ADMIN', 'PURCHASING_ADMIN');
 }
 

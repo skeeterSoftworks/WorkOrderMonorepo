@@ -156,6 +156,52 @@ export interface MaterialOrderPageTO {
     size?: number,
 }
 
+export interface ProductOrderHistoryRowTO {
+    id?: number,
+    orderedAt?: string | number[],
+    purchaseOrderId?: number,
+    purchaseOrderCode?: string,
+    orderStatus?: string,
+    productId?: number,
+    productReference?: string,
+    productName?: string,
+    customerId?: number,
+    customerName?: string,
+    buyerId?: string,
+    quantity?: number,
+    pricePerUnit?: number,
+    currency?: string,
+}
+
+export interface ProductOrderHistoryPageTO {
+    content?: ProductOrderHistoryRowTO[],
+    totalElements?: number,
+    page?: number,
+    size?: number,
+}
+
+export interface MaterialOrderHistoryRowTO {
+    id?: number,
+    orderedAt?: string | number[],
+    materialOrderId?: number,
+    materialOrderCode?: string,
+    status?: MaterialOrderStatus,
+    materialId?: number,
+    materialCode?: string,
+    materialName?: string,
+    materialProviderId?: number,
+    materialProviderName?: string,
+    quantity?: number,
+    unitOfMeasure?: string,
+}
+
+export interface MaterialOrderHistoryPageTO {
+    content?: MaterialOrderHistoryRowTO[],
+    totalElements?: number,
+    page?: number,
+    size?: number,
+}
+
 export interface DeliveryNoteTO {
     id?: number,
     materialOrderId?: number,
