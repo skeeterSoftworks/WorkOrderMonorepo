@@ -158,7 +158,12 @@ export interface MaterialOrderPageTO {
     size?: number,
 }
 
+export type OrdersHistoryEventType = 'ORDER_CREATED' | 'STOCK_IN' | 'STOCK_OUT'
+
 export interface ProductOrderHistoryRowTO {
+    rowKey?: string,
+    eventType?: OrdersHistoryEventType,
+    eventAt?: string | number[],
     id?: number,
     orderedAt?: string | number[],
     purchaseOrderId?: number,
@@ -173,6 +178,9 @@ export interface ProductOrderHistoryRowTO {
     quantity?: number,
     pricePerUnit?: number,
     currency?: string,
+    workOrderId?: number,
+    workOrderCode?: string,
+    actorFullName?: string,
 }
 
 export interface ProductOrderHistoryPageTO {
@@ -183,6 +191,9 @@ export interface ProductOrderHistoryPageTO {
 }
 
 export interface MaterialOrderHistoryRowTO {
+    rowKey?: string,
+    eventType?: OrdersHistoryEventType,
+    eventAt?: string | number[],
     id?: number,
     orderedAt?: string | number[],
     materialOrderId?: number,
@@ -196,6 +207,7 @@ export interface MaterialOrderHistoryRowTO {
     quantity?: number,
     pricePerUnit?: number,
     unitOfMeasure?: string,
+    deliveryNoteNumber?: string,
 }
 
 export interface MaterialOrderHistoryPageTO {

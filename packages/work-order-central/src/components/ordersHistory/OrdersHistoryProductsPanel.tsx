@@ -16,7 +16,15 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { Server } from 'sf-common';
 import type { CustomerTO, ProductOrderHistoryRowTO } from 'sf-common/src/models/ApiRequests';
-import { customerHistoryLabel, formatHistoryDateTime, formatHistoryLineTotal, formatHistoryPrice } from './ordersHistoryDisplay';
+import {
+    customerHistoryLabel,
+    formatHistoryDateTime,
+    formatHistoryLineTotal,
+    formatHistoryPrice,
+    isOrdersHistoryOrderCreated,
+    ordersHistoryEventLabel,
+    ordersHistoryRowSx,
+} from './ordersHistoryDisplay';
 
 const DEFAULT_ROWS_PER_PAGE = 25;
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50, 100] as const;
@@ -167,6 +175,7 @@ export function OrdersHistoryProductsPanel() {
                     <TableHead>
                         <TableRow>
                             <TableCell>{t('date')}</TableCell>
+                            <TableCell>{t('ordersHistoryEvent')}</TableCell>
                             <TableCell>{t('orderNumber')}</TableCell>
                             <TableCell>{t('catalogueId')}</TableCell>
                             <TableCell>{t('product')}</TableCell>
@@ -180,39 +189,61 @@ export function OrdersHistoryProductsPanel() {
                     <TableBody>
                         {rows.length === 0 && !loading ? (
                             <TableRow>
-                                <TableCell colSpan={9}>
+                                <TableCell colSpan={10}>
                                     <Typography variant="body2" color="text.secondary">
                                         {t('ordersHistoryEmpty')}
                                     </Typography>
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            rows.map((row) => (
-                                <TableRow key={row.id}>
-                                    <TableCell>{formatHistoryDateTime(row.orderedAt)}</TableCell>
-                                    <TableCell>
-                                        {row.purchaseOrderCode?.trim()
-                                            || (row.purchaseOrderId != null ? `#${row.purchaseOrderId}` : '—')}
-                                    </TableCell>
-                                    <TableCell>{row.productReference?.trim() || '—'}</TableCell>
-                                    <TableCell>{row.productName?.trim() || '—'}</TableCell>
-                                    <TableCell>
-                                        {customerHistoryLabel({
-                                            companyName: row.customerName,
-                                            buyerId: row.buyerId,
-                                            id: row.customerId,
-                                        })}
-                                    </TableCell>
-                                    <TableCell align="right">{row.quantity ?? 0}</TableCell>
-                                    <TableCell align="right">
-                                        {formatHistoryPrice(row.pricePerUnit, row.currency)}
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        {formatHistoryLineTotal(row.quantity, row.pricePerUnit, row.currency)}
-                                    </TableCell>
-                                    <TableCell>{purchaseOrderStatusLabel(row.orderStatus, t)}</TableCell>
-                                </TableRow>
-                            ))
+                            rows.map((row) => {
+                                const isOrder = isOrdersHistoryOrderCreated(row.eventType);
+                                return (
+                                    <TableRow
+                                        key={row.rowKey ?? `${row.eventType}-${row.id}`}
+                                        sx={ordersHistoryRowSx(row.eventType)}
+                                    >
+                                        <TableCell>
+                                            {formatHistoryDateTime(row.eventAt ?? row.orderedAt)}
+                                        </TableCell>
+                                        <TableCell>{ordersHistoryEventLabel(row.eventType, t)}</TableCell>
+                                        <TableCell>
+                                            {row.purchaseOrderCode?.trim()
+                                                || (row.purchaseOrderId != null ? `#${row.purchaseOrderId}` : '—')}
+                                            {!isOrder && row.workOrderCode?.trim()
+                                                ? ` / ${row.workOrderCode.trim()}`
+                                                : !isOrder && row.workOrderId != null
+                                                  ? ` / #${row.workOrderId}`
+                                                  : ''}
+                                        </TableCell>
+                                        <TableCell>{row.productReference?.trim() || '—'}</TableCell>
+                                        <TableCell>{row.productName?.trim() || '—'}</TableCell>
+                                        <TableCell>
+                                            {customerHistoryLabel({
+                                                companyName: row.customerName,
+                                                buyerId: row.buyerId,
+                                                id: row.customerId,
+                                            })}
+                                        </TableCell>
+                                        <TableCell align="right">{row.quantity ?? 0}</TableCell>
+                                        <TableCell align="right">
+                                            {isOrder
+                                                ? formatHistoryPrice(row.pricePerUnit, row.currency)
+                                                : '—'}
+                                        </TableCell>
+                                        <TableCell align="right">
+                                            {isOrder
+                                                ? formatHistoryLineTotal(row.quantity, row.pricePerUnit, row.currency)
+                                                : '—'}
+                                        </TableCell>
+                                        <TableCell>
+                                            {isOrder
+                                                ? purchaseOrderStatusLabel(row.orderStatus, t)
+                                                : (row.actorFullName?.trim() || '—')}
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })
                         )}
                     </TableBody>
                 </Table>

@@ -15,7 +15,14 @@ import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 import { Server } from 'sf-common';
 import type { MaterialOrderHistoryRowTO, MaterialProviderTO } from 'sf-common/src/models/ApiRequests';
-import { formatHistoryDateTime, formatHistoryLineTotal, formatHistoryPrice } from './ordersHistoryDisplay';
+import {
+    formatHistoryDateTime,
+    formatHistoryLineTotal,
+    formatHistoryPrice,
+    isOrdersHistoryOrderCreated,
+    ordersHistoryEventLabel,
+    ordersHistoryRowSx,
+} from './ordersHistoryDisplay';
 
 const DEFAULT_ROWS_PER_PAGE = 25;
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50, 100] as const;
@@ -148,6 +155,7 @@ export function OrdersHistoryMaterialsPanel() {
                     <TableHead>
                         <TableRow>
                             <TableCell>{t('date')}</TableCell>
+                            <TableCell>{t('ordersHistoryEvent')}</TableCell>
                             <TableCell>{t('orderNumber')}</TableCell>
                             <TableCell>{t('materialCode')}</TableCell>
                             <TableCell>{t('materialName')}</TableCell>
@@ -161,43 +169,57 @@ export function OrdersHistoryMaterialsPanel() {
                     <TableBody>
                         {rows.length === 0 && !loading ? (
                             <TableRow>
-                                <TableCell colSpan={9}>
+                                <TableCell colSpan={10}>
                                     <Typography variant="body2" color="text.secondary">
                                         {t('ordersHistoryEmpty')}
                                     </Typography>
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            rows.map((row) => (
-                                <TableRow key={row.id}>
-                                    <TableCell>{formatHistoryDateTime(row.orderedAt)}</TableCell>
-                                    <TableCell>
-                                        {row.materialOrderCode?.trim()
-                                            || (row.materialOrderId != null ? `#${row.materialOrderId}` : '—')}
-                                    </TableCell>
-                                    <TableCell>{row.materialCode?.trim() || '—'}</TableCell>
-                                    <TableCell>{row.materialName?.trim() || '—'}</TableCell>
-                                    <TableCell>{providerLabel({
-                                        name: row.materialProviderName,
-                                        id: row.materialProviderId,
-                                    })}</TableCell>
-                                    <TableCell align="right">
-                                        {row.quantity ?? 0}
-                                        {row.unitOfMeasure ? ` ${row.unitOfMeasure}` : ''}
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        {formatHistoryPrice(row.pricePerUnit)}
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        {formatHistoryLineTotal(row.quantity, row.pricePerUnit)}
-                                    </TableCell>
-                                    <TableCell>
-                                        {row.status
-                                            ? t(`materialOrderStatus_${row.status}`)
-                                            : '—'}
-                                    </TableCell>
-                                </TableRow>
-                            ))
+                            rows.map((row) => {
+                                const isOrder = isOrdersHistoryOrderCreated(row.eventType);
+                                return (
+                                    <TableRow
+                                        key={row.rowKey ?? `${row.eventType}-${row.id}`}
+                                        sx={ordersHistoryRowSx(row.eventType)}
+                                    >
+                                        <TableCell>
+                                            {formatHistoryDateTime(row.eventAt ?? row.orderedAt)}
+                                        </TableCell>
+                                        <TableCell>{ordersHistoryEventLabel(row.eventType, t)}</TableCell>
+                                        <TableCell>
+                                            {row.materialOrderCode?.trim()
+                                                || (row.materialOrderId != null ? `#${row.materialOrderId}` : '—')}
+                                            {!isOrder && row.deliveryNoteNumber?.trim()
+                                                ? ` / ${row.deliveryNoteNumber.trim()}`
+                                                : ''}
+                                        </TableCell>
+                                        <TableCell>{row.materialCode?.trim() || '—'}</TableCell>
+                                        <TableCell>{row.materialName?.trim() || '—'}</TableCell>
+                                        <TableCell>{providerLabel({
+                                            name: row.materialProviderName,
+                                            id: row.materialProviderId,
+                                        })}</TableCell>
+                                        <TableCell align="right">
+                                            {row.quantity ?? 0}
+                                            {row.unitOfMeasure ? ` ${row.unitOfMeasure}` : ''}
+                                        </TableCell>
+                                        <TableCell align="right">
+                                            {isOrder ? formatHistoryPrice(row.pricePerUnit) : '—'}
+                                        </TableCell>
+                                        <TableCell align="right">
+                                            {isOrder
+                                                ? formatHistoryLineTotal(row.quantity, row.pricePerUnit)
+                                                : '—'}
+                                        </TableCell>
+                                        <TableCell>
+                                            {isOrder
+                                                ? (row.status ? t(`materialOrderStatus_${row.status}`) : '—')
+                                                : '—'}
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })
                         )}
                     </TableBody>
                 </Table>
