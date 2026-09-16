@@ -87,6 +87,8 @@ export interface MaterialOrderLineTO {
     materialName?: string,
     materialCode?: string,
     quantity?: number,
+    /** Optional unit price when the order was placed. */
+    pricePerUnit?: number,
     received?: boolean,
     receivedQuantityTotal?: number,
     remainingQuantity?: number,
@@ -192,6 +194,7 @@ export interface MaterialOrderHistoryRowTO {
     materialProviderId?: number,
     materialProviderName?: string,
     quantity?: number,
+    pricePerUnit?: number,
     unitOfMeasure?: string,
 }
 

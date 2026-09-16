@@ -32,8 +32,8 @@ import type {
     ProductMaterialUnitOfMeasure,
 } from 'sf-common/src/models/ApiRequests';
 import { PRODUCT_MATERIAL_UNITS_OF_MEASURE } from 'sf-common/src/models/ApiRequests';
-import { Server } from 'sf-common';
-import { toastActionSuccess, toastServerError } from '../../util/actionToast';
+import { Server, filterDecimalNumericInput, parseDecimalNumericInputToNumber } from 'sf-common';
+import { toastActionError, toastActionSuccess, toastServerError } from '../../util/actionToast';
 
 const DEFAULT_UNIT: ProductMaterialUnitOfMeasure = 'PCS';
 
@@ -42,11 +42,12 @@ type CreateMode = 'byProvider' | 'byMaterial';
 type LineDraft = {
     materialId?: number;
     quantity: string;
+    pricePerUnit: string;
     unitOfMeasure: ProductMaterialUnitOfMeasure;
 };
 
 function newLineDraft(): LineDraft {
-    return { materialId: undefined, quantity: '', unitOfMeasure: DEFAULT_UNIT };
+    return { materialId: undefined, quantity: '', pricePerUnit: '', unitOfMeasure: DEFAULT_UNIT };
 }
 
 function normalizeUnit(value: unknown): ProductMaterialUnitOfMeasure {
@@ -103,6 +104,7 @@ export function MaterialOrderCreateDialog({ open, providers, materials, onClose,
     const [selectedMaterialId, setSelectedMaterialId] = useState<number | undefined>(undefined);
     const [materialModeProviderId, setMaterialModeProviderId] = useState<number | undefined>(undefined);
     const [materialModeQuantity, setMaterialModeQuantity] = useState('');
+    const [materialModePricePerUnit, setMaterialModePricePerUnit] = useState('');
     const [materialModeUnit, setMaterialModeUnit] = useState<ProductMaterialUnitOfMeasure>(DEFAULT_UNIT);
 
     const resetForm = () => {
@@ -112,6 +114,7 @@ export function MaterialOrderCreateDialog({ open, providers, materials, onClose,
         setSelectedMaterialId(undefined);
         setMaterialModeProviderId(undefined);
         setMaterialModeQuantity('');
+        setMaterialModePricePerUnit('');
         setMaterialModeUnit(DEFAULT_UNIT);
     };
 
@@ -172,6 +175,33 @@ export function MaterialOrderCreateDialog({ open, providers, materials, onClose,
         setCreateLines((prev) => prev.map((line, i) => (i === index ? { ...line, ...patch } : line)));
     };
 
+    const parseOptionalPricePerUnit = (raw: string): number | undefined | null => {
+        const trimmed = raw.trim();
+        if (!trimmed) return undefined;
+        const parsed = parseDecimalNumericInputToNumber(trimmed);
+        if (parsed === undefined || parsed < 0) return null;
+        return parsed;
+    };
+
+    const toLinePayload = (
+        materialId: number,
+        quantity: number,
+        unitOfMeasure: ProductMaterialUnitOfMeasure,
+        priceRaw: string,
+    ): MaterialOrderLineTO | null => {
+        const pricePerUnit = parseOptionalPricePerUnit(priceRaw);
+        if (pricePerUnit === null) {
+            toastActionError(t('pricePerUnitInvalid'));
+            return null;
+        }
+        return {
+            materialId,
+            quantity,
+            materialUnitOfMeasure: unitOfMeasure,
+            ...(pricePerUnit !== undefined ? { pricePerUnit } : {}),
+        };
+    };
+
     const submitOrder = (materialProviderIdValue: number, linePayload: MaterialOrderLineTO[]) => {
         Server.addMaterialOrder(
             { materialProviderId: materialProviderIdValue, lines: linePayload },
@@ -189,24 +219,30 @@ export function MaterialOrderCreateDialog({ open, providers, materials, onClose,
         if (!canCreate) return;
         if (createMode === 'byProvider') {
             if (materialProviderId == null) return;
-            submitOrder(
-                materialProviderId,
-                createLines.map((line) => ({
-                    materialId: line.materialId,
-                    quantity: Math.trunc(Number(line.quantity)),
-                    materialUnitOfMeasure: line.unitOfMeasure,
-                })),
-            );
+            const linePayload: MaterialOrderLineTO[] = [];
+            for (const line of createLines) {
+                if (line.materialId == null) return;
+                const payload = toLinePayload(
+                    line.materialId,
+                    Math.trunc(Number(line.quantity)),
+                    line.unitOfMeasure,
+                    line.pricePerUnit,
+                );
+                if (!payload) return;
+                linePayload.push(payload);
+            }
+            submitOrder(materialProviderId, linePayload);
             return;
         }
         if (materialModeProviderId == null || selectedMaterialId == null) return;
-        submitOrder(materialModeProviderId, [
-            {
-                materialId: selectedMaterialId,
-                quantity: Math.trunc(Number(materialModeQuantity)),
-                materialUnitOfMeasure: materialModeUnit,
-            },
-        ]);
+        const payload = toLinePayload(
+            selectedMaterialId,
+            Math.trunc(Number(materialModeQuantity)),
+            materialModeUnit,
+            materialModePricePerUnit,
+        );
+        if (!payload) return;
+        submitOrder(materialModeProviderId, [payload]);
     };
 
     const handleModeChange = (nextMode: CreateMode) => {
@@ -216,11 +252,12 @@ export function MaterialOrderCreateDialog({ open, providers, materials, onClose,
         setSelectedMaterialId(undefined);
         setMaterialModeProviderId(undefined);
         setMaterialModeQuantity('');
+        setMaterialModePricePerUnit('');
         setMaterialModeUnit(DEFAULT_UNIT);
     };
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+        <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
             <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 {t('createMaterialOrder')}
                 <IconButton size="small" onClick={onClose} aria-label={t('close')}>
@@ -277,9 +314,10 @@ export function MaterialOrderCreateDialog({ open, providers, materials, onClose,
                                     <TableHead>
                                         <TableRow>
                                             <TableCell>{t('materialName')}</TableCell>
-                                            <TableCell width={120}>{t('productMaterialUnitOfMeasure')}</TableCell>
-                                            <TableCell width={140}>{t('quantity')}</TableCell>
-                                            <TableCell width={56} />
+                                            <TableCell sx={{ width: 110 }}>{t('productMaterialUnitOfMeasure')}</TableCell>
+                                            <TableCell sx={{ width: 110 }}>{t('quantity')}</TableCell>
+                                            <TableCell sx={{ width: 130 }}>{t('pricePerUnit')}</TableCell>
+                                            <TableCell sx={{ width: 48 }} />
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
@@ -339,6 +377,22 @@ export function MaterialOrderCreateDialog({ open, providers, materials, onClose,
                                                         fullWidth
                                                         inputProps={{ min: 1, step: 1 }}
                                                         disabled={materialProviderId == null}
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <TextField
+                                                        value={line.pricePerUnit}
+                                                        onChange={(e) =>
+                                                            updateCreateLine(index, {
+                                                                pricePerUnit: filterDecimalNumericInput(e.target.value),
+                                                            })
+                                                        }
+                                                        inputMode="decimal"
+                                                        size="small"
+                                                        fullWidth
+                                                        disabled={materialProviderId == null}
+                                                        placeholder={t('pricePerUnit')}
+                                                        inputProps={{ 'aria-label': t('pricePerUnit') }}
                                                     />
                                                 </TableCell>
                                                 <TableCell align="right">
@@ -455,6 +509,17 @@ export function MaterialOrderCreateDialog({ open, providers, materials, onClose,
                                     sx={{ minWidth: 140 }}
                                     inputProps={{ min: 1, step: 1 }}
                                     required
+                                    disabled={selectedMaterialId == null}
+                                />
+                                <TextField
+                                    label={t('pricePerUnit')}
+                                    value={materialModePricePerUnit}
+                                    onChange={(e) =>
+                                        setMaterialModePricePerUnit(filterDecimalNumericInput(e.target.value))
+                                    }
+                                    inputMode="decimal"
+                                    size="small"
+                                    sx={{ minWidth: 140 }}
                                     disabled={selectedMaterialId == null}
                                 />
                             </Box>

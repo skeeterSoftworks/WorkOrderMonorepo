@@ -30,7 +30,7 @@ export function formatHistoryPrice(
 ): string {
     const value = parseHistoryAmount(pricePerUnit);
     if (value == null) return '—';
-    const amount = value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 4 });
+    const amount = value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const code = currency?.trim();
     return code ? `${amount} ${code}` : amount;
 }
