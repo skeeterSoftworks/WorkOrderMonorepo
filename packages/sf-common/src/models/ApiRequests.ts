@@ -431,6 +431,9 @@ export interface CustomerTO {
     id?: number,
     companyName?: string,
     buyerId?: string,
+    contactPerson?: string,
+    emailAddress?: string,
+    phoneNumber?: string,
     addressData?: string,
     description?: string
 }

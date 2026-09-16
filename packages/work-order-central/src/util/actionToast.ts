@@ -18,7 +18,9 @@ export function toastServerError(err: unknown, t: TFunction): void {
     const r = err as { response?: { data?: unknown; status?: number }; message?: string };
     const data = r.response?.data;
     if (typeof data === 'string' && data.trim()) {
-        msg = data;
+        const code = data.trim();
+        const translated = t(code);
+        msg = translated || code;
     } else if (data && typeof data === 'object') {
         const o = data as Record<string, unknown>;
         if (typeof o.code === 'string' && o.code.trim()) {

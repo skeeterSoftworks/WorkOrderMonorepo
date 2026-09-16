@@ -10,7 +10,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
 import type { CustomerTO } from 'sf-common/src/models/ApiRequests';
 import { Server } from 'sf-common';
-import { toastActionSuccess, toastServerError } from '../../util/actionToast';
+import { toastActionError, toastActionSuccess, toastServerError } from '../../util/actionToast';
 
 type Props = {
     open: boolean;
@@ -23,6 +23,9 @@ export function CustomerFormDialog({ open, customer, onClose, onSaved }: Props) 
     const { t } = useTranslation();
     const [companyName, setCompanyName] = useState('');
     const [buyerId, setBuyerId] = useState('');
+    const [contactPerson, setContactPerson] = useState('');
+    const [emailAddress, setEmailAddress] = useState('');
+    const [phoneNumber, setPhoneNumber] = useState('');
     const [addressData, setAddressData] = useState('');
     const [description, setDescription] = useState('');
 
@@ -30,15 +33,31 @@ export function CustomerFormDialog({ open, customer, onClose, onSaved }: Props) 
         if (!open) return;
         setCompanyName(customer?.companyName ?? '');
         setBuyerId(customer?.buyerId ?? '');
+        setContactPerson(customer?.contactPerson ?? '');
+        setEmailAddress(customer?.emailAddress ?? '');
+        setPhoneNumber(customer?.phoneNumber ?? '');
         setAddressData(customer?.addressData ?? '');
         setDescription(customer?.description ?? '');
     }, [open, customer?.id]);
 
+    const isFormValid =
+        Boolean(companyName.trim()) &&
+        Boolean(contactPerson.trim()) &&
+        Boolean(emailAddress.trim()) &&
+        Boolean(phoneNumber.trim());
+
     const handleSubmit = () => {
+        if (!isFormValid) {
+            toastActionError(t('customerContactFieldsRequired'));
+            return;
+        }
         const payload: CustomerTO = {
             id: customer?.id,
-            companyName: companyName || undefined,
+            companyName: companyName.trim(),
             buyerId: buyerId.trim() || undefined,
+            contactPerson: contactPerson.trim(),
+            emailAddress: emailAddress.trim(),
+            phoneNumber: phoneNumber.trim(),
             addressData: addressData || undefined,
             description: description || undefined,
         };
@@ -64,7 +83,14 @@ export function CustomerFormDialog({ open, customer, onClose, onSaved }: Props) 
             </DialogTitle>
             <DialogContent dividers>
                 <Box component="form" autoComplete="off" sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-                    <TextField label={t('companyName')} value={companyName} onChange={(e) => setCompanyName(e.target.value)} size="small" fullWidth />
+                    <TextField
+                        required
+                        label={t('companyName')}
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        size="small"
+                        fullWidth
+                    />
                     <TextField
                         label={t('customerBuyerId')}
                         value={buyerId}
@@ -73,13 +99,58 @@ export function CustomerFormDialog({ open, customer, onClose, onSaved }: Props) 
                         fullWidth
                         helperText={t('customerBuyerIdHint')}
                     />
-                    <TextField label={t('addressData')} value={addressData} onChange={(e) => setAddressData(e.target.value)} size="small" fullWidth multiline minRows={2} />
-                    <TextField label={t('description')} value={description} onChange={(e) => setDescription(e.target.value)} size="small" fullWidth multiline minRows={2} />
+                    <TextField
+                        required
+                        label={t('customerContactPerson')}
+                        value={contactPerson}
+                        onChange={(e) => setContactPerson(e.target.value)}
+                        size="small"
+                        fullWidth
+                    />
+                    <TextField
+                        required
+                        label={t('customerEmailAddress')}
+                        value={emailAddress}
+                        onChange={(e) => setEmailAddress(e.target.value)}
+                        size="small"
+                        fullWidth
+                        type="email"
+                        inputMode="email"
+                    />
+                    <TextField
+                        required
+                        label={t('customerPhoneNumber')}
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        size="small"
+                        fullWidth
+                        inputMode="tel"
+                    />
+                    <TextField
+                        label={t('addressData')}
+                        value={addressData}
+                        onChange={(e) => setAddressData(e.target.value)}
+                        size="small"
+                        fullWidth
+                        multiline
+                        minRows={2}
+                    />
+                    <TextField
+                        label={t('description')}
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        size="small"
+                        fullWidth
+                        multiline
+                        minRows={2}
+                    />
                     <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
-                        <Button variant="contained" color="primary" onClick={handleSubmit}>
+                        <Button variant="contained" color="primary" onClick={handleSubmit} disabled={!isFormValid}>
                             {customer?.id ? t('editCustomer') : t('addCustomer')}
                         </Button>
-                        <Button variant="outlined" onClick={onClose}>{t('cancel')}</Button>
+                        <Button variant="outlined" onClick={onClose}>
+                            {t('cancel')}
+                        </Button>
                     </Box>
                 </Box>
             </DialogContent>

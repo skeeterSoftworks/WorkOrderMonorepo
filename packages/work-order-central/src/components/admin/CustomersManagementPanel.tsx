@@ -15,6 +15,7 @@ import Tooltip from '@mui/material/Tooltip';
 import LinkIcon from '@mui/icons-material/Link';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CustomerTO, ProductTO } from 'sf-common/src/models/ApiRequests';
@@ -23,6 +24,7 @@ import { TableActionsRow, tableActionsTableCellSx, tableActionIconButtonSx } fro
 import { toastActionSuccess, toastServerError } from '../../util/actionToast';
 import { isInternalStockOrdererCustomer } from '../../util/internalStockOrderer';
 import { CustomerFormDialog } from './CustomerFormDialog';
+import { CustomerInfoDialog } from './CustomerInfoDialog';
 
 function parseProductsResponse(response: unknown): ProductTO[] {
     const r = response as { data?: ProductTO[] | { data?: ProductTO[] } };
@@ -37,6 +39,7 @@ export function CustomersManagementPanel() {
     const [products, setProducts] = useState<ProductTO[]>([]);
     const [editingCustomer, setEditingCustomer] = useState<CustomerTO | null>(null);
     const [customerToDelete, setCustomerToDelete] = useState<CustomerTO | null>(null);
+    const [infoCustomer, setInfoCustomer] = useState<CustomerTO | null>(null);
     const [formModalOpen, setFormModalOpen] = useState(false);
 
     const linkedCustomerIds = useMemo(() => {
@@ -130,8 +133,9 @@ export function CustomersManagementPanel() {
                             <TableRow>
                                 <TableCell>{t('companyName')}</TableCell>
                                 <TableCell>{t('customerBuyerId')}</TableCell>
-                                <TableCell>{t('addressData')}</TableCell>
-                                <TableCell>{t('description')}</TableCell>
+                                <TableCell>{t('customerContactPerson')}</TableCell>
+                                <TableCell>{t('customerEmailAddress')}</TableCell>
+                                <TableCell>{t('customerPhoneNumber')}</TableCell>
                                 <TableCell align="right" sx={tableActionsTableCellSx}>{t('actions')}</TableCell>
                             </TableRow>
                         </TableHead>
@@ -152,10 +156,19 @@ export function CustomersManagementPanel() {
                                             </Stack>
                                         </TableCell>
                                         <TableCell>{customer.buyerId || '—'}</TableCell>
-                                        <TableCell>{customer.addressData}</TableCell>
-                                        <TableCell>{customer.description}</TableCell>
+                                        <TableCell>{customer.contactPerson || '—'}</TableCell>
+                                        <TableCell>{customer.emailAddress || '—'}</TableCell>
+                                        <TableCell>{customer.phoneNumber || '—'}</TableCell>
                                         <TableCell align="right" sx={tableActionsTableCellSx}>
                                             <TableActionsRow>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => setInfoCustomer(customer)}
+                                                    sx={tableActionIconButtonSx.view}
+                                                    title={t('viewCustomerInfo')}
+                                                >
+                                                    <VisibilityIcon fontSize="small" />
+                                                </IconButton>
                                                 <IconButton size="small" onClick={() => handleEditClick(customer)} sx={tableActionIconButtonSx.edit} title={t('editCustomer')}>
                                                     <LinkIcon fontSize="small" />
                                                 </IconButton>
@@ -177,6 +190,12 @@ export function CustomersManagementPanel() {
                 customer={editingCustomer}
                 onClose={closeFormModal}
                 onSaved={() => { loadCustomers(); loadProducts(); }}
+            />
+
+            <CustomerInfoDialog
+                open={!!infoCustomer}
+                customer={infoCustomer}
+                onClose={() => setInfoCustomer(null)}
             />
 
             <ConfirmationModal
