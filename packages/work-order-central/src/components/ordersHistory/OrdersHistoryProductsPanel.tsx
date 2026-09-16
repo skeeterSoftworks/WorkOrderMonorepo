@@ -238,8 +238,7 @@ export function OrdersHistoryProductsPanel() {
                                         </TableCell>
                                         <TableCell>
                                             {isOrder
-                                                ? purchaseOrderStatusLabel(row.orderStatus, t)
-                                                : (row.actorFullName?.trim() || '—')}
+                                                ? purchaseOrderStatusLabel(row.orderStatus, t) :  '—'}
                                         </TableCell>
                                     </TableRow>
                                 );
