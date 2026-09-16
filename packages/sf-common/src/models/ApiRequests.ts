@@ -546,6 +546,8 @@ export interface WorkOrderTO {
     stockAssignmentOrderCode?: string,
     /** Denormalized: stock assignment order fulfillment status. */
     stockAssignmentOrderStatus?: StockAssignmentOrderStatus,
+    /** Denormalized: 8-digit material assignment order code when present. */
+    materialAssignmentOrderCode?: string,
     /** Denormalized: true when at least one non-cancelled machine booking exists. */
     machineAssigned?: boolean,
 }

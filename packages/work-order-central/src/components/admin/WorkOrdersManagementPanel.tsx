@@ -221,6 +221,24 @@ export function WorkOrdersManagementPanel() {
         setOrderToDelete(wo);
     };
 
+    const deleteConfirmationMessage = (() => {
+        if (!orderToDelete) {
+            return t('confirmDeleteWorkOrder');
+        }
+        const stockCode = orderToDelete.stockAssignmentOrderCode?.trim();
+        const materialCode = orderToDelete.materialAssignmentOrderCode?.trim();
+        if (stockCode && materialCode) {
+            return t('confirmDeleteWorkOrderWithAssignments', {stockCode, materialCode});
+        }
+        if (stockCode) {
+            return t('confirmDeleteWorkOrderWithStockAssignment', {code: stockCode});
+        }
+        if (materialCode) {
+            return t('confirmDeleteWorkOrderWithMaterialAssignment', {code: materialCode});
+        }
+        return t('confirmDeleteWorkOrder');
+    })();
+
     const closeDetailsModal = () => {
         setDetailsModalOpen(false);
         setDetailsWorkOrder(null);
@@ -550,7 +568,7 @@ export function WorkOrdersManagementPanel() {
 
             <ConfirmationModal
                 open={!!orderToDelete}
-                modalMessage={t('confirmDeleteWorkOrder')}
+                modalMessage={deleteConfirmationMessage}
                 onConfirm={handleConfirmDelete}
                 onModalClose={() => setOrderToDelete(null)}
             />
