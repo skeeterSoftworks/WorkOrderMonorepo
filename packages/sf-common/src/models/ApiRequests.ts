@@ -197,6 +197,7 @@ export interface TechnologyToolHistoryRowTO {
     sessionStartedAt?: string | number[],
     sessionEndedAt?: string | number[],
     sessionProductCount?: number,
+    sessionFaultyProductCount?: number,
     workOrderId?: number,
     workOrderCode?: string,
     productReference?: string,

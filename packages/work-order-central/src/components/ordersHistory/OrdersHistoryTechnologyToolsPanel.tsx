@@ -104,8 +104,8 @@ export function OrdersHistoryTechnologyToolsPanel() {
                             <TableCell>{t('toolName')}</TableCell>
                             <TableCell align="right">{t('technologyToolWorkingTime')}</TableCell>
                             <TableCell>{t('technologyCycleTime')}</TableCell>
-                            <TableCell align="right">{t('technologyNorm100')}</TableCell>
                             <TableCell align="right">{t('ordersHistorySessionGoodQty')}</TableCell>
+                            <TableCell align="right">{t('ordersHistorySessionFaultyQty')}</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -130,8 +130,8 @@ export function OrdersHistoryTechnologyToolsPanel() {
                                     <TableCell>{row.toolName?.trim() || '—'}</TableCell>
                                     <TableCell align="right">{row.workingTime ?? '—'}</TableCell>
                                     <TableCell>{row.cycleTime?.trim() || '—'}</TableCell>
-                                    <TableCell align="right">{row.norm100 ?? '—'}</TableCell>
                                     <TableCell align="right">{row.sessionProductCount ?? 0}</TableCell>
+                                    <TableCell align="right">{row.sessionFaultyProductCount ?? 0}</TableCell>
                                 </TableRow>
                             ))
                         )}

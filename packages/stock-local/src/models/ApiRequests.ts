@@ -227,6 +227,8 @@ export interface WorkSessionFaultyProductCreateTO {
     rejectReason?: string;
     rejectCause?: string;
     rejectComment?: string;
+    /** Number of faulty products to record (defaults to 1 on the server). */
+    quantity?: number;
 }
 
 export interface WorkSessionGoodDeltaTO {

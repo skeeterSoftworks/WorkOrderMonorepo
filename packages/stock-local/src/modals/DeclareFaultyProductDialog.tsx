@@ -13,6 +13,8 @@ export type DeclareFaultyProductDialogProps = {
     onClose: () => void;
     submitting: boolean;
     rejectCauseOptions: string[];
+    faultyQuantity: string;
+    onFaultyQuantityChange: (v: string) => void;
     faultyReason: string;
     onFaultyReasonChange: (v: string) => void;
     faultyCause: string;
@@ -27,6 +29,8 @@ export function DeclareFaultyProductDialog({
     onClose,
     submitting,
     rejectCauseOptions,
+    faultyQuantity,
+    onFaultyQuantityChange,
     faultyReason,
     onFaultyReasonChange,
     faultyCause,
@@ -40,6 +44,8 @@ export function DeclareFaultyProductDialog({
     if (faultyCause.trim() && !causeSuggestions.includes(faultyCause.trim())) {
         causeSuggestions.push(faultyCause.trim());
     }
+    const quantityValue = Number(faultyQuantity);
+    const quantityInvalid = !Number.isInteger(quantityValue) || quantityValue < 1;
     const reasonMissing = faultyReason.trim().length === 0;
     const causeMissing = faultyCause.trim().length === 0;
 
@@ -48,6 +54,15 @@ export function DeclareFaultyProductDialog({
             <DialogTitle sx={faultyProductDialogTitleSx}>{t('workSessionDeclareFaulty')}</DialogTitle>
             <DialogContent>
                 <Stack spacing={1.5} sx={{mt: 1}}>
+                    <TextField
+                        required
+                        label={t('workSessionFaultyQuantity')}
+                        type="number"
+                        inputProps={{min: 1, step: 1}}
+                        value={faultyQuantity}
+                        onChange={(e) => onFaultyQuantityChange(e.target.value)}
+                        fullWidth
+                    />
                     <TextField
                         required
                         label={t('reason')}
@@ -83,7 +98,7 @@ export function DeclareFaultyProductDialog({
                 <Button
                     onClick={onSave}
                     variant="contained"
-                    disabled={submitting || reasonMissing || causeMissing}
+                    disabled={submitting || reasonMissing || causeMissing || quantityInvalid}
                 >
                     {t('save')}
                 </Button>

@@ -564,6 +564,7 @@
   "ordersHistoryStation": "Station",
   "ordersHistoryToolOrder": "Tool #",
   "ordersHistorySessionGoodQty": "Session good qty",
+  "ordersHistorySessionFaultyQty": "Session faulty qty",
   "ordersHistoryTotalPrice": "Total price",
   "ordersHistoryEvent": "Event",
   "ordersHistoryEventOrderCreated": "Order created",

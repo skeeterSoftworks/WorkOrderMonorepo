@@ -564,6 +564,7 @@
   "ordersHistoryStation": "Stanica",
   "ordersHistoryToolOrder": "Alat #",
   "ordersHistorySessionGoodQty": "Dobre kom. u sesiji",
+  "ordersHistorySessionFaultyQty": "Neusaglašene kom. u sesiji",
   "ordersHistoryTotalPrice": "Ukupna cena",
   "ordersHistoryEvent": "Događaj",
   "ordersHistoryEventOrderCreated": "Kreiran nalog",

@@ -222,6 +222,7 @@ export function ProductionWorkSessionPanel({
     const [rowsInitial, setRowsInitial] = useState<WorkSessionMeasuringFeatureInputTO[]>([]);
     const [rowsControl, setRowsControl] = useState<WorkSessionMeasuringFeatureInputTO[]>([]);
 
+    const [faultyQuantity, setFaultyQuantity] = useState('1');
     const [faultyReason, setFaultyReason] = useState('');
     const [faultyCause, setFaultyCause] = useState('');
     const [faultyComment, setFaultyComment] = useState('');
@@ -673,6 +674,7 @@ export function ProductionWorkSessionPanel({
         const nokReason = buildControlNokRejectReason(prototypes, rowsInitial, t);
         if (nokReason) {
             faultyModalReturnToControlRef.current = 'initial';
+            setFaultyQuantity('1');
             setFaultyReason(nokReason);
             setFaultyCause('');
             setFaultyComment('');
@@ -733,6 +735,7 @@ export function ProductionWorkSessionPanel({
         const nokReason = buildControlNokRejectReason(prototypes, rowsControl, t);
         if (nokReason) {
             faultyModalReturnToControlRef.current = 'ondemand';
+            setFaultyQuantity('1');
             setFaultyReason(nokReason);
             setFaultyCause('');
             setFaultyComment('');
@@ -805,6 +808,7 @@ export function ProductionWorkSessionPanel({
         const returnTo = faultyModalReturnToControlRef.current;
         faultyModalReturnToControlRef.current = null;
         setFaultyOpen(false);
+        setFaultyQuantity('1');
         setFaultyReason('');
         setFaultyCause('');
         setFaultyComment('');
@@ -819,8 +823,13 @@ export function ProductionWorkSessionPanel({
         if (sessionId == null) return;
         const reason = faultyReason.trim();
         const cause = faultyCause.trim();
+        const quantity = Number(faultyQuantity);
         if (!reason || !cause) {
             setActionError(t('allFieldsRequired'));
+            return;
+        }
+        if (!Number.isInteger(quantity) || quantity < 1) {
+            setActionError(t('workSessionFaultyQuantityInvalid'));
             return;
         }
         const reopenControlKind = faultyModalReturnToControlRef.current;
@@ -831,10 +840,12 @@ export function ProductionWorkSessionPanel({
                 rejectReason: reason,
                 rejectCause: cause,
                 rejectComment: faultyComment.trim() || undefined,
+                quantity,
             });
             setSession(updated);
             faultyModalReturnToControlRef.current = null;
             setFaultyOpen(false);
+            setFaultyQuantity('1');
             setFaultyReason('');
             setFaultyCause('');
             setFaultyComment('');
@@ -1182,6 +1193,10 @@ export function ProductionWorkSessionPanel({
                             onClick={() => {
                                 setActionError(null);
                                 faultyModalReturnToControlRef.current = null;
+                                setFaultyQuantity('1');
+                                setFaultyReason('');
+                                setFaultyCause('');
+                                setFaultyComment('');
                                 setFaultyOpen(true);
                             }}
                         >
@@ -1287,6 +1302,8 @@ export function ProductionWorkSessionPanel({
                 onClose={() => closeFaultyModalReopenControlIfNeeded()}
                 submitting={submitting}
                 rejectCauseOptions={rejectCauseOptions}
+                faultyQuantity={faultyQuantity}
+                onFaultyQuantityChange={setFaultyQuantity}
                 faultyReason={faultyReason}
                 onFaultyReasonChange={setFaultyReason}
                 faultyCause={faultyCause}
