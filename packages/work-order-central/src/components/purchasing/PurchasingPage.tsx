@@ -34,6 +34,7 @@ import type {
 import { toastActionError, toastActionSuccess } from '../../util/actionToast';
 import {
     isMaterialOrderStaleForMonitoring,
+    materialOrderManualTransitionTargets,
     MATERIAL_ORDER_STALE_ROW_BACKGROUND,
 } from '../../util/materialOrderStale';
 import { materialOrderStatusColor } from '../../util/materialOrderStatusColor';
@@ -44,6 +45,7 @@ import {
 import { MaterialOrderCertificateViewDialog } from './MaterialOrderCertificateViewDialog';
 import { MaterialOrderCreateDialog } from './MaterialOrderCreateDialog';
 import { MaterialOrderEmailPickerDialog } from './MaterialOrderEmailPickerDialog';
+import { MaterialOrderAcceptRejectDialog } from './MaterialOrderAcceptRejectDialog';
 import { MaterialOrderSearchFilters, type MaterialOrderSearchForm } from './MaterialOrderSearchFilters';
 import { MaterialOrderStatusDialog } from './MaterialOrderStatusDialog';
 import { MaterialProviderQueryDialog } from './MaterialProviderQueryDialog';
@@ -96,10 +98,19 @@ function materialOrderStatusLocked(order: MaterialOrderTO): boolean {
     );
 }
 
+function canChangeMaterialOrderStatus(order: MaterialOrderTO): boolean {
+    if (order.id == null || !Number.isFinite(order.id) || materialOrderStatusLocked(order)) {
+        return false;
+    }
+    if (order.status === 'ORDER_SENT') {
+        return true;
+    }
+    return materialOrderManualTransitionTargets(order.status).length > 0;
+}
+
 const MATERIAL_ORDER_STATUSES: MaterialOrderStatus[] = [
     'ORDER_CREATED',
     'ORDER_SENT',
-    'ORDER_ACKNOWLEDGED',
     'ORDER_ACCEPTED',
     'IN_TRANSPORT',
     'RECEIVED_IN_STOCK',
@@ -200,6 +211,7 @@ export function PurchasingPage() {
     const [createOpen, setCreateOpen] = useState(false);
 
     const [statusDialogOrder, setStatusDialogOrder] = useState<MaterialOrderTO | null>(null);
+    const [acceptRejectOrder, setAcceptRejectOrder] = useState<MaterialOrderTO | null>(null);
     const [emailPickOpen, setEmailPickOpen] = useState(false);
     const [emailPickOrder, setEmailPickOrder] = useState<MaterialOrderTO | null>(null);
     const [emailPickProvider, setEmailPickProvider] = useState<MaterialProviderTO | undefined>(undefined);
@@ -376,10 +388,15 @@ export function PurchasingPage() {
     };
 
     const openStatusDialog = (order: MaterialOrderTO) => {
+        if (order.status === 'ORDER_SENT') {
+            setAcceptRejectOrder(order);
+            return;
+        }
         setStatusDialogOrder(order);
     };
 
     const closeStatusDialog = () => setStatusDialogOrder(null);
+    const closeAcceptRejectDialog = () => setAcceptRejectOrder(null);
 
     const handleConfirmReject = () => {
         if (!orderToReject?.id) {
@@ -655,11 +672,7 @@ export function PurchasingPage() {
                                             <IconButton
                                                 size="small"
                                                 title={t('materialOrderChangeStatus')}
-                                                disabled={
-                                                    o.id == null ||
-                                                    !Number.isFinite(o.id) ||
-                                                    materialOrderStatusLocked(o)
-                                                }
+                                                disabled={!canChangeMaterialOrderStatus(o)}
                                                 onClick={() => openStatusDialog(o)}
                                             >
                                                 <PublishedWithChangesOutlinedIcon fontSize="small" />
@@ -731,6 +744,13 @@ export function PurchasingPage() {
                 open={statusDialogOrder != null}
                 order={statusDialogOrder}
                 onClose={closeStatusDialog}
+                onSaved={refreshOrders}
+            />
+
+            <MaterialOrderAcceptRejectDialog
+                open={acceptRejectOrder != null}
+                order={acceptRejectOrder}
+                onClose={closeAcceptRejectDialog}
                 onSaved={refreshOrders}
             />
 

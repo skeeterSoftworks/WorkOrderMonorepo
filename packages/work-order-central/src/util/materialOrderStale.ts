@@ -11,12 +11,18 @@ export const MATERIAL_ORDER_STALE_MONITOR_EXCLUDED_STATUSES: MaterialOrderStatus
     'REJECTED',
 ];
 
-export const MATERIAL_ORDER_MANUAL_TRANSITION_STATUSES: MaterialOrderStatus[] = [
-    'ORDER_SENT',
-    'ORDER_ACKNOWLEDGED',
-    'ORDER_ACCEPTED',
-    'IN_TRANSPORT',
-];
+/** Manual transition targets allowed from the current status. */
+export function materialOrderManualTransitionTargets(
+    current?: MaterialOrderStatus | string | null,
+): MaterialOrderStatus[] {
+    if (current === 'ORDER_CREATED') {
+        return ['ORDER_SENT'];
+    }
+    if (current === 'ORDER_ACCEPTED') {
+        return ['IN_TRANSPORT'];
+    }
+    return [];
+}
 
 export function isMaterialOrderStaleForMonitoring(o: MaterialOrderTO): boolean {
     if (!o.status || MATERIAL_ORDER_STALE_MONITOR_EXCLUDED_STATUSES.includes(o.status)) return false;

@@ -478,6 +478,22 @@ export class Server {
             });
     }
 
+    static acceptMaterialOrder(
+        id: number,
+        body: {
+            lines?: Array<{ lineId?: number; offeredPricePerUnit?: number | null }>;
+        },
+        onSuccess: Function,
+        onError: Function,
+    ) {
+        axios.post(`${getServerUrl()}/material-orders/${id}/accept`, body)
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
     static rejectMaterialOrder(id: number, onSuccess: Function, onError: Function) {
         axios.post(`${getServerUrl()}/material-orders/${id}/reject`)
             .then(response => onSuccess(response))

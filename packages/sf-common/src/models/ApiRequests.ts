@@ -76,7 +76,6 @@ export interface MaterialOrderCertificateTO {
 export type MaterialOrderStatus =
     | 'ORDER_CREATED'
     | 'ORDER_SENT'
-    | 'ORDER_ACKNOWLEDGED'
     | 'ORDER_ACCEPTED'
     | 'IN_TRANSPORT'
     | 'RECEIVED_IN_STOCK'
@@ -89,8 +88,10 @@ export interface MaterialOrderLineTO {
     materialName?: string,
     materialCode?: string,
     quantity?: number,
-    /** Optional unit price when the order was placed. */
+    /** Optional unit price when the order was placed (requested). */
     pricePerUnit?: number,
+    /** Optional unit price offered/accepted by the provider. */
+    offeredPricePerUnit?: number,
     received?: boolean,
     receivedQuantityTotal?: number,
     remainingQuantity?: number,
