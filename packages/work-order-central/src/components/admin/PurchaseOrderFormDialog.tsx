@@ -42,6 +42,21 @@ function normalizePurchaseOrderCurrency(value: string | undefined | null): Purch
     return v === 'EUR' ? 'EUR' : 'RSD';
 }
 
+function productCatalogueOptionLabel(product: ProductTO): string {
+    return product.reference?.trim() || '—';
+}
+
+function filterProductsByCatalogueQuery(options: ProductTO[], inputValue: string): ProductTO[] {
+    const q = inputValue.trim().toLocaleLowerCase();
+    if (!q) return options;
+    return options.filter((product) => {
+        const reference = (product.reference ?? '').toLocaleLowerCase();
+        const name = (product.name ?? '').toLocaleLowerCase();
+        const id = product.id != null ? String(product.id) : '';
+        return reference.includes(q) || name.includes(q) || id.includes(q);
+    });
+}
+
 function orderToProductRows(order: PurchaseOrderTO): ProductOrderRow[] {
     const stripPricesInternalPo =
         order.internalStockDemand === true ||
@@ -220,6 +235,10 @@ export function PurchaseOrderFormDialog({
                 setShippingAddress('');
             } else if (customerId != null) {
                 setCurrency((prev) => (prev === '' ? 'RSD' : prev));
+                const customer = customers.find((c) => c.id === customerId);
+                setShippingAddress(customer?.addressData?.trim() || '');
+            } else {
+                setShippingAddress('');
             }
         }
         setProductOrderRows((rows) => {
@@ -471,58 +490,67 @@ export function PurchaseOrderFormDialog({
                             {t('purchaseOrderNoProductsForCustomer')}
                         </Typography>
                     ) : null}
-                    {productOrderRows.map((row, index) => (
+                    {productOrderRows.map((row, index) => {
+                        const productOptions = (() => {
+                            const list = [...productsForSelectedCustomer];
+                            const pid = row.productId;
+                            if (
+                                pid != null &&
+                                !list.some((p) => p.id === pid) &&
+                                products.some((p) => p.id === pid)
+                            ) {
+                                const orphan = products.find((p) => p.id === pid);
+                                if (orphan) list.push(orphan);
+                            }
+                            return list;
+                        })();
+                        const selectedProduct =
+                            row.productId != null
+                                ? (productOptions.find((p) => p.id === row.productId) ?? null)
+                                : null;
+                        return (
                         <Box
                             key={index}
-                            sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'nowrap' }}
+                            sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', flexWrap: 'nowrap' }}
                         >
-                            <TextField
-                                select
-                                label={t('product')}
-                                value={row.productId ?? ''}
-                                onChange={(e) =>
-                                    setProductOrderRowProduct(
-                                        index,
-                                        e.target.value ? Number(e.target.value) : undefined,
-                                    )
+                            <Autocomplete
+                                options={productOptions}
+                                value={selectedProduct}
+                                onChange={(_, value) => setProductOrderRowProduct(index, value?.id)}
+                                getOptionLabel={productCatalogueOptionLabel}
+                                isOptionEqualToValue={(a, b) => a.id === b.id}
+                                filterOptions={(options, state) =>
+                                    filterProductsByCatalogueQuery(options, state.inputValue)
                                 }
-                                size="small"
-                                sx={{ minWidth: 160, flex: 1 }}
                                 disabled={
                                     selectedCustomerId == null ||
                                     (noProductsLinkedForCustomer && row.productId == null)
                                 }
-                                helperText={
-                                    selectedCustomerId == null
-                                        ? t('purchaseOrderSelectCustomerForProducts')
-                                        : undefined
-                                }
-                            >
-                                <MenuItem value="">{t('none')}</MenuItem>
-                                {(() => {
-                                    const pid = row.productId;
-                                    const list = [...productsForSelectedCustomer];
-                                    if (
-                                        pid != null &&
-                                        !list.some((p) => p.id === pid) &&
-                                        products.some((p) => p.id === pid)
-                                    ) {
-                                        const orphan = products.find((p) => p.id === pid);
-                                        if (orphan) list.push(orphan);
-                                    }
-                                    return list.map((p) => (
-                                        <MenuItem key={p.id} value={p.id}>
-                                            {p.name}
-                                        </MenuItem>
-                                    ));
-                                })()}
-                            </TextField>
+                                sx={{ minWidth: 160, flex: 1 }}
+                                renderOption={(props, option) => (
+                                    <li {...props} key={option.id}>
+                                        {productCatalogueOptionLabel(option)}
+                                    </li>
+                                )}
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        label={t('catalogueId')}
+                                        size="small"
+                                        helperText={
+                                            selectedCustomerId == null
+                                                ? t('purchaseOrderSelectCustomerForProducts')
+                                                : undefined
+                                        }
+                                    />
+                                )}
+                            />
                             <TextField
-                                label={t('catalogueId')}
-                                value={row.catalogueReference}
-                                onChange={(e) => updateProductOrderRow(index, 'catalogueReference', e.target.value)}
+                                label={t('productName')}
+                                value={selectedProduct?.name?.trim() || ''}
                                 size="small"
-                                sx={{ minWidth: 140 }}
+                                sx={{ minWidth: 160, flex: 1 }}
+                                InputProps={{ readOnly: true }}
                             />
                             <TextField
                                 type="number"
@@ -556,7 +584,8 @@ export function PurchaseOrderFormDialog({
                                 <DeleteIcon fontSize="small" />
                             </IconButton>
                         </Box>
-                    ))}
+                        );
+                    })}
                     <Button
                         startIcon={<AddIcon />}
                         variant="outlined"
