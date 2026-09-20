@@ -107,6 +107,7 @@ export function CatalogOverviewPanel({ onOpenSection }: { onOpenSection: (sectio
         productsWithoutProviders,
         productsWithoutMeasuringFeatures,
         productsWithoutQualitySteps,
+        productsWithoutTechnologyTools,
         unlinkedBuyers,
         unlinkedMachines,
     } = useMemo(() => {
@@ -114,12 +115,14 @@ export function CatalogOverviewPanel({ onOpenSection }: { onOpenSection: (sectio
         let withoutProviders = 0;
         let withoutMeasuringFeatures = 0;
         let withoutQualitySteps = 0;
+        let withoutTechnologyTools = 0;
         const linkedCustomerIds = new Set<number>();
         const linkedMachineIds = new Set<number>();
         for (const p of products) {
             if ((p.productMaterials?.length ?? 0) === 0) withoutProviders += 1;
             if ((p.measuringFeaturePrototypes?.length ?? 0) === 0) withoutMeasuringFeatures += 1;
             if ((p.qualityInfoSteps?.length ?? 0) === 0) withoutQualitySteps += 1;
+            if ((p.technologyData?.tools?.length ?? 0) === 0) withoutTechnologyTools += 1;
             for (const cid of p.customerIds ?? []) {
                 if (typeof cid === 'number' && Number.isFinite(cid)) linkedCustomerIds.add(cid);
             }
@@ -141,6 +144,7 @@ export function CatalogOverviewPanel({ onOpenSection }: { onOpenSection: (sectio
             productsWithoutProviders: withoutProviders,
             productsWithoutMeasuringFeatures: withoutMeasuringFeatures,
             productsWithoutQualitySteps: withoutQualitySteps,
+            productsWithoutTechnologyTools: withoutTechnologyTools,
             unlinkedBuyers: buyersWithoutProducts,
             unlinkedMachines: machinesWithoutProducts,
         };
@@ -170,11 +174,13 @@ export function CatalogOverviewPanel({ onOpenSection }: { onOpenSection: (sectio
         const productsNoProviders: string[] = [];
         const productsNoMeasuring: string[] = [];
         const productsNoQuality: string[] = [];
+        const productsNoTechnologyTools: string[] = [];
         for (const p of products) {
             const label = p.name || p.reference || `#${p.id ?? '?'}`;
             if ((p.productMaterials?.length ?? 0) === 0) productsNoProviders.push(label);
             if ((p.measuringFeaturePrototypes?.length ?? 0) === 0) productsNoMeasuring.push(label);
             if ((p.qualityInfoSteps?.length ?? 0) === 0) productsNoQuality.push(label);
+            if ((p.technologyData?.tools?.length ?? 0) === 0) productsNoTechnologyTools.push(label);
         }
 
         const linkedCustomerIds = new Set<number>();
@@ -218,6 +224,7 @@ export function CatalogOverviewPanel({ onOpenSection }: { onOpenSection: (sectio
             productsNoProviders,
             productsNoMeasuring,
             productsNoQuality,
+            productsNoTechnologyTools,
             customersNoProducts,
             machinesNoProducts,
             providersNoMaterials,
@@ -298,6 +305,7 @@ export function CatalogOverviewPanel({ onOpenSection }: { onOpenSection: (sectio
                     {healthRow(t('healthProductsWithoutProviders'), productsWithoutProviders, affected.productsNoProviders)}
                     {healthRow(t('healthProductsWithoutMeasuringFeatures'), productsWithoutMeasuringFeatures, affected.productsNoMeasuring)}
                     {healthRow(t('healthProductsWithoutQualitySteps'), productsWithoutQualitySteps, affected.productsNoQuality)}
+                    {healthRow(t('healthProductsWithoutTechnologyTools'), productsWithoutTechnologyTools, affected.productsNoTechnologyTools)}
                     {healthRow(t('healthCustomersWithoutProducts'), unlinkedBuyers, affected.customersNoProducts)}
                     {healthRow(t('healthMachinesWithoutProducts'), unlinkedMachines, affected.machinesNoProducts)}
                     {healthRow(t('healthProvidersWithoutMaterials'), providersWithoutMaterials, affected.providersNoMaterials)}

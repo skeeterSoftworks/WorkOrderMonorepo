@@ -15,14 +15,17 @@ import {
     canAccessCentralOrdersHistory,
     canAccessCentralOrdersHistoryMaterials,
     canAccessCentralOrdersHistoryProducts,
+    canAccessCentralOrdersHistoryTechnologyTools,
     readLoggedUser,
 } from 'sf-common';
 import { OrdersHistoryProductsPanel } from './OrdersHistoryProductsPanel';
 import { OrdersHistoryMaterialsPanel } from './OrdersHistoryMaterialsPanel';
+import { OrdersHistoryTechnologyToolsPanel } from './OrdersHistoryTechnologyToolsPanel';
 
 const OrdersHistoryTabs = {
     PRODUCTS: 0,
     MATERIALS: 1,
+    TECHNOLOGY_TOOLS: 2,
 } as const;
 
 type OrdersHistoryTabId = (typeof OrdersHistoryTabs)[keyof typeof OrdersHistoryTabs];
@@ -34,22 +37,26 @@ export function OrdersHistoryPage() {
 
     const showProducts = canAccessCentralOrdersHistoryProducts(user);
     const showMaterials = canAccessCentralOrdersHistoryMaterials(user);
+    const showTechnologyTools = canAccessCentralOrdersHistoryTechnologyTools(user);
 
     const defaultTab = useMemo(() => {
         if (showProducts) return OrdersHistoryTabs.PRODUCTS;
         if (showMaterials) return OrdersHistoryTabs.MATERIALS;
+        if (showTechnologyTools) return OrdersHistoryTabs.TECHNOLOGY_TOOLS;
         return OrdersHistoryTabs.PRODUCTS;
-    }, [showProducts, showMaterials]);
+    }, [showProducts, showMaterials, showTechnologyTools]);
 
     const [activeTab, setActiveTab] = useState<OrdersHistoryTabId>(defaultTab);
 
     useEffect(() => {
-        if (activeTab === OrdersHistoryTabs.PRODUCTS && !showProducts && showMaterials) {
-            setActiveTab(OrdersHistoryTabs.MATERIALS);
-        } else if (activeTab === OrdersHistoryTabs.MATERIALS && !showMaterials && showProducts) {
-            setActiveTab(OrdersHistoryTabs.PRODUCTS);
+        const tabVisible =
+            (activeTab === OrdersHistoryTabs.PRODUCTS && showProducts)
+            || (activeTab === OrdersHistoryTabs.MATERIALS && showMaterials)
+            || (activeTab === OrdersHistoryTabs.TECHNOLOGY_TOOLS && showTechnologyTools);
+        if (!tabVisible) {
+            setActiveTab(defaultTab);
         }
-    }, [activeTab, showMaterials, showProducts]);
+    }, [activeTab, defaultTab, showMaterials, showProducts, showTechnologyTools]);
 
     return (
         <RoleAccessGuard user={user} allowed={canAccessCentralOrdersHistory(user)}>
@@ -78,12 +85,21 @@ export function OrdersHistoryPage() {
                         {showMaterials && (
                             <Tab label={t('ordersHistoryMaterialsTab')} value={OrdersHistoryTabs.MATERIALS} />
                         )}
+                        {showTechnologyTools && (
+                            <Tab
+                                label={t('ordersHistoryTechnologyToolsTab')}
+                                value={OrdersHistoryTabs.TECHNOLOGY_TOOLS}
+                            />
+                        )}
                     </Tabs>
                 </Box>
 
                 <Box sx={{ py: 3 }}>
                     {activeTab === OrdersHistoryTabs.PRODUCTS && showProducts && <OrdersHistoryProductsPanel />}
                     {activeTab === OrdersHistoryTabs.MATERIALS && showMaterials && <OrdersHistoryMaterialsPanel />}
+                    {activeTab === OrdersHistoryTabs.TECHNOLOGY_TOOLS && showTechnologyTools && (
+                        <OrdersHistoryTechnologyToolsPanel />
+                    )}
                 </Box>
             </Container>
         </RoleAccessGuard>

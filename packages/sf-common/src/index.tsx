@@ -68,6 +68,7 @@ export {
     canAccessCentralOrdersHistory,
     canAccessCentralOrdersHistoryProducts,
     canAccessCentralOrdersHistoryMaterials,
+    canAccessCentralOrdersHistoryTechnologyTools,
     canAccessCentralStock,
     canAccessCentralStockMaterials,
     canAccessCentralStockProducts,

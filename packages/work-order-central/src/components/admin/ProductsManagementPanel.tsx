@@ -192,6 +192,8 @@ export function ProductsManagementPanel() {
                                     (product.measuringFeaturePrototypes?.length ?? 0) === 0;
                                 const noQualitySteps = (product.qualityInfoSteps?.length ?? 0) === 0;
                                 const noMaterials = (product.productMaterials?.length ?? 0) === 0;
+                                const noTechnologyTools =
+                                    (product.technologyData?.tools?.length ?? 0) === 0;
                                 const chipSx = {
                                     height: 22,
                                     '& .MuiChip-label': { px: 1, fontSize: '0.7rem' },
@@ -231,6 +233,17 @@ export function ProductsManagementPanel() {
                                                         <Chip
                                                             size="small"
                                                             label={t('productNoMaterialsBadge')}
+                                                            color="warning"
+                                                            variant="outlined"
+                                                            sx={chipSx}
+                                                        />
+                                                    </Tooltip>
+                                                )}
+                                                {noTechnologyTools && (
+                                                    <Tooltip title={t('productNoTechnologyToolsHint')}>
+                                                        <Chip
+                                                            size="small"
+                                                            label={t('productNoTechnologyToolsBadge')}
                                                             color="warning"
                                                             variant="outlined"
                                                             sx={chipSx}

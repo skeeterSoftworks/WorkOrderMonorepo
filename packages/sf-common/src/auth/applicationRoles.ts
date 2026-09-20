@@ -102,7 +102,9 @@ export function canAccessCentralPurchasing(user: UserWithRoles): boolean {
 }
 
 export function canAccessCentralOrdersHistory(user: UserWithRoles): boolean {
-    return canAccessCentralOrdersHistoryProducts(user) || canAccessCentralOrdersHistoryMaterials(user);
+    return canAccessCentralOrdersHistoryProducts(user)
+        || canAccessCentralOrdersHistoryMaterials(user)
+        || canAccessCentralOrdersHistoryTechnologyTools(user);
 }
 
 export function canAccessCentralOrdersHistoryProducts(user: UserWithRoles): boolean {
@@ -111,6 +113,10 @@ export function canAccessCentralOrdersHistoryProducts(user: UserWithRoles): bool
 
 export function canAccessCentralOrdersHistoryMaterials(user: UserWithRoles): boolean {
     return hasAnyRole(user, 'ADMIN', 'PURCHASING_ADMIN');
+}
+
+export function canAccessCentralOrdersHistoryTechnologyTools(user: UserWithRoles): boolean {
+    return hasAnyRole(user, 'ADMIN', 'PRODUCTION_PLANNING_ADMIN');
 }
 
 export function canAccessCentralStock(user: UserWithRoles): boolean {

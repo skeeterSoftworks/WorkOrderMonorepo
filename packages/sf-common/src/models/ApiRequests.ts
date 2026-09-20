@@ -190,6 +190,37 @@ export interface ProductOrderHistoryPageTO {
     size?: number,
 }
 
+export interface TechnologyToolHistoryRowTO {
+    rowKey?: string,
+    toolUsageId?: number,
+    workSessionId?: number,
+    sessionStartedAt?: string | number[],
+    sessionEndedAt?: string | number[],
+    sessionProductCount?: number,
+    workOrderId?: number,
+    workOrderCode?: string,
+    productReference?: string,
+    productName?: string,
+    stationId?: string,
+    operatorName?: string,
+    operatorSurname?: string,
+    cycleTime?: string,
+    norm100?: number,
+    piecesPerMaterial?: number,
+    sourceToolId?: number,
+    toolName?: string,
+    toolDescription?: string,
+    orderNumber?: number,
+    workingTime?: number,
+}
+
+export interface TechnologyToolHistoryPageTO {
+    content?: TechnologyToolHistoryRowTO[],
+    totalElements?: number,
+    page?: number,
+    size?: number,
+}
+
 export interface MaterialOrderHistoryRowTO {
     rowKey?: string,
     eventType?: OrdersHistoryEventType,

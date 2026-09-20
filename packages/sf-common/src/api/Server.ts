@@ -19,6 +19,7 @@ import type {
     MaterialOrderPageTO,
     ProductOrderHistoryPageTO,
     MaterialOrderHistoryPageTO,
+    TechnologyToolHistoryPageTO,
     MaterialOrderCertificateTO,
     EmailTemplateTO,
     EmailTemplateCode,
@@ -410,6 +411,25 @@ export class Server {
         onError: Function,
     ) {
         axios.get<MaterialOrderHistoryPageTO>(`${getServerUrl()}/orders-history/materials`, { params })
+            .then(response => onSuccess(response))
+            .catch(error => {
+                console.log(error);
+                onError(error);
+            });
+    }
+
+    static searchTechnologyToolHistory(
+        params: {
+            page?: number;
+            size?: number;
+            productReference?: string;
+            toolName?: string;
+            workOrderCode?: string;
+        },
+        onSuccess: Function,
+        onError: Function,
+    ) {
+        axios.get<TechnologyToolHistoryPageTO>(`${getServerUrl()}/orders-history/technology-tools`, { params })
             .then(response => onSuccess(response))
             .catch(error => {
                 console.log(error);
