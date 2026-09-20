@@ -2,18 +2,21 @@ import type {
     MaterialReceptionStockAllocationTO,
     StockLocationTO,
 } from 'sf-common/src/models/ApiRequests';
+import type { ColorMarkerValue } from 'sf-common/src/util/colorMarkers';
 
 export type StockAllocationRow = {
     key: string;
     stockLocationId: number | '';
     quantity: string;
+    /** Optional color marker; empty string means none. */
+    colorMarker: ColorMarkerValue | '';
 };
 
 let rowKeyCounter = 0;
 
 export function newAllocationRow(): StockAllocationRow {
     rowKeyCounter += 1;
-    return { key: `alloc-${rowKeyCounter}`, stockLocationId: '', quantity: '' };
+    return { key: `alloc-${rowKeyCounter}`, stockLocationId: '', quantity: '', colorMarker: '' };
 }
 
 export function parseReceivedQuantity(raw: string): number | null {
@@ -30,19 +33,38 @@ export function sumAllocationQuantities(rows: StockAllocationRow[]): number {
     }, 0);
 }
 
+export function resolveColorMarker(rows: StockAllocationRow[]): ColorMarkerValue | undefined {
+    for (const row of rows) {
+        if (row.colorMarker) return row.colorMarker;
+    }
+    return undefined;
+}
+
 export function buildStockAllocationsPayload(
     rows: StockAllocationRow[],
 ): MaterialReceptionStockAllocationTO[] {
-    const merged = new Map<number, number>();
+    const merged = new Map<number, { quantity: number; colorMarker?: ColorMarkerValue }>();
     for (const row of rows) {
         if (row.stockLocationId === '' || !row.stockLocationId) continue;
         const qty = Number.parseInt(row.quantity, 10);
         if (!Number.isFinite(qty) || qty <= 0) continue;
-        merged.set(row.stockLocationId, (merged.get(row.stockLocationId) ?? 0) + qty);
+        const existing = merged.get(row.stockLocationId);
+        if (existing) {
+            existing.quantity += qty;
+            if (!existing.colorMarker && row.colorMarker) {
+                existing.colorMarker = row.colorMarker;
+            }
+        } else {
+            merged.set(row.stockLocationId, {
+                quantity: qty,
+                colorMarker: row.colorMarker || undefined,
+            });
+        }
     }
-    return Array.from(merged.entries()).map(([stockLocationId, quantity]) => ({
+    return Array.from(merged.entries()).map(([stockLocationId, entry]) => ({
         stockLocationId,
-        quantity,
+        quantity: entry.quantity,
+        colorMarker: entry.colorMarker,
     }));
 }
 

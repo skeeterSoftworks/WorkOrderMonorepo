@@ -15,6 +15,7 @@ import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 import { Server } from 'sf-common';
 import type { MaterialOrderHistoryRowTO, MaterialProviderTO } from 'sf-common/src/models/ApiRequests';
+import { colorMarkerSwatch } from 'sf-common/src/util/colorMarkers';
 import {
     formatHistoryDateTime,
     formatHistoryLineTotal,
@@ -40,6 +41,28 @@ function unwrapList<T>(response: { data?: T[] | { data?: T[] } }): T[] {
 
 function providerLabel(provider: { name?: string; id?: number }): string {
     return provider.name?.trim() || (provider.id != null ? `#${provider.id}` : '—');
+}
+
+function ColorMarkerCell({ value }: { value?: string }) {
+    const hex = colorMarkerSwatch(value);
+    if (!hex) {
+        return <>{'\u2014'}</>;
+    }
+    return (
+        <Box
+            component="span"
+            title={value}
+            sx={{
+                display: 'inline-block',
+                width: 18,
+                height: 18,
+                borderRadius: '50%',
+                bgcolor: hex,
+                border: '1px solid rgba(0,0,0,0.25)',
+                verticalAlign: 'middle',
+            }}
+        />
+    );
 }
 
 export function OrdersHistoryMaterialsPanel() {
@@ -160,6 +183,7 @@ export function OrdersHistoryMaterialsPanel() {
                             <TableCell>{t('materialCode')}</TableCell>
                             <TableCell>{t('materialName')}</TableCell>
                             <TableCell>{t('materialProviderName')}</TableCell>
+                            <TableCell align="center">{t('colorMarker')}</TableCell>
                             <TableCell align="right">{t('quantity')}</TableCell>
                             <TableCell align="right">{t('pricePerUnit')}</TableCell>
                             <TableCell align="right">{t('ordersHistoryTotalPrice')}</TableCell>
@@ -169,7 +193,7 @@ export function OrdersHistoryMaterialsPanel() {
                     <TableBody>
                         {rows.length === 0 && !loading ? (
                             <TableRow>
-                                <TableCell colSpan={10}>
+                                <TableCell colSpan={11}>
                                     <Typography variant="body2" color="text.secondary">
                                         {t('ordersHistoryEmpty')}
                                     </Typography>
@@ -200,6 +224,9 @@ export function OrdersHistoryMaterialsPanel() {
                                             name: row.materialProviderName,
                                             id: row.materialProviderId,
                                         })}</TableCell>
+                                        <TableCell align="center">
+                                            {isOrder ? '—' : <ColorMarkerCell value={row.colorMarker} />}
+                                        </TableCell>
                                         <TableCell align="right">
                                             {row.quantity ?? 0}
                                             {row.unitOfMeasure ? ` ${row.unitOfMeasure}` : ''}

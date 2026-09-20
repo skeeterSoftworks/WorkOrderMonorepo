@@ -11,6 +11,11 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { useTranslation } from 'react-i18next';
 import type { StockLocationTO } from 'sf-common/src/models/ApiRequests';
 import {
+    COLOR_MARKER_SWATCHES,
+    COLOR_MARKER_VALUES,
+    type ColorMarkerValue,
+} from 'sf-common/src/util/colorMarkers';
+import {
     type StockAllocationRow,
     sumAllocationQuantities,
 } from './materialReceptionStockAllocation';
@@ -22,6 +27,23 @@ type Props = {
     onRowsChange: (rows: StockAllocationRow[]) => void;
     onAddRow: () => void;
 };
+
+function ColorSwatch({ hex, size = 16 }: { hex: string; size?: number }) {
+    return (
+        <Box
+            component="span"
+            sx={{
+                display: 'inline-block',
+                width: size,
+                height: size,
+                borderRadius: '50%',
+                bgcolor: hex,
+                border: '1px solid rgba(0,0,0,0.25)',
+                flexShrink: 0,
+            }}
+        />
+    );
+}
 
 export function ReceiveMaterialStockAllocationSection({
     rows,
@@ -97,6 +119,44 @@ export function ReceiveMaterialStockAllocationSection({
                             sx={{ width: 120 }}
                             inputProps={{ min: 1 }}
                         />
+                        <TextField
+                            select
+                            label={t('colorMarker')}
+                            value={row.colorMarker}
+                            onChange={(e) =>
+                                updateRow(row.key, {
+                                    colorMarker: (e.target.value || '') as ColorMarkerValue | '',
+                                })
+                            }
+                            size="small"
+                            sx={{ width: 140 }}
+                            SelectProps={{
+                                renderValue: (selected) => {
+                                    const value = selected as ColorMarkerValue | '';
+                                    if (!value) {
+                                        return t('none');
+                                    }
+                                    return (
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <ColorSwatch hex={COLOR_MARKER_SWATCHES[value]} />
+                                            {t(`colorMarker_${value}`)}
+                                        </Box>
+                                    );
+                                },
+                            }}
+                        >
+                            <MenuItem value="">
+                                <em>{t('none')}</em>
+                            </MenuItem>
+                            {COLOR_MARKER_VALUES.map((value) => (
+                                <MenuItem key={value} value={value}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <ColorSwatch hex={COLOR_MARKER_SWATCHES[value]} />
+                                        {t(`colorMarker_${value}`)}
+                                    </Box>
+                                </MenuItem>
+                            ))}
+                        </TextField>
                         <IconButton
                             size="small"
                             aria-label={t('removeStockAllocationRow')}

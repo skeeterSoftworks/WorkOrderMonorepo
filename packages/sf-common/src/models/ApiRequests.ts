@@ -65,6 +65,8 @@ export interface StockLocationTO {
 export interface MaterialReceptionStockAllocationTO {
     stockLocationId?: number,
     quantity?: number,
+    /** Optional visual marker (e.g. RED, BLUE). */
+    colorMarker?: string,
 }
 
 export interface MaterialOrderCertificateTO {
@@ -240,6 +242,8 @@ export interface MaterialOrderHistoryRowTO {
     pricePerUnit?: number,
     unitOfMeasure?: string,
     deliveryNoteNumber?: string,
+    /** Optional visual marker from the delivery note (STOCK_IN events). */
+    colorMarker?: string,
 }
 
 export interface MaterialOrderHistoryPageTO {
@@ -257,6 +261,8 @@ export interface DeliveryNoteTO {
     /** ISO-8601 date-time of physical reception for this batch. */
     receivedAt?: string,
     quantity?: number,
+    /** Optional visual marker (e.g. RED, BLUE). */
+    colorMarker?: string,
 }
 
 export interface MaterialOrderReceptionInternalControlTO {
@@ -298,6 +304,8 @@ export interface MaterialOrderReceptionTO {
     stockAllocations?: MaterialReceptionStockAllocationTO[],
     /** Whether the linked material order has an uploaded certificate. */
     certificatePresent?: boolean,
+    /** Optional visual marker for this reception batch (e.g. RED, BLUE). */
+    colorMarker?: string,
 }
 
 export type EmailTemplateCode =

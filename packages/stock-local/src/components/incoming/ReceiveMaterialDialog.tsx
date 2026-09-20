@@ -22,6 +22,7 @@ import {
     isReceiveFormValid,
     newAllocationRow,
     parseReceivedQuantity,
+    resolveColorMarker,
     type StockAllocationRow,
 } from './materialReceptionStockAllocation';
 
@@ -110,6 +111,7 @@ export function ReceiveMaterialDialog({ open, order, line, stockLocations, onClo
                 receivedAt: toServerDateTime(receivedAt),
                 receivedQuantity: qty,
                 stockAllocations: buildStockAllocationsPayload(allocationRows),
+                colorMarker: resolveColorMarker(allocationRows),
             },
             (response: unknown) => {
                 setSubmitting(false);
