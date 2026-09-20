@@ -695,7 +695,7 @@
   "emailTemplatePickerTitle": "Izaberite email šablon",
   "emailTemplatePickerChooseLabel": "Šablon",
   "emailTemplatePickerOpenMailto": "Otvori email nacrt",
-  "emailTemplatePlaceholdersHint": "Šabloni podržavaju oznake: {{materialOrderCode}}, {{providerName}}, {{materialLabel}}, {{quantity}}, {{materialName}}, {{materialCode}}, {{providerCompany}}, {{providerContact}}.",
+  "emailTemplatePlaceholdersHint": "Šabloni podržavaju oznake: {{materialOrderCode}}, {{providerName}}, {{materialLabel}}, {{quantity}}, {{quantityWithUnit}}, {{unitOfMeasure}}, {{materialName}}, {{materialCode}}, {{providerCompany}}, {{providerContact}}.",
   "emailTemplatesAdminIntro": "Izmenite predmet i telo za svaki šablon. Vrednosti se popunjavaju iz narudžbenice materijala pri otvaranju nacrta iz Nabavke.",
   "emailTemplateSubject": "Predmet",
   "emailTemplateBody": "Telo",

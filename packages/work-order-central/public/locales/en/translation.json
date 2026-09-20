@@ -698,7 +698,7 @@
   "emailTemplatePickerTitle": "Choose email template",
   "emailTemplatePickerChooseLabel": "Template",
   "emailTemplatePickerOpenMailto": "Open email draft",
-  "emailTemplatePlaceholdersHint": "Templates support placeholders: {{materialOrderCode}}, {{providerName}}, {{materialLabel}}, {{quantity}}, {{materialName}}, {{materialCode}}, {{providerCompany}}, {{providerContact}}.",
+  "emailTemplatePlaceholdersHint": "Templates support placeholders: {{materialOrderCode}}, {{providerName}}, {{materialLabel}}, {{quantity}}, {{quantityWithUnit}}, {{unitOfMeasure}}, {{materialName}}, {{materialCode}}, {{providerCompany}}, {{providerContact}}.",
   "emailTemplatesAdminIntro": "Edit the subject and body for each template. Values are filled from the material order when you open a draft from Purchasing.",
   "emailTemplateSubject": "Subject",
   "emailTemplateBody": "Body",
